@@ -112,6 +112,16 @@ RETRO_API bool retro_load_game(const struct retro_game_info *g)
 	if (log_cb) {
 		log_cb(RETRO_LOG_INFO, "testcore: testcore_speed=%s testcore_cost=%d testcore_crash=%d\n",
 			   var("testcore_speed"), cost_ms, crash);
+		/* the language tests: GET_LANGUAGE and the rsos_language variable */
+		{
+			unsigned lang = 99;
+			struct retro_variable lv = { "rsos_language", NULL };
+
+			env(RETRO_ENVIRONMENT_GET_LANGUAGE, &lang);
+			env(RETRO_ENVIRONMENT_GET_VARIABLE, &lv);
+			log_cb(RETRO_LOG_INFO, "testcore: language %u rsos_language=%s\n", lang,
+				   lv.value ? lv.value : "(none)");
+		}
 		/* the no-content tests (RetroStone VC games) */
 		log_cb(RETRO_LOG_INFO, "testcore: content %s\n", !g ? "none" : g->path ? g->path : "(data only)");
 	}

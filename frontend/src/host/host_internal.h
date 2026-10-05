@@ -64,6 +64,11 @@ struct host {
 	char state_dir[PATH_MAX];
 	char bios_dir[PATH_MAX];
 	struct core_info info;
+	/* The user's language (settings.ini `language`, or --lang) for the
+	 * core: GET_LANGUAGE and the `rsos_language` variable. The configured
+	 * one even when its menu catalog is missing (the core may have its own
+	 * translations); NULL = the menu's. */
+	const struct i18n_lang *game_lang;
 
 	/* Core. */
 	struct core_api core;

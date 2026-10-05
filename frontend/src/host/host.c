@@ -2327,6 +2327,7 @@ static int fail_text(int code, const char *msg)
 static void setup_language(const char *lang)
 {
 	i18n_set_dir(H.cfg.locale_dir);
+	H.game_lang = lang && *lang ? i18n_lang_find(lang) : NULL;
 	if (lang && *lang && i18n_set_language(lang) < 0)
 		hlog(HLOG_WARN, "language %s: no usable catalog in %s, English", lang, i18n_dir());
 	hlog(HLOG_INFO, "language %s (%d translations)", i18n_language(), i18n_catalog_entries());

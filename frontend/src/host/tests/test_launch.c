@@ -574,6 +574,49 @@ static void test_no_content(char **argv, const char *const *args, struct host_la
 	remove(st);
 }
 
+/*
+ * The user's language reaches the core (RetroStone VC games translate their
+ * texts): GET_LANGUAGE gives the libretro enum (no Danish there: English),
+ * the `rsos_language` variable the RetroStoneOS code for all 22 languages,
+ * from settings.ini even without the menu's catalog.
+ */
+static void test_language(char **argv, const char *const *args, struct host_launch_opts *o, const char *rom)
+{
+	static const struct { const char *setting, *expect; } cases[] = {
+		{ "", "testcore: language 0 rsos_language=en" },
+		{ "language = fr\n", "testcore: language 2 rsos_language=fr" },
+		{ "language = da\n", "testcore: language 0 rsos_language=da" },
+		{ "language = nb\n", "testcore: language 34 rsos_language=nb" },
+		{ "language = pt_BR\n", "testcore: language 7 rsos_language=pt_BR" },
+		{ "language = zh_CN\n", "testcore: language 12 rsos_language=zh_CN" },
+		{ "language = xx\n", "testcore: language 0 rsos_language=en" },
+	};
+	char set[600], log[600];
+	const char *a2[48];
+	struct host_launch_result r;
+	int k;
+
+	printf("the user's language for the core (GET_LANGUAGE, rsos_language)\n");
+	snprintf(set, sizeof(set), "%s/settings-lang.ini", argv[3]);
+	snprintf(log, sizeof(log), "%s/game.log", argv[3]);
+	for (k = 0; args[k] && k < 44; k++)
+		a2[k] = !strcmp(args[k], "/dev/null") ? set : !strcmp(args[k], "3000") ? "20" : args[k];
+	a2[k] = NULL;
+	o->extra_args = a2;
+	for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		char *txt = NULL;
+
+		hwrite_atomic(set, cases[i].setting, strlen(cases[i].setting), false);
+		CHECK(host_launch(argv[2], rom, "test", o, &r) == 0 && r.status == HOST_EXIT_OK &&
+		      (txt = hread_file(log, NULL)) && strstr(txt, cases[i].expect),
+		      "settings \"%.*s\": the core logs \"%s\"", (int)strcspn(cases[i].setting, "\n"),
+		      cases[i].setting, cases[i].expect);
+		free(txt);
+	}
+	o->extra_args = args;
+	remove(set);
+}
+
 int main(int argc, char **argv)
 {
 	struct host_launch_opts o;
@@ -621,6 +664,8 @@ int main(int argc, char **argv)
 	o.exe = argv[1];
 	o.extra_args = args;
 	o.log_path = log;
+
+	test_language(argv, args, &o, rom);
 
 	printf("process model (host_launch)\n");
 	unsetenv("RSOS_TESTCORE");

@@ -50,7 +50,10 @@ Devanagari and other scripts that need shaping are out too. Adding them means a 
 - **The language**: `language = <code>` in `/data/rsos/settings.ini`. With none (first boot, or an update from a
   version without translations), a picker comes before the menu. Settings > Language changes it at once (no
   restart). The game process gets it with `--lang` and answers `RETRO_ENVIRONMENT_GET_LANGUAGE` with it (cores that
-  have their own translations use it).
+  have their own translations use it). The libretro enum has no Danish (it gets English), so the host also answers
+  `RETRO_ENVIRONMENT_GET_VARIABLE` for the key `rsos_language` with the language code (`fr`, `pt_BR`, `da`, `nb`,
+  `zh_CN`...: all 22), a variable every core may ask for without declaring it; the RetroStone VC games read it
+  first. Both follow the setting even when the menu's catalog is missing.
 - **Fonts**: the theme's font, then DejaVu Sans (Latin, Greek, Cyrillic), then three CJK subsets (Japanese,
   Chinese, Korean glyph shapes, the one of the language first) for each character (`src/gfx/font.c`).
 - **Locale conventions** are translations too: the decimal and thousands separators (contexts `decimal separator`,

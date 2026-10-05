@@ -224,6 +224,13 @@ static bool clear_thread_waits(unsigned clear, void *data)
 
 /* ------------------------------------------------------ the environment */
 
+/* The user's language for the core (struct host.game_lang), else the
+ * menu's (English when neither is set). */
+static const struct i18n_lang *game_language(void)
+{
+	return H.game_lang ? H.game_lang : i18n_current();
+}
+
 static const char *env_name(unsigned cmd)
 {
 	static char buf[32];
@@ -252,11 +259,12 @@ bool core_environment(unsigned cmd, void *data)
 		*(const char **)data = "Player";
 		return true;
 	case RETRO_ENVIRONMENT_GET_LANGUAGE:
-		/* the menu's language (cores with translated OSD/options, or a
-		 * game language setting, e.g. the NeoGeo/Saturn BIOS) */
-		*(unsigned *)data = i18n_retro_language();
-		hlog_once("GET_LANGUAGE", "core asked for the language: %u (%s)", i18n_retro_language(),
-			  i18n_language());
+		/* the user's language (cores with translated OSD/options, or a
+		 * game language setting, e.g. the NeoGeo/Saturn BIOS). The libretro
+		 * enum has no Danish (0 = English): see `rsos_language` below. */
+		*(unsigned *)data = game_language()->retro;
+		hlog_once("GET_LANGUAGE", "core asked for the language: %u (%s)", game_language()->retro,
+			  game_language()->code);
 		return true;
 
 	/* --- logging, messages, perf ------------------------------------ */
@@ -421,8 +429,21 @@ bool core_environment(unsigned cmd, void *data)
 	}
 
 	/* --- options ---------------------------------------------------- */
-	case RETRO_ENVIRONMENT_GET_VARIABLE:
+	case RETRO_ENVIRONMENT_GET_VARIABLE: {
+		struct retro_variable *v = data;
+
+		/* `rsos_language`: the user's language as a RetroStoneOS code
+		 * ("fr", "pt_BR", "da", "nb", "zh_CN"...: every language of the
+		 * menu, also those the libretro enum lacks). A variable the host
+		 * gives every core, not a core option (RetroStone VC games read
+		 * it; RetroArch answers false). */
+		if (v && v->key && !strcmp(v->key, "rsos_language")) {
+			v->value = game_language()->code;
+			hlog_once("rsos_language", "core asked for rsos_language: %s", v->value);
+			return true;
+		}
 		return opts_env_get_variable(data);
+	}
 	case RETRO_ENVIRONMENT_SET_VARIABLES:
 		return opts_env_set_variables(data);
 	case RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE:
