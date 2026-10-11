@@ -2,7 +2,7 @@ config BR2_PACKAGE_RSOS_VC_GAMES
 	bool "rsos-vc-games"
 	depends on !BR2_STATIC_LIBS # libretro cores, loaded with dlopen()
 	help
-	  The seven RetroStone VC games (8BCraft), the "RetroStone"
+	  The RetroStone VC games (8BCraft), the "RetroStone"
 	  system at the start of the menu's carousel (docs/vc-games.md).
 
 	  Each game is a libretro core built from the RetroStone VC
@@ -86,6 +86,108 @@ config BR2_PACKAGE_RSOS_VC_GAMES_POGOMAMIE
 	  Bounce across the rooftops of Paris on a pogo stick. Avoid
 	  aerial hazards, stomp pigeons and race with up to four
 	  grannies.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_BISCUITBANDIT
+	bool "Biscuit Bandit"
+	default y
+	help
+	  A raccoon raids a bakery: catch the cookies falling from the
+	  belts on your tray, but never the cups, and carry the stack to
+	  the basket. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_CRABCOCONUT
+	bool "Crab Coconut"
+	default y
+	help
+	  A crab on the beach bounces a coconut off its claws to break
+	  the shells that rain from the sky. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_FROGREACH
+	bool "Frog Reach"
+	default y
+	help
+	  Hold to stretch the frog's tongue just far enough to catch the
+	  flies and cross the swamp from lily pad to lily pad. 1-4
+	  players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_HEDGEHOGHILLS
+	bool "Hedgehog Hills"
+	default y
+	help
+	  Curl up downhill, let go uphill: a hedgehog rolls and flies
+	  over endless woodland hills. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_MOLEMARBLES
+	bool "Mole Marbles"
+	default y
+	help
+	  A miner mole splits the bouncing gemstones of a cave with its
+	  harpoon before they crush it. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_MOTHAROUND
+	bool "Moth Around"
+	default y
+	help
+	  A moth circles a lantern at night: turn one way or the other
+	  to slip through the closing rings. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_MOUSEESPRESSO
+	bool "Mouse Espresso"
+	default y
+	help
+	  A mouse wearing an espresso machine flies through the cafe on
+	  bursts of steam, collecting biscuits. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_NUTTYBRANCH
+	bool "Nutty Branch"
+	default y
+	help
+	  A squirrel runs along an endless branch: steer, jump the gaps
+	  and dodge the traps without sliding off its sides. 1-4
+	  players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_OTTERRAPIDS
+	bool "Otter Rapids"
+	default y
+	help
+	  An otter paddles down the river, catching golden fish and
+	  dodging rocks, logs and the shadow of a hungry pike. 1-4
+	  players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_PENGUINSLALOM
+	bool "Penguin Slalom"
+	default y
+	help
+	  A penguin skis between the flags down an endless snowy slope,
+	  catching fish and dodging polar bears. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_RADISHRASCALS
+	bool "Radish Rascals"
+	default y
+	help
+	  A farmer shoos the rabbits from the vegetable beds with a
+	  pitchfork, but must spare the hedgehogs. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_RACCOONRECYCLER
+	bool "Raccoon Recycler"
+	default y
+	help
+	  A raccoon sorts the toys sliding down the chutes by kind or by
+	  colour, while the rules keep changing. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_SNAILSWITCH
+	bool "Snail Switch"
+	default y
+	help
+	  A snail flips above or below the vine to dodge thorns and
+	  caterpillars and reach the fruits. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_SPIDERSWING
+	bool "Spider Swing"
+	default y
+	help
+	  A spider swings from flower to flower on its silk and climbs
+	  ever higher. 1-4 players.
 
 endif
 

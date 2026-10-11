@@ -13,6 +13,20 @@ of the menu's carousel:
 | **Beaver Rush** | 1-4 | `beaverrush_libretro.so` | `/usr/share/rsos/games/retrostone/Beaver Rush.beaverrush` |
 | **Pancake Tower** | 1-4 | `pancaketower_libretro.so` | `/usr/share/rsos/games/retrostone/Pancake Tower.pancaketower` |
 | **Pogo Mamie** | 1-4 | `pogomamie_libretro.so` | `/usr/share/rsos/games/retrostone/Pogo Mamie.pogomamie` |
+| **Biscuit Bandit** | 1-4 | `biscuitbandit_libretro.so` | `/usr/share/rsos/games/retrostone/Biscuit Bandit.biscuitbandit` |
+| **Crab Coconut** | 1-4 | `crabcoconut_libretro.so` | `/usr/share/rsos/games/retrostone/Crab Coconut.crabcoconut` |
+| **Frog Reach** | 1-4 | `frogreach_libretro.so` | `/usr/share/rsos/games/retrostone/Frog Reach.frogreach` |
+| **Hedgehog Hills** | 1-4 | `hedgehoghills_libretro.so` | `/usr/share/rsos/games/retrostone/Hedgehog Hills.hedgehoghills` |
+| **Mole Marbles** | 1-4 | `molemarbles_libretro.so` | `/usr/share/rsos/games/retrostone/Mole Marbles.molemarbles` |
+| **Moth Around** | 1-4 | `motharound_libretro.so` | `/usr/share/rsos/games/retrostone/Moth Around.motharound` |
+| **Mouse Espresso** | 1-4 | `mouseespresso_libretro.so` | `/usr/share/rsos/games/retrostone/Mouse Espresso.mouseespresso` |
+| **Nutty Branch** | 1-4 | `nuttybranch_libretro.so` | `/usr/share/rsos/games/retrostone/Nutty Branch.nuttybranch` |
+| **Otter Rapids** | 1-4 | `otterrapids_libretro.so` | `/usr/share/rsos/games/retrostone/Otter Rapids.otterrapids` |
+| **Penguin Slalom** | 1-4 | `penguinslalom_libretro.so` | `/usr/share/rsos/games/retrostone/Penguin Slalom.penguinslalom` |
+| **Radish Rascals** | 1-4 | `radishrascals_libretro.so` | `/usr/share/rsos/games/retrostone/Radish Rascals.radishrascals` |
+| **Raccoon Recycler** | 1-4 | `raccoonrecycler_libretro.so` | `/usr/share/rsos/games/retrostone/Raccoon Recycler.raccoonrecycler` |
+| **Snail Switch** | 1-4 | `snailswitch_libretro.so` | `/usr/share/rsos/games/retrostone/Snail Switch.snailswitch` |
+| **Spider Swing** | 1-4 | `spiderswing_libretro.so` | `/usr/share/rsos/games/retrostone/Spider Swing.spiderswing` |
 
 Each game is a libretro core with the game built in: there is no ROM file to copy, the games are part of the system
 (and of its updates).
@@ -23,14 +37,14 @@ Each game is a libretro core with the game built in: there is no ROM file to cop
   [PaddleStroke/RetroStoneVC](https://github.com/PaddleStroke/RetroStoneVC): `sdk/` (the runtime, the libretro
   frontend; **MIT**, (c) 2026 Pierre-Louis Boyer (8BCraft)), `tools/` (MIT), the vendored third-party code of
   `sdk/third_party/` (libxmp-lite MIT, stb MIT/public domain, libretro.h MIT; `THIRD_PARTY.md`), and the games in
-  `games/<game>/` for all seven games: the game **code under MIT**, the game **art, music, sound, levels and
+  `games/<game>/` for every game: the game **code under MIT**, the game **art, music, sound, levels and
   design documents under CC BY-NC-SA 4.0** (`games/<game>/LICENSE` lists the paths; `LICENSE-CC-BY-NC-SA-4.0.txt`).
   The names and logos "Bomber Mole", "Leady Squid", "RetroStone" and "8BCraft" are not licensed: a fork must rename.
 - Local builds use a checkout next to this one; CI checks out the public repository (below, and [ci.md](ci.md)
   section 4).
 - `RSOS_VC_GAMES_LICENSE` lists MIT (the SDK, tools and game code) and CC-BY-NC-SA-4.0 (the game assets), and the
   package is redistributed (no `_REDISTRIBUTE = NO`): `make legal-info` saves the licence texts (`LICENSE-MIT`,
-  `LICENSE-CC-BY-NC-SA-4.0.txt`, `THIRD_PARTY.md`, all seven game `LICENSE` files) and the source (the synced
+  `LICENSE-CC-BY-NC-SA-4.0.txt`, `THIRD_PARTY.md`, every game's `LICENSE` file) and the source (the synced
   checkout, without the art inbox). The CC BY-NC-SA art is one more reason the images must not be sold.
 - On the device: `/usr/share/rsos/licenses/retrostone-vc/` (the same texts, and `COMMIT`: the RetroStone VC commit
   the cores were built from, also in the `commit =` line of each core's `.ini`).
@@ -64,7 +78,7 @@ Each game is a libretro core with the game built in: there is no ROM file to cop
   - `/usr/lib/libretro/<game>_libretro.so` (stripped on the RetroStone2: Bomber Mole 403 KB, Leady Squid 231 KB, assets included);
   - `/usr/share/rsos/cores/<game>.ini`: `systems = retrostone`, `extensions = <game>`, **`no_content = true`**,
     `savestates = true`;
-  - `/usr/share/rsos/games/retrostone/`: the seven menu entries (small text files, never read), `gamelist.xml`
+  - `/usr/share/rsos/games/retrostone/`: the menu entries (one per game) (small text files, never read), `gamelist.xml`
     (names, descriptions, genre, players, developer; `package/rsos-vc-games/gamelist.xml`) and
     `media/images/<name>.png` (the title screens of the games' `docs/screenshots/`, 640x480);
   - `/usr/share/rsos/licenses/retrostone-vc/`.

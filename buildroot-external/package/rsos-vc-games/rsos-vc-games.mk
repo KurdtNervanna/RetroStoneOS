@@ -25,7 +25,7 @@ RSOS_VC_GAMES_LICENSE_FILES = LICENSE-MIT LICENSE-CC-BY-NC-SA-4.0.txt THIRD_PART
 	games/blueberrytumble/LICENSE \
 	games/beaverrush/LICENSE \
 	games/pancaketower/LICENSE \
-	games/pogomamie/LICENSE
+	games/pogomamie/LICENSE \n	games/biscuitbandit/LICENSE \n	games/crabcoconut/LICENSE \n	games/frogreach/LICENSE \n	games/hedgehoghills/LICENSE \n	games/molemarbles/LICENSE \n	games/motharound/LICENSE \n	games/mouseespresso/LICENSE \n	games/nuttybranch/LICENSE \n	games/otterrapids/LICENSE \n	games/penguinslalom/LICENSE \n	games/radishrascals/LICENSE \n	games/raccoonrecycler/LICENSE \n	games/snailswitch/LICENSE \n	games/spiderswing/LICENSE
 # Not copied into the build directory: the developer's own builds, the
 # deliverables, the image agent's art inbox (tens of MB, not used by the
 # build: the games build with their committed art sets, e.g. Bomber Mole's
@@ -59,7 +59,7 @@ RSOS_VC_GAMES_LIST = \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_BLUEBERRYTUMBLE),blueberrytumble) \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_BEAVERRUSH),beaverrush) \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_PANCAKETOWER),pancaketower) \
-	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_POGOMAMIE),pogomamie)
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_POGOMAMIE),pogomamie) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_BISCUITBANDIT),biscuitbandit) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_CRABCOCONUT),crabcoconut) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_FROGREACH),frogreach) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_HEDGEHOGHILLS),hedgehoghills) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_MOLEMARBLES),molemarbles) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_MOTHAROUND),motharound) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_MOUSEESPRESSO),mouseespresso) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_NUTTYBRANCH),nuttybranch) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_OTTERRAPIDS),otterrapids) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_PENGUINSLALOM),penguinslalom) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_RADISHRASCALS),radishrascals) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_RACCOONRECYCLER),raccoonrecycler) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_SNAILSWITCH),snailswitch) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_SPIDERSWING),spiderswing)
 # The menu entry name (the game's name: the saves are named after it) and
 # the picture of the game list (the title screen, 640x480).
 RSOS_VC_GAMES_NAME_bombermole = Bomber Mole
@@ -76,6 +76,34 @@ RSOS_VC_GAMES_NAME_pancaketower = Pancake Tower
 RSOS_VC_GAMES_SHOT_pancaketower = games/pancaketower/docs/screenshots/title.png
 RSOS_VC_GAMES_NAME_pogomamie = Pogo Mamie
 RSOS_VC_GAMES_SHOT_pogomamie = games/pogomamie/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_biscuitbandit = Biscuit Bandit
+RSOS_VC_GAMES_SHOT_biscuitbandit = games/biscuitbandit/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_crabcoconut = Crab Coconut
+RSOS_VC_GAMES_SHOT_crabcoconut = games/crabcoconut/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_frogreach = Frog Reach
+RSOS_VC_GAMES_SHOT_frogreach = games/frogreach/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_hedgehoghills = Hedgehog Hills
+RSOS_VC_GAMES_SHOT_hedgehoghills = games/hedgehoghills/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_molemarbles = Mole Marbles
+RSOS_VC_GAMES_SHOT_molemarbles = games/molemarbles/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_motharound = Moth Around
+RSOS_VC_GAMES_SHOT_motharound = games/motharound/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_mouseespresso = Mouse Espresso
+RSOS_VC_GAMES_SHOT_mouseespresso = games/mouseespresso/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_nuttybranch = Nutty Branch
+RSOS_VC_GAMES_SHOT_nuttybranch = games/nuttybranch/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_otterrapids = Otter Rapids
+RSOS_VC_GAMES_SHOT_otterrapids = games/otterrapids/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_penguinslalom = Penguin Slalom
+RSOS_VC_GAMES_SHOT_penguinslalom = games/penguinslalom/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_radishrascals = Radish Rascals
+RSOS_VC_GAMES_SHOT_radishrascals = games/radishrascals/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_raccoonrecycler = Raccoon Recycler
+RSOS_VC_GAMES_SHOT_raccoonrecycler = games/raccoonrecycler/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_snailswitch = Snail Switch
+RSOS_VC_GAMES_SHOT_snailswitch = games/snailswitch/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_spiderswing = Spider Swing
+RSOS_VC_GAMES_SHOT_spiderswing = games/spiderswing/docs/screenshots/title.png
 
 # The asset step (games/<game>/tools/build_assets.py) needs Pillow, which
 # Buildroot has no host package for: the build host's own python3
@@ -135,7 +163,7 @@ define RSOS_VC_GAMES_INSTALL_GAME
 	$(INSTALL) -D -m 0644 $(@D)/games/$(1)/LICENSE $(RSOS_VC_GAMES_TARGET_LICENSES)/$(1)/LICENSE
 endef
 
-# gamelist.xml lists all seven games; the menu drops an entry without its file
+# gamelist.xml lists every game; the menu drops an entry without its file
 # (a game turned off in menuconfig).
 define RSOS_VC_GAMES_INSTALL_TARGET_CMDS
 	rm -rf $(RSOS_VC_GAMES_TARGET_GAMES) $(RSOS_VC_GAMES_TARGET_LICENSES)

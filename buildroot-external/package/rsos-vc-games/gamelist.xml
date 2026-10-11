@@ -77,4 +77,158 @@
 		<genre>Action, Platform</genre>
 		<players>1-4</players>
 	</game>
+	<game>
+		<path>./Biscuit Bandit.biscuitbandit</path>
+		<name>Biscuit Bandit</name>
+		<desc>A raccoon raids a bakery: catch the cookies falling from the belts on your tray, but never the cups, and carry the stack to the basket. Up to four players.</desc>
+		<image>./media/images/Biscuit Bandit.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Crab Coconut.crabcoconut</path>
+		<name>Crab Coconut</name>
+		<desc>A crab on the beach bounces a coconut off its claws to break the shells that rain from the sky. Up to four players.</desc>
+		<image>./media/images/Crab Coconut.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Frog Reach.frogreach</path>
+		<name>Frog Reach</name>
+		<desc>Hold to stretch the frog's tongue just far enough to catch the flies and cross the swamp from lily pad to lily pad. Up to four players.</desc>
+		<image>./media/images/Frog Reach.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Hedgehog Hills.hedgehoghills</path>
+		<name>Hedgehog Hills</name>
+		<desc>Curl up downhill, let go uphill: a hedgehog rolls and flies over endless woodland hills. Up to four players.</desc>
+		<image>./media/images/Hedgehog Hills.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Mole Marbles.molemarbles</path>
+		<name>Mole Marbles</name>
+		<desc>A miner mole splits the bouncing gemstones of a cave with its harpoon before they crush it. Up to four players.</desc>
+		<image>./media/images/Mole Marbles.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Moth Around.motharound</path>
+		<name>Moth Around</name>
+		<desc>A moth circles a lantern at night: turn one way or the other to slip through the closing rings. Up to four players.</desc>
+		<image>./media/images/Moth Around.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Mouse Espresso.mouseespresso</path>
+		<name>Mouse Espresso</name>
+		<desc>A mouse wearing an espresso machine flies through the cafe on bursts of steam, collecting biscuits. Up to four players.</desc>
+		<image>./media/images/Mouse Espresso.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Nutty Branch.nuttybranch</path>
+		<name>Nutty Branch</name>
+		<desc>A squirrel runs along an endless branch: steer, jump the gaps and dodge the traps without sliding off its sides. Up to four players.</desc>
+		<image>./media/images/Nutty Branch.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Platform</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Otter Rapids.otterrapids</path>
+		<name>Otter Rapids</name>
+		<desc>An otter paddles down the river, catching golden fish and dodging rocks, logs and the shadow of a hungry pike. Up to four players.</desc>
+		<image>./media/images/Otter Rapids.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Penguin Slalom.penguinslalom</path>
+		<name>Penguin Slalom</name>
+		<desc>A penguin skis between the flags down an endless snowy slope, catching fish and dodging polar bears. Up to four players.</desc>
+		<image>./media/images/Penguin Slalom.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Sports</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Radish Rascals.radishrascals</path>
+		<name>Radish Rascals</name>
+		<desc>A farmer shoos the rabbits from the vegetable beds with a pitchfork, but must spare the hedgehogs. Up to four players.</desc>
+		<image>./media/images/Radish Rascals.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Raccoon Recycler.raccoonrecycler</path>
+		<name>Raccoon Recycler</name>
+		<desc>A raccoon sorts the toys sliding down the chutes by kind or by colour, while the rules keep changing. Up to four players.</desc>
+		<image>./media/images/Raccoon Recycler.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Puzzle</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Snail Switch.snailswitch</path>
+		<name>Snail Switch</name>
+		<desc>A snail flips above or below the vine to dodge thorns and caterpillars and reach the fruits. Up to four players.</desc>
+		<image>./media/images/Snail Switch.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Spider Swing.spiderswing</path>
+		<name>Spider Swing</name>
+		<desc>A spider swings from flower to flower on its silk and climbs ever higher. Up to four players.</desc>
+		<image>./media/images/Spider Swing.png</image>
+		<releasedate>20261011T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Platform</genre>
+		<players>1-4</players>
+	</game>
 </gameList>
