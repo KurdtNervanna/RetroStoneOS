@@ -25,7 +25,21 @@ RSOS_VC_GAMES_LICENSE_FILES = LICENSE-MIT LICENSE-CC-BY-NC-SA-4.0.txt THIRD_PART
 	games/blueberrytumble/LICENSE \
 	games/beaverrush/LICENSE \
 	games/pancaketower/LICENSE \
-	games/pogomamie/LICENSE \n	games/biscuitbandit/LICENSE \n	games/crabcoconut/LICENSE \n	games/frogreach/LICENSE \n	games/hedgehoghills/LICENSE \n	games/molemarbles/LICENSE \n	games/motharound/LICENSE \n	games/mouseespresso/LICENSE \n	games/nuttybranch/LICENSE \n	games/otterrapids/LICENSE \n	games/penguinslalom/LICENSE \n	games/radishrascals/LICENSE \n	games/raccoonrecycler/LICENSE \n	games/snailswitch/LICENSE \n	games/spiderswing/LICENSE
+	games/pogomamie/LICENSE \
+	games/biscuitbandit/LICENSE \
+	games/crabcoconut/LICENSE \
+	games/frogreach/LICENSE \
+	games/hedgehoghills/LICENSE \
+	games/molemarbles/LICENSE \
+	games/motharound/LICENSE \
+	games/mouseespresso/LICENSE \
+	games/nuttybranch/LICENSE \
+	games/otterrapids/LICENSE \
+	games/penguinslalom/LICENSE \
+	games/radishrascals/LICENSE \
+	games/raccoonrecycler/LICENSE \
+	games/snailswitch/LICENSE \
+	games/spiderswing/LICENSE
 # Not copied into the build directory: the developer's own builds, the
 # deliverables, the image agent's art inbox (tens of MB, not used by the
 # build: the games build with their committed art sets, e.g. Bomber Mole's
@@ -59,7 +73,21 @@ RSOS_VC_GAMES_LIST = \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_BLUEBERRYTUMBLE),blueberrytumble) \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_BEAVERRUSH),beaverrush) \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_PANCAKETOWER),pancaketower) \
-	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_POGOMAMIE),pogomamie) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_BISCUITBANDIT),biscuitbandit) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_CRABCOCONUT),crabcoconut) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_FROGREACH),frogreach) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_HEDGEHOGHILLS),hedgehoghills) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_MOLEMARBLES),molemarbles) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_MOTHAROUND),motharound) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_MOUSEESPRESSO),mouseespresso) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_NUTTYBRANCH),nuttybranch) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_OTTERRAPIDS),otterrapids) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_PENGUINSLALOM),penguinslalom) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_RADISHRASCALS),radishrascals) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_RACCOONRECYCLER),raccoonrecycler) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_SNAILSWITCH),snailswitch) \n	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_SPIDERSWING),spiderswing)
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_POGOMAMIE),pogomamie) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_BISCUITBANDIT),biscuitbandit) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_CRABCOCONUT),crabcoconut) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_FROGREACH),frogreach) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_HEDGEHOGHILLS),hedgehoghills) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_MOLEMARBLES),molemarbles) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_MOTHAROUND),motharound) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_MOUSEESPRESSO),mouseespresso) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_NUTTYBRANCH),nuttybranch) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_OTTERRAPIDS),otterrapids) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_PENGUINSLALOM),penguinslalom) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_RADISHRASCALS),radishrascals) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_RACCOONRECYCLER),raccoonrecycler) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_SNAILSWITCH),snailswitch) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_SPIDERSWING),spiderswing)
 # The menu entry name (the game's name: the saves are named after it) and
 # the picture of the game list (the title screen, 640x480).
 RSOS_VC_GAMES_NAME_bombermole = Bomber Mole
