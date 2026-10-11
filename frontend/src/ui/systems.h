@@ -9,7 +9,9 @@
 
 #include <stdbool.h>
 
-#define MAX_CORES_PER_SYSTEM 6
+/* The RetroStone system has one core per game (docs/vc-games.md: 21 now), so this is no longer "a few emulators":
+ * with 6, only the first 6 RetroStone VC games (by core id) were listed. */
+#define MAX_CORES_PER_SYSTEM 64
 
 struct core_info {
 	char id[32];              /* "snes9x2005" */
