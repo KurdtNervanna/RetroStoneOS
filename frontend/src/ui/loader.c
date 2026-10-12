@@ -155,8 +155,9 @@ static struct lres *load_one(struct loader *L, int sidx)
 	if (!sd)
 		return r;
 	if (L->empty_mt[sidx] && !has_folder_alias(sd)) {
-		/* empty last time: one stat() says whether it still is (and
-		 * one more that no read-only folder came with a system update).
+		/* empty last time: its stamp (one stat() and one readdir:
+		 * games_dir_stamp) says whether it still is (and one more stat()
+		 * that no read-only folder came with a system update).
 		 * A new alias folder does not change the primary folder's mtime,
 		 * so systems with aliases must still check those folders. */
 		struct stat st;
@@ -164,7 +165,7 @@ static struct lres *load_one(struct loader *L, int sidx)
 		snprintf(dir, sizeof(dir), "%s/%s", L->builtin_dir, sd->name);
 		if ((!L->builtin_dir[0] || !dir_exists(dir)) &&
 		    stat(L->empty_dir[sidx], &st) == 0 && S_ISDIR(st.st_mode) &&
-		    (int64_t)st.st_mtim.tv_sec * 1000000000 + st.st_mtim.tv_nsec == L->empty_mt[sidx]) {
+		    games_dir_stamp(L->empty_dir[sidx], &st) == L->empty_mt[sidx]) {
 			r->gl = xcalloc(1, sizeof(*r->gl));
 			arena_init(&r->gl->arena, 256);
 			strlcpy_(r->gl->system, sd->name, sizeof(r->gl->system));

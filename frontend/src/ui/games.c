@@ -75,6 +75,29 @@ static int64_t mtime_ns(const struct stat *st)
 	return (int64_t)st->st_mtim.tv_sec * 1000000000 + st->st_mtim.tv_nsec;
 }
 
+/* A folder's stamp for the caches: its mtime and its entries' names. The mtime
+ * alone misses games copied from a PC: Windows does not update an exFAT
+ * folder's mtime when it adds or removes a file in it (and the image's folders
+ * keep their 1980 date), so the folder looked unchanged and its games never
+ * appeared. One readdir, no stat() per file; the names are combined in any
+ * order (readdir's order may change). */
+int64_t games_dir_stamp(const char *dir, const struct stat *st)
+{
+	uint64_t h = 0, n = 0;
+	DIR *d = opendir(dir);
+	struct dirent *de;
+
+	if (d) {
+		while ((de = readdir(d)))
+			if (strcmp(de->d_name, ".") && strcmp(de->d_name, "..")) {
+				h ^= hash64_str(de->d_name, 0x5bd1e995u);
+				n++;
+			}
+		closedir(d);
+	}
+	return (int64_t)((uint64_t)mtime_ns(st) ^ (h + n * 0x9e3779b97f4a7c15ull));
+}
+
 static int64_t parse_es_date(const char *s)
 {
 	struct tm tm;
@@ -203,7 +226,7 @@ static void scan_dir(struct scan *sc, const char *dir, int depth)
 	if (depth > 4 || sc->ndirs >= MAX_DIRS || stat(dir, &st) < 0)
 		return;
 	sc->dirs[sc->ndirs] = xstrdup(dir);
-	sc->dir_mtime[sc->ndirs++] = mtime_ns(&st);
+	sc->dir_mtime[sc->ndirs++] = games_dir_stamp(dir, &st);
 	d = opendir(dir);
 	if (!d)
 		return;
@@ -616,15 +639,16 @@ static struct gamelist *cache_load(const char *cache_dir, const char *system,
 			goto fail;
 	}
 	st->parse_us += ui_now_us() - t;
-	/* validation: one stat() per scanned folder. Subfolders (games in
-	 * folders) are warmed first: a cold exFAT folder costs ~110 ms. */
+	/* validation: one stat() and one readdir per scanned folder (its stamp).
+	 * Subfolders (games in folders) are warmed first: a cold exFAT folder
+	 * costs ~110 ms. */
 	t = ui_now_us();
 	if (ndirs > 1)
 		fswarm(dirs + 1, (int)ndirs - 1, 0, NULL);
 	for (uint32_t i = 0; i < ndirs; i++) {
 		struct stat s;
 
-		if (stat(dirs[i], &s) < 0 || mtime_ns(&s) != mts[i]) {
+		if (stat(dirs[i], &s) < 0 || games_dir_stamp(dirs[i], &s) != mts[i]) {
 			st->stat_us += ui_now_us() - t;
 			goto fail;
 		}
@@ -1367,7 +1391,7 @@ bool games_changed(const struct gamelist *gl)
 	if (!gl)
 		return false;
 	for (int i = 0; i < gl->ndirs; i++)
-		if (stat(gl->dirs[i], &st) < 0 || mtime_ns(&st) != gl->dir_mtime[i])
+		if (stat(gl->dirs[i], &st) < 0 || games_dir_stamp(gl->dirs[i], &st) != gl->dir_mtime[i])
 			return true;
 	gamelist_stat(gl->glpath[0] ? gl->glpath : NULL, &mt, &sz);
 	return mt != gl->gl_mtime || sz != gl->gl_size;

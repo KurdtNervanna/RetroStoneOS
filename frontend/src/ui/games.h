@@ -56,8 +56,14 @@ struct gamelist {
 };
 
 /* True if a scanned folder or the gamelist.xml changed since the list was
- * built (a few stat() calls; used when coming back to the system view). */
+ * built (a few stat() and readdir calls; used when coming back to the system
+ * view). */
 bool games_changed(const struct gamelist *gl);
+/* A folder's stamp (gamelist.dir_mtime, the scan cache, the carousel
+ * snapshot's empty folders): its mtime combined with its entries' names, since
+ * Windows leaves an exFAT folder's mtime unchanged when it copies files in. */
+struct stat;
+int64_t games_dir_stamp(const char *dir, const struct stat *st);
 /* Deletes the scan cache of a system ("Refresh game lists"). */
 void games_invalidate(const char *cache_dir, const char *system);
 

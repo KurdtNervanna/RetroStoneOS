@@ -20,6 +20,7 @@
  *    raw otherwise; corrupt files are cache misses
  */
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,6 +71,34 @@ static void dir(const char *rel)
 
 	snprintf(p, sizeof(p), "%s/%s", W, rel);
 	mkdir(p, 0755);
+}
+
+/* What Windows does on an exFAT card: a file added to (name) or removed from
+ * (NULL: the last one added here) a folder, the folder's mtime left as it was. */
+static void copied_from_pc(const char *folder, const char *name)
+{
+	static char last[1024];
+	char d[1024];
+	struct stat st;
+	struct timespec keep[2];
+
+	snprintf(d, sizeof(d), "%s/%s", W, folder);
+	if (stat(d, &st) < 0) {
+		printf("no folder %s\n", d);
+		exit(2);
+	}
+	keep[0] = st.st_atim;
+	keep[1] = st.st_mtim;
+	if (name) {
+		snprintf(last, sizeof(last), "%s/%s", folder, name);
+		put(last, "x");
+	} else {
+		char p[1100];
+
+		snprintf(p, sizeof(p), "%s/%s", W, last);
+		unlink(p);
+	}
+	utimensat(AT_FDCWD, d, keep, 0);
 }
 
 static void make_tree(void)
@@ -536,6 +565,35 @@ int main(int argc, char **argv)
 		put("data/roms/mastersystem/Primary2.sms", "x");
 		boot(&f, NULL, NULL);
 		CHECK(strstr(f.final, "mastersystem:2"), "a populated primary folder keeps precedence");
+	}
+
+	printf("10. games copied from a PC: Windows leaves an exFAT folder's mtime unchanged\n");
+	{
+		struct boot e, f;
+		char c1[512];
+
+		/* gamegear/ is empty (remembered so by the snapshot), gba/ has two
+		 * games (their list in the scan cache): a file copied into each, then the
+		 * folder's old mtime put back, as Windows does on the card */
+		char *idx;
+
+		boot(&e, NULL, NULL);
+		CHECK(!strstr(e.final, "gamegear:") && strstr(e.final, "gba:2"), "gamegear empty, gba with two games: %s",
+		      field(e.final, "carousel", c1, sizeof(c1)));
+		idx = file_read(snap, NULL);
+		CHECK(idx && strstr(idx, "\nempty gamegear "), "the snapshot remembers gamegear as an empty folder");
+		free(idx);
+		copied_from_pc("data/roms/gamegear", "Copied.gg");
+		copied_from_pc("data/roms/gba", "Copied.gba");
+		boot(&f, NULL, NULL);
+		CHECK(strstr(f.final, "gamegear:1"), "a game copied into an empty folder is found (its mtime did not change)");
+		CHECK(strstr(f.final, "gba:3"), "a game copied into a folder with a cached list is found");
+		boot(&e, NULL, NULL);
+		CHECK(strstr(e.final, "gamegear:1") && strstr(e.final, "gba:3") && same_field(e.final, f.final, "digest"),
+		      "the next boot keeps them (from the caches)");
+		copied_from_pc("data/roms/gba", NULL);
+		boot(&f, NULL, NULL);
+		CHECK(strstr(f.final, "gba:2"), "a game deleted on a PC goes away too");
 	}
 
 	printf(g_fail ? "test_loader: %d FAILED\n" : "test_loader: all passed\n", g_fail);
