@@ -507,6 +507,37 @@ int main(int argc, char **argv)
 		systems_free();
 	}
 
+	printf("9. legacy ROM folders beside empty image-created folders\n");
+	{
+		struct boot e, f;
+		char cache[700];
+		struct stat before, after;
+
+		/* The previous snapshot remembers mastersystem/ as empty. Adding
+		 * sms/ changes neither that folder nor its mtime. */
+		dir("data/roms/sms");
+		dir("data/roms/sms/subfolder");
+		put("data/roms/sms/subfolder/Legacy.sms", "x");
+		boot(&e, NULL, NULL);
+		CHECK(strstr(e.final, "mastersystem:1"), "a new alias is found despite the empty-folder snapshot");
+		snprintf(cache, sizeof(cache), "%s/data/rsos/cache/scan/mastersystem.bin", W);
+		CHECK(stat(cache, &before) == 0, "the populated alias has a scan cache");
+		boot(&f, NULL, NULL);
+		CHECK(strstr(f.final, "mastersystem:1") && same_field(e.final, f.final, "digest"),
+		      "the alias survives the next cached boot");
+		CHECK(stat(cache, &after) == 0 && before.st_mtim.tv_sec == after.st_mtim.tv_sec &&
+		      before.st_mtim.tv_nsec == after.st_mtim.tv_nsec,
+		      "the empty primary does not overwrite the alias cache and force another scan");
+		unlink(snap);
+		boot(&f, NULL, NULL);
+		CHECK(strstr(f.final, "mastersystem:1") && same_field(e.final, f.final, "digest"),
+		      "the alias is also found without a snapshot");
+		put("data/roms/mastersystem/Primary.sms", "x");
+		put("data/roms/mastersystem/Primary2.sms", "x");
+		boot(&f, NULL, NULL);
+		CHECK(strstr(f.final, "mastersystem:2"), "a populated primary folder keeps precedence");
+	}
+
 	printf(g_fail ? "test_loader: %d FAILED\n" : "test_loader: all passed\n", g_fail);
 	return g_fail ? 1 : 0;
 }

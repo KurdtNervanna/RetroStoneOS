@@ -136,6 +136,14 @@ static bool find_rom_folder(const char *builtin_dir, const char *roms_dir, const
 	return false;
 }
 
+static bool has_folder_alias(const struct sysdef *sd)
+{
+	for (int i = 0; i < 4 && sd->folders[i]; i++)
+		if (strcmp(sd->folders[i], sd->name))
+			return true;
+	return false;
+}
+
 static struct lres *load_one(struct loader *L, int sidx)
 {
 	const struct sysdef *sd = systems_get(sidx);
@@ -146,9 +154,11 @@ static struct lres *load_one(struct loader *L, int sidx)
 	r->sidx = sidx;
 	if (!sd)
 		return r;
-	if (L->empty_mt[sidx]) {
+	if (L->empty_mt[sidx] && !has_folder_alias(sd)) {
 		/* empty last time: one stat() says whether it still is (and
-		 * one more that no read-only folder came with a system update) */
+		 * one more that no read-only folder came with a system update).
+		 * A new alias folder does not change the primary folder's mtime,
+		 * so systems with aliases must still check those folders. */
 		struct stat st;
 
 		snprintf(dir, sizeof(dir), "%s/%s", L->builtin_dir, sd->name);
@@ -176,6 +186,43 @@ static struct lres *load_one(struct loader *L, int sidx)
 	}
 	tf = ui_now_us() - t0;
 	r->gl = games_load(sd->name, dir, L->use_cache ? L->cache_dir : NULL, L->alt, &r->st);
+	/* The image creates empty primary folders. Do not let one hide a
+	 * legacy folder (sms/, genesis/, sfc/, ...). Keep the first populated
+	 * folder's precedence, and keep built-in games authoritative. */
+	if (r->gl && !r->gl->n) {
+		char builtin[1100];
+
+		snprintf(builtin, sizeof(builtin), "%s/%s", L->builtin_dir, sd->name);
+		for (int i = 0; (!L->builtin_dir[0] || strcmp(dir, builtin)) &&
+		     i < 4 && sd->folders[i]; i++) {
+			char alias[1100];
+			struct gamelist *gl;
+			struct games_load_stats st;
+
+			if (!strcmp(sd->folders[i], sd->name))
+				continue;
+			snprintf(alias, sizeof(alias), "%s/%s", L->roms_dir, sd->folders[i]);
+			if (!strcmp(alias, dir) || !dir_exists(alias))
+				continue;
+			gl = games_load(sd->name, alias, L->use_cache ? L->cache_dir : NULL, L->alt, &st);
+			r->st.dir_us += st.dir_us;
+			r->st.read_us += st.read_us;
+			r->st.stat_us += st.stat_us;
+			r->st.parse_us += st.parse_us;
+			r->st.scan_us += st.scan_us;
+			r->st.xml_us += st.xml_us;
+			r->st.save_us += st.save_us;
+			r->st.ndirs += st.ndirs;
+			r->st.from_cache = r->st.from_cache && st.from_cache;
+			if (gl && gl->n) {
+				games_free(r->gl);
+				r->gl = gl;
+				LOGI("ui: %s games read from %s (earlier folder has no games)", sd->name, alias);
+				break;
+			}
+			games_free(gl);
+		}
+	}
 	r->st.dir_us += tf;
 	r->st.total_us = ui_now_us() - t0;   /* folder lookup included */
 	return r;

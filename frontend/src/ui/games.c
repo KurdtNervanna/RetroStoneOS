@@ -977,7 +977,10 @@ struct gamelist *games_load(const char *system, const char *rom_dir,
 	for (int i = 0; i < gl->n; i++)
 		if (gl->games[i].image || gl->games[i].desc)
 			gl->has_media = true;
-	if (cache_dir) {
+	/* A bare empty folder is remembered by the carousel snapshot's mtime.
+	 * Do not overwrite a populated alias's per-system cache with it when
+	 * the loader checks an image-created primary folder before the alias. */
+	if (cache_dir && (gl->n || sc.ndirs > 1 || have_gl)) {
 		t = ui_now_us();
 		gl->cache_written = cache_save(cache_dir, &sc, have_gl ? glpath : NULL, gl);
 		st->save_us = ui_now_us() - t;
