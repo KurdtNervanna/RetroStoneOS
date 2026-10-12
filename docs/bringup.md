@@ -18,8 +18,12 @@ kill -CONT 1                      # the menu comes back
 Logs from the menu go to `/run/rsos/frontend.log` (also shown on the UART).
 
 ### Logs without a UART
-Once the menu is on screen, the console copies its logs to the SD card every 2 seconds for 5 minutes, then every
-30 seconds up to 60 minutes (a play session): **RETROSTONE drive → `rsos/logs/`**. `last.txt` gives the newest boot
+Once the menu is on screen, the console copies its logs to the SD card:
+**RETROSTONE drive → `rsos/logs/`**. Development images copy every 2 seconds for 5 minutes, then every
+30 seconds up to 60 minutes. Release images copy at menu startup, 10 seconds later, then every 10 minutes
+for up to 60 minutes. To reproduce an intermittent issue on a release image, create an empty file named
+**`rsos/logs/verbose`** on the card before booting (no `.txt` extension); that restores the development cadence.
+Remove or rename `rsos/logs/disabled` if present, since it disables all logging. `last.txt` gives the newest boot
 number, and `boot<N>/` holds:
 - `dmesg.txt`: the kernel log
 - `frontend.log`: the menu's log
@@ -34,7 +38,16 @@ number, and `boot<N>/` holds:
 - `heartbeat.txt`: a counter; if it stopped early, the whole system froze at that moment
 - `info.txt` (also: when the menu came up, the /data mount options, the SD card's I/O scheduler)
 
-After a freeze: hold power 6 s, put the card in the PC, and zip the `rsos/logs` folder for analysis.
+To collect a report from a PC, shut down, put the SD card in a card reader, enable `verbose`, then return the
+card to the console. Reproduce within an hour of booting, note the affected button/game and approximately
+how long after startup it occurred, wait a minute for a log copy, and shut down normally. Put the card back
+in the PC and zip the whole `rsos/logs` folder. Include the image filename, SD card brand/capacity, and a
+screenshot of the `roms` folder layout plus examples of missing games' filenames/extensions (no ROM files).
+Keep reports from different consoles in separate archives. The handheld's USB power port does not expose
+the SD card to the PC. Cancel Windows prompts to format unreadable Linux partitions.
+
+After a freeze: on RetroStone2, hold power 6 s if normal shutdown is unavailable, then collect the card's logs.
+RetroStone1's slide switch cuts power in hardware; use it only when the console cannot shut down normally.
 (Create an empty file `rsos/logs/disabled` to turn the logger off.)
 
 **The first boot** (the data partition conversion) runs before the logger can write anything. Since image
@@ -43,6 +56,22 @@ a raw spot on the card (3 MiB, outside every partition), and the next boot that 
 `rsos/logs/firstboot.txt`; the splash's own log is `boot<N>/splash.log`. The splash can no longer hold the boot, and
 a first boot with no progress at all for 3 minutes lets the hardware watchdog reset the board (docs/build.md,
 "First boot").
+
+**A RetroStone1/2 first-boot loop with no readable logs:** preserve the card before reflashing or formatting.
+The reserved trace can be read from Windows even when the data partition is not mountable. Send the tester
+[`Get-RetroStoneFirstBootLog.ps1`](../scripts/support/Get-RetroStoneFirstBootLog.ps1), then have them open
+PowerShell **as Administrator**, change to the folder containing the script, and run:
+```powershell
+Get-Disk | Format-Table Number, FriendlyName, BusType, Size, IsBoot, IsSystem
+# Identify the SD card by its reader and capacity. Replace 3 with its disk NUMBER, not drive letter.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Get-RetroStoneFirstBootLog.ps1 -PhysicalDrive 3 -OutputPath .\rs1-firstboot.txt
+```
+The script opens the card read-only, reads just the reserved 64 KiB at 3 MiB, checks the trace magic, and
+saves a text file. It refuses Windows boot/system disks and never clears the trace or repairs the card.
+Extraction has been checked with synthetic disk images; physical card-reader access still needs testing.
+If no trace is found, first check `rsos/logs/firstboot.txt`: a successful boot exports and clears the raw
+record. Otherwise failure may precede the first-boot script, and a board-specific UART capture is required.
+The UART wiring below is for **RetroStone2**, not RetroStone1 (see [boards.md](boards.md#retrostone1)).
 
 ### A first boot that stays black: UART capture
 1. Wire the UART (section 0) and log the whole session to a file (PuTTY: Session > Logging > "All session output").
