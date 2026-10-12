@@ -189,6 +189,13 @@ config BR2_PACKAGE_RSOS_VC_GAMES_SPIDERSWING
 	  A spider swings from flower to flower on its silk and climbs
 	  ever higher. 1-4 players.
 
+config BR2_PACKAGE_RSOS_VC_GAMES_UNICORNHOP
+	bool "Unicorn Hop"
+	default y
+	help
+	  A unicorn hops from cloud to cloud, straight up through a sky
+	  of drifting clouds, from morning to the aurora. 1-4 players.
+
 endif
 
 comment "rsos-vc-games needs a toolchain w/ dynamic library"

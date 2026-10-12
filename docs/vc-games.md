@@ -27,6 +27,7 @@ of the menu's carousel:
 | **Raccoon Recycler** | 1-4 | `raccoonrecycler_libretro.so` | `/usr/share/rsos/games/retrostone/Raccoon Recycler.raccoonrecycler` |
 | **Snail Switch** | 1-4 | `snailswitch_libretro.so` | `/usr/share/rsos/games/retrostone/Snail Switch.snailswitch` |
 | **Spider Swing** | 1-4 | `spiderswing_libretro.so` | `/usr/share/rsos/games/retrostone/Spider Swing.spiderswing` |
+| **Unicorn Hop** | 1-4 | `unicornhop_libretro.so` | `/usr/share/rsos/games/retrostone/Unicorn Hop.unicornhop` |
 
 Each game is a libretro core with the game built in: there is no ROM file to copy, the games are part of the system
 (and of its updates).

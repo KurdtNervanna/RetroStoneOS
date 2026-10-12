@@ -231,4 +231,15 @@
 		<genre>Action, Platform</genre>
 		<players>1-4</players>
 	</game>
+	<game>
+		<path>./Unicorn Hop.unicornhop</path>
+		<name>Unicorn Hop</name>
+		<desc>A unicorn hops from cloud to cloud, straight up through a sky of drifting clouds: one tap, at the right moment. Up to four players.</desc>
+		<image>./media/images/Unicorn Hop.png</image>
+		<releasedate>20261012T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Platform</genre>
+		<players>1-4</players>
+	</game>
 </gameList>
