@@ -205,6 +205,13 @@ Select+L/R the save-state slots...). A plain Select reaches the game, and the ho
 - `scripts/ci/check-defconfigs.sh`: `BR2_PACKAGE_RSOS_VC_GAMES=y` (with its source path) and `=n` both survive
   `olddefconfig` for every board.
 
+## Source pin (2026-10-12)
+
+- CI builds the games from RetroStone VC `2dd66975511565608acf21f51bddb9093225d67f` (`RETROSTONE_VC_REF`): the 22 games
+  (Unicorn Hop and the 14 games added on 2026-10-11 join the first seven). Unicorn Hop passed its RetroStone VC
+  checks (`make unicornhop-check`, its armhf build); the image builds and `check-vc-games.py` run on the next CI
+  image build.
+
 ## Verification (2026-10-02, release game integration)
 
 - Source pinned to RetroStone VC `c60b905bbf2bfebc58980d8bc20833fa7fefe47a`.

@@ -44,7 +44,7 @@ defaults:
 env:
   # The RetroStone VC ref the images are built from: "main", or a tag or
   # commit to pin a release to.
-  RETROSTONE_VC_REF: c60b905bbf2bfebc58980d8bc20833fa7fefe47a
+  RETROSTONE_VC_REF: 2dd66975511565608acf21f51bddb9093225d67f
 
 jobs:
   boards:
