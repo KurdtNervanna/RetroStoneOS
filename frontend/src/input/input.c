@@ -1870,6 +1870,12 @@ int input_poll(struct input *in)
 						if (ie[e].type == EV_SYN && ie[e].code == SYN_REPORT) {
 							d->dropping = false;
 							dev_resync(in, d);
+							/* The snapshot is newer than the rest of ie[].
+							 * EVIOCGKEY also flushes queued kernel key events:
+							 * replaying an old press here can stick a button
+							 * whose release was just flushed. Discard the old
+							 * in-memory events before reading again. */
+							break;
 						}
 					} else if (ie[e].type == EV_KEY) {
 						handle_key(in, d, ie[e].code, ie[e].value);

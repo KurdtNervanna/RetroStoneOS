@@ -249,7 +249,7 @@ uipreview: $(UIPREVIEW)
 # ------------------------------------------------------------------ checks
 # Every module's tests. Paths are used as they are (BUILDDIR may be absolute).
 check: check-display check-host check-power check-transfer check-ui check-ui-assets check-loader check-splash \
-	check-board check-i18n check-frontend check-update check-b2 check-robust
+	check-board check-i18n check-frontend check-update check-b2 check-robust check-input
 
 check-display: $(SELFTEST) $(KMS_TEST)
 	$(SELFTEST)
@@ -404,6 +404,14 @@ $(LOADER_TEST): $(BUILDDIR)/tests/test_loader.o $(UI_OBJS)
 check-loader: $(LOADER_TEST)
 	rm -rf $(LOADER_CHECK_DIR)
 	$(LOADER_TEST) $(LOADER_CHECK_DIR) $(abspath third_party) $(abspath themes)
+
+INPUT_TEST = $(BUILDDIR)/test_input
+# The test includes input.c to mock only EVIOCGKEY; polling uses real pipes/epoll.
+$(INPUT_TEST): $(BUILDDIR)/tests/test_input.o $(filter-out $(UI_BUILD)/host/input/input.o,$(UI_OBJS))
+	$(CC) $(LDFLAGS) -o $@ $^ $(UI_LDLIBS)
+
+check-input: $(INPUT_TEST)
+	$(INPUT_TEST)
 
 # Broken or odd files (a theme, a gamelist, a font from a USB stick) do not
 # freeze or crash the menu: SVG sizes, include loops, XML text and nesting,
@@ -899,11 +907,11 @@ clean:
 
 .PHONY: all frontend-all install clean check check-display check-host check-power check-transfer \
 	check-ui check-ui-assets check-loader check-splash check-board check-frontend check-syntax check-asan uipreview \
-	splash-previews FORCE catalogs pot po-update po-stats check-i18n cjk-fonts check-robust
+	splash-previews FORCE catalogs pot po-update po-stats check-i18n cjk-fonts check-robust check-input
 
 # the batch 2 checks (check-b2), after every variable they use
 include batch2.mk
 
 -include $(LIB_OBJS:.o=.d) $(KMSTEST_OBJS:.o=.d) $(SELFTEST_OBJS:.o=.d) $(KMS_TEST_OBJS:.o=.d) $(BUILDDIR)/main.d \
 	$(BUILDDIR)/tests/test_loader.d $(BUILDDIR)/tests/test_board.d $(BUILDDIR)/tests/test_i18n.d \
-	$(BUILDDIR)/tests/test_robust.d
+	$(BUILDDIR)/tests/test_robust.d $(BUILDDIR)/tests/test_input.d
