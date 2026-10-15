@@ -266,7 +266,7 @@ H=~/rsos/output/host/bin CROSS_CC=$H/arm-linux-gcc CROSS_AR=$H/arm-linux-ar CROS
 | "Buildroot tarball ... does not match scripts/ci/buildroot.env" | the download is corrupt or the release was changed upstream: re-run; when moving to a new Buildroot release, update `buildroot.env` (version and sha256, checked against the signed `.sign` file) |
 | `make source` fails 3 times | an upstream site is down (GitHub archive, kernel.org, sourceforge): re-run later. A hash mismatch means the upstream file changed: check it and update the package's `.hash` |
 | "Fetch RetroStone VC": "repository not found" / "couldn't find remote ref" | `PaddleStroke/RetroStoneVC` is not public, or `RETROSTONE_VC_REF` in `images.yml` names a branch, tag or commit it does not have (section 4) |
-| "rsos-vc-games: /usr/bin/python3 with Pillow is needed" | the build host lacks `python3-pil` (`install-deps.sh buildroot` installs it; docs/build.md) |
+| "rsos-vc-games: /usr/bin/python3 with Pillow and NumPy is needed" | the build host lacks `python3-pil` or `python3-numpy` (`install-deps.sh buildroot` installs them; docs/build.md) |
 | "RSOS_CI_VC_GAMES=yes but ... is not a RetroStone VC checkout" | the checkout step did not run or RetroStone VC is empty: push its `main` (section 4) |
 | "selects a UART password login: set the UART_PASSWORD secret" | the defconfig uses `BR2_RETROSTONE_UART_SHELL_PASSWORD`: add the secret (no `"`, `\` or `$` in it) |
 | "Permission denied" running `post-build.sh` or `post-image.sh` | the executable bit is missing in git: section 8 |

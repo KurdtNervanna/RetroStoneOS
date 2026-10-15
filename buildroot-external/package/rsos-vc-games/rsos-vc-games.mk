@@ -137,10 +137,10 @@ RSOS_VC_GAMES_SHOT_spiderswing = games/spiderswing/docs/screenshots/title.png
 RSOS_VC_GAMES_NAME_unicornhop = Unicorn Hop
 RSOS_VC_GAMES_SHOT_unicornhop = games/unicornhop/docs/screenshots/title.png
 
-# The asset step (games/<game>/tools/build_assets.py) needs Pillow, which
-# Buildroot has no host package for: the build host's own python3
-# (python3-pil; install-deps.sh installs it for CI). Not the python3 of
-# $(HOST_DIR), which the toolchain PATH would find first.
+# The asset step (games/<game>/tools/build_assets.py) needs Pillow and NumPy,
+# which Buildroot has no host package for: the build host's own python3
+# (python3-pil, python3-numpy; install-deps.sh installs them for CI). Not the
+# python3 of $(HOST_DIR), which the toolchain PATH would find first.
 RSOS_VC_GAMES_PYTHON ?= /usr/bin/python3
 
 # The source's commit, for the .ini files and the licence folder ("-dirty":
@@ -168,8 +168,8 @@ RSOS_VC_GAMES_MAKE_OPTS = \
 	PYTHON=$(RSOS_VC_GAMES_PYTHON)
 
 define RSOS_VC_GAMES_BUILD_CMDS
-	@$(RSOS_VC_GAMES_PYTHON) -c 'import PIL' 2>/dev/null || { \
-		echo "rsos-vc-games: $(RSOS_VC_GAMES_PYTHON) with Pillow is needed (apt install python3-pil)" >&2; \
+	@$(RSOS_VC_GAMES_PYTHON) -c 'import PIL, numpy' 2>/dev/null || { \
+		echo "rsos-vc-games: $(RSOS_VC_GAMES_PYTHON) with Pillow and NumPy is needed (apt install python3-pil python3-numpy)" >&2; \
 		exit 1; }
 	$(foreach g,$(RSOS_VC_GAMES_LIST),\
 		$(TARGET_MAKE_ENV) $(MAKE) -C $(@D) GAME=$(g) $(RSOS_VC_GAMES_MAKE_OPTS) \

@@ -7,7 +7,7 @@
 #              cross compilers and the armhf/arm64 libdrm and alsa-lib from
 #              ports.ubuntu.com (multiarch)
 #   buildroot  the Buildroot host dependencies (docs/build.md) + xz/zstd, and
-#              python3-pil (the RetroStone VC games' asset step, rsos-vc-games)
+#              python3-pil and python3-numpy (the RetroStone VC games' asset step, rsos-vc-games)
 #   tests      board/common tests and the image tests: BusyBox, exFAT,
 #              mtools, QEMU and the ARM cross compiler (A/B U-Boot test)
 #   lint       shellcheck, and python3-magic for Buildroot's check-package
@@ -66,7 +66,7 @@ for p in "$@"; do
 	buildroot)
 		PKGS="$PKGS build-essential bc cpio file git libncurses-dev libssl-dev python3 rsync unzip
 			wget patch perl bzip2 gzip xz-utils zstd debianutils
-			python3-pil" ;;
+			python3-pil python3-numpy" ;;
 	tests) PKGS="$PKGS busybox-static exfatprogs mtools dosfstools util-linux fdisk
 			qemu-system-arm gcc-arm-linux-gnueabihf bison flex libssl-dev uuid-dev pkg-config bc wget
 			e2fsprogs zstd libzstd-dev libmbedtls-dev" ;;
