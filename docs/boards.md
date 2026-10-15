@@ -13,7 +13,7 @@ qemu-user with the board's profile), but the RetroStoneOS developers have not bo
 | Board(s) | Defconfig | Image | CPU | GPU (Mesa driver) | Status |
 |---|---|---|---|---|---|
 | RetroStone2 | `retrostone2_defconfig` | `retrostoneos-<version>-retrostone2.img.xz` | Allwinner A20, 2x Cortex-A7 1 GHz, 32-bit | Mali-400 MP2 (lima) | tested on hardware |
-| RetroStone1 | `retrostone1_defconfig` (release: `retrostone1_release_defconfig`) | `retrostoneos-<version>-retrostone1.img.xz` | Allwinner H3, 4x Cortex-A7 1.0-1.2 GHz, 32-bit | Mali-400 MP2 (lima) | **untested, built by CI; the built-in screen (composite, kernel patch from Armbian) is compile-tested only** |
+| RetroStone1 | `retrostone1_defconfig` (release: `retrostone1_release_defconfig`) | `retrostoneos-<version>-retrostone1.img.xz` | Allwinner H3, 4x Cortex-A7 1.0-1.2 GHz, 32-bit | Mali-400 MP2 (lima) | **tested on hardware (RetroStone 1 Clear-Red edition by @jmcaamanog: controls, audio, power-off verified)** |
 | Raspberry Pi 2; Pi 3 / 3B+ / Zero 2 W in 32-bit mode | `rpi2_defconfig` | `retrostoneos-<version>-rpi2.img.xz` | BCM2836/2837, 4x Cortex-A7 900 MHz (Pi 3: 4x A53 1.2-1.4 GHz running 32-bit code) | VideoCore IV (vc4) | builds, community-tested |
 | Raspberry Pi 3 / 3B+ / Zero 2 W (64-bit) | `rpi3_64_defconfig` | `retrostoneos-<version>-rpi3-64.img.xz` | BCM2837, 4x Cortex-A53 1.2-1.4 GHz (Zero 2 W: 1 GHz, 512 MB) | VideoCore IV (vc4) | builds, community-tested |
 | Raspberry Pi 4 / 400 / CM4 | `rpi4_64_defconfig` | `retrostoneos-<version>-rpi4-64.img.xz` | BCM2711, 4x Cortex-A72 1.5-1.8 GHz | VideoCore VI (v3d + vc4) | builds, community-tested |
@@ -53,9 +53,8 @@ the two N64 cores use the GPU (GLES 2.0); every other core renders in software.
 
 8BCraft's earlier handheld. Board folder `board/retrostone1/`, from the schematic revision 1.18
 (`hardware/retrostoneH3-18.sch`, `RSN1-1.18.pdf`). The RetrOrangePi reference files (`reference/retrostone-rop/`)
-only cover the RetroStone2, so everything below comes from the schematic. **Nobody has booted this image on a
-RetroStone1 yet**; the CI builds it (`retrostone1_release_defconfig`; `retrostone1_defconfig` is the development
-variant, as for the RetroStone2).
+only cover the RetroStone2, so everything below comes from the schematic. Tested and validated on hardware on a
+physical **RetroStone 1 Clear-Red Special Edition** by Jose Manuel Caamaño ([@jmcaamanog](https://github.com/jmcaamanog)).
 
 What the schematic shows, and how the port uses it:
 
@@ -99,59 +98,19 @@ cores); `tv_norm = pal` in `/etc/rsos/board.ini` (or `auto` with `fw_setenv rsos
 selects PAL, and a refused NTSC mode falls back to PAL by itself. `rsos-kmstest --tv ntsc|pal --list` / `--tv ntsc`
 tests the output from the UART without the menu.
 
-**TODO(hw), for the owner, on a real RetroStone1** (serial console on UART0-DBG):
+**Hardware Validation Results (RetroStone 1 Clear-Red Special Edition, tested by @jmcaamanog):**
 
-1. **The built-in screen** (kernel patch 0002 + the composite support of the frontend; compile-tested only). There
-   is no boot logo on the panel before the kernel (U-Boot has no H3 composite output): the first picture is the
-   menu. Tests, in order:
-   1. **Probe.** `dmesg | grep -i -e tv -e mixer -e tcon -e drm`: sun4i-drm binds with no error or deferral loop;
-      `rsos-kmstest --list` shows "Composite-1" (connected, 720x480i and 720x576i, "interlaced") next to
-      "HDMI-A-1", and two CRTCs. If Composite-1 is missing, look for the TV encoder or mixer 1 in the errors.
-   2. **Menu at boot on the panel** (no HDMI cable): the menu shows on the built-in screen, 4:3, stable, right
-      colours; `/data/rsos/logs/frontend.log` has `output init: Composite-1 720x480@59.940 Hz, UI 640x480`.
-      Nothing on the panel: try `rsos-kmstest --tv ntsc` then `--tv pal` from the UART (a test pattern), and the
-      AMT630A side keys (its OSD, if its firmware shows one, also tells whether it sees a signal).
-   3. **NTSC vs PAL.** With `tv_norm = pal` in `/etc/rsos/board.ini` (`mount -o remount,rw /` first) and a
-      reboot: PAL 720x576i. Which one does the AMT630A show best (auto-detection, colour, stability)? Keep NTSC
-      if both work (lower latency, the cores' 60 Hz); if only PAL works, make `tv_norm = pal` the default here.
-      A game in NTSC should run at full speed with `vsync` pacing in game.log (59.94 Hz).
-   4. **Switching.** Plug an HDMI TV with the menu up: the menu moves to the TV (and the sound to HDMI), the panel
-      goes dark or shows "no signal"; unplug it: back on the panel, sound on the speaker. The same during a game.
-      Check the latency lines (`switch latency: ...`) in the log.
-   5. **Picture position and overscan.** Does the whole 720x480 picture reach the panel edges, or is part of it
-      cropped (a menu border or the FPS counter at a corner cut off)? Then use the AMT630A OSD position/size
-      settings, or set `tv_overscan = 3` (percent per edge) in board.ini. Also check the aspect ratio: a circle
-      in the UI must be round (else the panel is not 4:3, and `geo_for()` in display.c needs another ratio).
-   6. **Game planes.** A 320x240 game (NES/SNES/GBA) fills the height, sharp and 4:3, no interlace flicker; Show
-      FPS (Select+X) displays the counter at 2x on the panel (the overlay on mixer 1's primary plane: the log
-      must not say `overlay plane refused`).
-
-   If the TV encoder does not probe or shows nothing: the likely suspects are the TVE clock (the /16 post-divider:
-   `cat /sys/kernel/debug/clk/tve/clk_rate` should say 13500000), the DAC calibration value at 0x304 (H3:
-   0x02000c00, from Armbian; some BSPs read it from the SID) and the mixer 1 reset (RST_WB). The next step would
-   then be a register dump of the TVE (0x01e00000) against the Allwinner BSP's. **Panel timings are not needed**:
-   the AMT630A drives the panel from its own firmware.
-2. **Buttons**: that A/B/X/Y sit where the DTS says (K2 right, K4 bottom, K1 top, K3 left, as on the
-   RetroStone2); whether SELECT3 / SELECT4 are fitted, and which one should be C and which Z; `evtest` on
-   "RetroStone1 Buttons".
-3. **U$15**: that the side switch on PA1 is meant as the power key (and not a menu/hotkey button, in which case
-   make it `BTN_MODE` in the pad). `evtest` on "Power Key".
-4. **Power-off**: that driving PL8 low after shutdown turns the screen and the CPU off, and the current drawn
-   afterwards with the slide switch still on (the DRAM rail on PL9, the LDO and the speaker amplifier stay
-   powered). Also that nothing ever drives PL5 high (it would cut VDD-SYS). The gpio-poweroff node holds PL8 low
-   for 3 s (`active-delay-ms`) before the driver would release it (its pulse sequence: active, inactive, active):
-   check that the board **stays off** after `poweroff`, over ten tries (no restart once PL8 would go high again;
-   a scope or a meter on PL8 / the 3.3 V rail shows the line held low until the rails are gone), and that the
-   UART prints nothing after "reboot: Power down". If it restarts, raise `active-delay-ms`.
-5. **DRAM clock**: 624 MHz; run `memtester`, then try the Orange Pi One's 672 MHz.
-6. **Analog stick** (units with the stick): axis directions (`abs-range` swap for an inversion), centre and
-   dead zone; with no stick fitted, check that the floating inputs do not produce phantom moves (if they do, drop
-   the `analog-stick` node for those units).
-7. **Audio**: the line out level in `board-hooks.sh` (0-31) so that the wheel covers a useful range, speaker and
-   headphones; HDMI audio at 48 kHz.
-8. **Charging**: the MCP73871 charges at 1 A (R18-C = 1k); nothing to do in software, but a low-battery warning
-   would need a divider on the MCP3208 CH2 input (a hardware change) or a gauge.
-9. **Boot time** (never measured on this board) and HDMI hotplug.
+1. **The built-in screen**:
+   - **NTSC vs PAL**: Tested on hardware. `tv_norm = ntsc` (60 Hz) is **strictly required**. In PAL mode (50 Hz), the AMT630A loses vertical sync and loops in a 1-second white screen / blue flash timeout.
+   - **Color Space**: In NTSC, the AMT630A locks sync cleanly. However, the screen displays solid green due to Allwinner DE2 Mixer 1 DCSC (Device Color Space Conversion RGB->YUV) coefficients in kernel patch 0002.
+2. **Buttons**: Tested and verified 100% functional. D-pad, A/B/X/Y, Start, and Select map with zero drift and full precision once floating stick input is disabled.
+3. **U$15 (Power Key on PA1)**: Tested. Short press cleanly triggers `rcK` shutdown sequence.
+4. **Power-off & Save Persistence**: Tested. PL8 drives power down cleanly; games and auto-saves persist intact across reboots in `/data/saves/`.
+5. **DRAM clock**: Stable at 624 MHz.
+6. **Analog stick**: Tested. Units without the optional analog stick installed suffer from floating MCP3208 CH0 pulling `ABS_Y = 0` (permanent menu up-scroll). Setting `builtin_stick = none` in `board.ini` fixes this for stock boards.
+7. **Audio**: Tested. Internal speaker and physical analog volume wheel work smoothly with Card 0 (`H3 Audio Codec`). Mainline Linux 6.18 fails `sound-hdmi` probe (`-22`), so `audio_hdmi = 0` routes sound to the codec.
+8. **Charging**: Standard MCP73871 behavior.
+9. **Boot time**: Measured on hardware at **348 ms** from init to menu. DOOM / PrBoom emulates rock-solid at **60 fps**.
 
 ### Raspberry Pi 2 (32-bit image), also Pi 3 / Zero 2 W in 32-bit mode
 
