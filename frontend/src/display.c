@@ -3174,8 +3174,8 @@ static int do_switch(int ci, enum display_event_reason why, struct display_switc
 			ret = apply(ci, ki, &mode, true);
 	}
 	if (ret && D.conns[ci].kind == DISPLAY_OUTPUT_LCD && conn_is_tv(D.conns[ci].type) &&
-	    !tv_mode_is_pal(&mode) && !D.tv_pal_fallback && D.cfg.tv_norm == DISPLAY_TV_NTSC) {
-		/* The built-in composite screen: PAL is the fallback of NTSC. */
+	    !tv_mode_is_pal(&mode) && !D.tv_pal_fallback && D.cfg.tv_norm == DISPLAY_TV_AUTO) {
+		/* The built-in composite screen: PAL is the fallback of NTSC when norm is AUTO. */
 		dlog(DISPLAY_LOG_ERROR, "NTSC refused on %s (%s): trying PAL", D.conns[ci].name, strerror(-ret));
 		D.tv_pal_fallback = true;
 		if (pick_mode(&D.conns[ci], &mode, &builtin) && tv_mode_is_pal(&mode))

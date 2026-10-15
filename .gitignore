@@ -47,3 +47,7 @@ es-theme*.zip
 # --- RetroStone VC games: the checkout of the public PaddleStroke/RetroStoneVC
 #     that CI makes here (docs/vc-games.md)
 /.vc-games-src/
+
+# --- Local hardware test logs and notes
+/logs_*/
+NOTAS/
