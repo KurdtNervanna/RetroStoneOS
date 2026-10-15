@@ -452,7 +452,11 @@
 	};
 };
 
-/* TCON1 and the TV encoder of the built-in screen (see &mixer1) */
+/* Mixer 1, TCON1 and the TV encoder of the built-in screen */
+&mixer1 {
+	status = "okay";
+};
+
 &tcon1 {
 	status = "okay";
 };
