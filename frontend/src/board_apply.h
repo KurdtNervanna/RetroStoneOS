@@ -34,11 +34,16 @@ static inline void board_apply_input(const struct board_profile *b, struct input
  * opts out (panel-power-switched), for the panel connector types that need
  * it: DPI, LVDS, DSI, Unknown (a DPI panel behind a bridge) - and any
  * internal connector when the board does not list them (auto, or no
- * board.ini: fail safe). Never for a board without a built-in panel, nor for
- * a composite screen behind its own controller (the RetroStone1). */
+ * board.ini: fail safe). Never for a board without a built-in panel. Also
+ * for a composite screen behind its own controller (the RetroStone1's
+ * AMT630A): no DC bias there, but without a signal the controller shows its
+ * "no signal" screen with the backlight on (the SoC cannot switch it off),
+ * so it scans black behind HDMI and when the screen is off. */
 static inline bool board_panel_keeps_scanning(const struct board_profile *b)
 {
-	const unsigned need = 1u << 0 /* Unknown */ | 1u << 7 /* LVDS */ | 1u << 16 /* DSI */ | 1u << 17 /* DPI */;
+	const unsigned need = 1u << 0 /* Unknown */ | 1u << 7 /* LVDS */ | 1u << 16 /* DSI */ | 1u << 17 /* DPI */ |
+			      1u << 5 /* Composite */ | 1u << 6 /* SVIDEO */ | 1u << 8 /* Component */ |
+			      1u << 13 /* TV */;
 
 	if (!(b->display_quirks & BOARD_QUIRK_PANEL_KEEP_SCANNING))
 		return false;

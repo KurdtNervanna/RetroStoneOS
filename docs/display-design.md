@@ -204,8 +204,11 @@ Nothing here is used on the RetroStone2.
   overlay on the primary plane. It only does that for a CRTC with no ARGB8888 overlay plane and a lower XRGB8888
   overlay plane (by `zpos`): the A20 backends and the H3 mixer 0 (HDMI) keep the game on their primary plane. The
   RetroStone1 has no battery gauge, so its overlay only ever shows the FPS counter.
+- **Behind HDMI and screen off: black.** The composite output keeps scanning a black frame (§8.5 panel safety, applied
+  to the composite screen for the AMT630A's "no signal" screen). Mirroring the menu on both outputs is not done.
 - `rsos-kmstest --tv ntsc|pal|auto` treats the composite output as the built-in screen (for tests from the UART).
-- TODO(hw): everything above on a RetroStone1 (docs/boards.md, "RetroStone1").
+- TODO(hw): everything above on a RetroStone1 (docs/boards.md, "RetroStone1"). The menu on the built-in screen works
+  (board v1.3, 2026-10-16).
 
 ## 4. Switching sequence
 
@@ -551,7 +554,11 @@ off for the whole HDMI session), and so could a game child's exit or the fronten
 
 If the panel cannot be lit for HDMI (the black frame or its commit refused), the HDMI switch is refused and the
 panel stays the output. A board whose HDMI could only use the panel's CRTC stays on the panel (logged). Without the
-quirk (RetroStone1: its TFT is driven by the AMT630A's own controller; Pi, Orange Pi) nothing changes.
+quirk (Pi, Orange Pi: no built-in panel) nothing changes. The RetroStone1's composite screen keeps scanning too
+(2026-10-16), for another reason: its TFT is driven by the AMT630A's own controller (no DC bias), but without a
+signal the AMT630A shows its "no signal" screen with the backlight on, and the SoC cannot switch that backlight. So
+behind HDMI and with the screen off it scans black (never the boot logo, which would stay lit), and its first commit
+also sets the connector's "TV mode" property (sun4i_tv encodes that, not the CRTC mode).
 
 Remaining windows, all short: power-on to the splash's first modeset (U-Boot does not drive the LCD, the kernel
 brings the display up), and each modeset of the panel. Tested against a KMS mock (`tests/test_display_kms.c`, `make

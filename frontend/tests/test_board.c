@@ -418,7 +418,8 @@ static void test_parser(void)
 			{ "internal_display = lvds\n", true },
 			{ "internal_display = dsi\n", true },
 			{ "internal_display = auto\n", true },
-			{ "internal_display = composite\n", false },
+			{ "internal_display = composite\n", true },
+			{ "internal_display = composite\ndisplay_quirks = panel-power-switched\n", false },
 			{ "internal_display = none\n", false },
 			{ "internal_display = hdmi\n", false },
 			{ "internal_display = dpi\ndisplay_quirks = panel-power-switched\n", false },
@@ -481,7 +482,7 @@ static void test_other(const char *path)
 		board_apply_display(&b, &dc);
 		CHECK(dc.internal_mode == DISPLAY_INTERNAL_LIST && dc.internal_types == (1u << T_COMPOSITE) &&
 		      dc.tv_norm == DISPLAY_TV_NTSC, "RetroStone1: display config");
-		CHECK(!dc.panel_keep_scanning, "RetroStone1: no panel-keep-scanning (the AMT630A drives the TFT)");
+		CHECK(dc.panel_keep_scanning, "RetroStone1: the composite screen keeps scanning (black behind HDMI)");
 		ui_config_defaults(&uc);
 		board_apply_ui(&b, &uc);
 		CHECK(!uc.has_internal_display && !uc.lcd_refresh_choice,

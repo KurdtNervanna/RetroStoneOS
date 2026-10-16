@@ -317,6 +317,17 @@ static const drmModeModeInfo panel_mode = {
 	.type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED, .name = "640x480",
 };
 
+/* The RetroStone1's built-in screen: the H3 TV encoder's NTSC mode. */
+static const drmModeModeInfo ntsc_mode = {
+	.clock = 13500, .hdisplay = 720, .hsync_start = 736, .hsync_end = 800, .htotal = 858,
+	.vdisplay = 480, .vsync_start = 486, .vsync_end = 492, .vtotal = 525, .vrefresh = 60,
+	.flags = DRM_MODE_FLAG_INTERLACE,
+	.type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED, .name = "720x480i",
+};
+#define TV_NTSC_VAL 2   /* the connector's "TV mode" enum values (sun4i_tv: NTSC, PAL) */
+#define TV_PAL_VAL 3
+static bool mock_composite;   /* the built-in screen is "Composite-1" (RetroStone1) */
+
 static drmModeConnectorPtr mock_conn(uint32_t id)
 {
 	drmModeConnectorPtr c = calloc(1, sizeof(*c));
@@ -328,7 +339,7 @@ static drmModeConnectorPtr mock_conn(uint32_t id)
 	c->count_modes = id == HDMI_CONN && K.hdmi_status != DRM_MODE_CONNECTED ? 0 : 1;
 	c->modes = calloc(1, sizeof(drmModeModeInfo));
 	if (c->modes)
-		c->modes[0] = id == HDMI_CONN ? mode_cea_720p60 : panel_mode;
+		c->modes[0] = id == HDMI_CONN ? mode_cea_720p60 : mock_composite ? ntsc_mode : panel_mode;
 	return c;
 }
 
@@ -476,6 +487,15 @@ static int mock_open_process(bool keep, bool hdmi, bool same_kernel, const char 
 	D.conns[0] = (struct conn){ .id = LCD_CONN, .type = DRM_MODE_CONNECTOR_Unknown, .kind = DISPLAY_OUTPUT_LCD,
 				    .possible_crtcs = 1, .prop_crtc_id = P_CONN_CRTC };
 	snprintf(D.conns[0].name, sizeof(D.conns[0].name), "Unknown-1");
+	if (mock_composite) {
+		D.cfg.internal_types = 1u << DRM_MODE_CONNECTOR_Composite;
+		D.conns[0].type = DRM_MODE_CONNECTOR_Composite;
+		D.conns[0].prop_tv_mode = P_TV_MODE;
+		D.conns[0].has_tv_ntsc = D.conns[0].has_tv_pal = true;
+		D.conns[0].tv_ntsc = TV_NTSC_VAL;
+		D.conns[0].tv_pal = TV_PAL_VAL;
+		snprintf(D.conns[0].name, sizeof(D.conns[0].name), "Composite-1");
+	}
 	D.conns[1] = (struct conn){ .id = HDMI_CONN, .type = DRM_MODE_CONNECTOR_HDMIA, .kind = DISPLAY_OUTPUT_HDMI,
 				    .possible_crtcs = 3, .prop_crtc_id = P_CONN_CRTC };
 	snprintf(D.conns[1].name, sizeof(D.conns[1].name), "HDMI-A-1");
@@ -785,6 +805,44 @@ static void test_panel_picture(void)
 	display_shutdown();
 }
 
+/*
+ * 8b. The RetroStone1: the built-in screen is the composite output (the
+ * AMT630A converter keeps its backlight on). Behind HDMI and with the screen
+ * off it scans black, never the logo, and the panel's first commit sets the
+ * connector's TV mode (sun4i_tv encodes that, not the CRTC mode).
+ */
+static void test_composite(void)
+{
+	static uint32_t logo[100 * 50];
+
+	printf("8b. panel-keep-scanning: a composite built-in screen (RetroStone1)\n");
+	for (int i = 0; i < 100 * 50; i++)
+		logo[i] = 0x00e0453au;
+	mock_composite = true;
+	CHECK(mock_open(true, true) == 0, "open on HDMI");
+	CHECK(display_output()->type == DISPLAY_OUTPUT_HDMI && display_output()->crtc_index == 1, "HDMI on CRTC 50");
+	CHECK(K.modeset_mask_seq[0] == 1 && K.modeset_mask_seq[1] == 2, "composite lit first, then HDMI (%d %d)",
+	      K.modeset_mask_seq[0], K.modeset_mask_seq[1]);
+	CHECK(panel_scanning() && fb_black(game_plane_fb(0)), "composite scanning black behind HDMI");
+	CHECK(kget(LCD_CONN, P_TV_MODE) == TV_NTSC_VAL, "its TV mode set to NTSC (%llu)",
+	      (unsigned long long)kget(LCD_CONN, P_TV_MODE));
+	CHECK(display_set_panel_picture(logo, 100, 50, 0x002a2a35u) == 0 && !D.pic && fb_black(game_plane_fb(0)),
+	      "the logo is not kept: black");
+	hotplug(false);
+	CHECK(display_output()->type == DISPLAY_OUTPUT_LCD && kget(CRTC0, P_ACTIVE) == 1, "unplugged: on the composite");
+	CHECK(display_set_game_surface(320, 240, DRM_FORMAT_XRGB8888, 0) != NULL, "surface");
+	present_red();
+	CHECK(display_set_active(false) == 0 && panel_scanning() && fb_black(game_plane_fb(0)),
+	      "screen off: the composite scans black (no \"no signal\" screen)");
+	CHECK(display_set_active(true) == 0, "screen on");
+	hotplug(true);
+	CHECK(display_output()->type == DISPLAY_OUTPUT_HDMI && panel_scanning() && fb_black(game_plane_fb(0)),
+	      "HDMI again: the composite back to black");
+	CHECK(K.joint_modesets == 0 && K.panel_broken == 0, "joint %d broken %d", K.joint_modesets, K.panel_broken);
+	display_shutdown();
+	mock_composite = false;
+}
+
 static void bl_write(const char *v)
 {
 	char p[400];
@@ -878,6 +936,7 @@ int main(void)
 	test_no_quirk();
 	test_single_crtc();
 	test_panel_picture();
+	test_composite();
 	test_first_boot_sequence();
 	{
 		char cmd[400];

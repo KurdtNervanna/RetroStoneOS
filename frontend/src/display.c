@@ -2110,6 +2110,9 @@ static int lcd_bg_prepare(void)
 		if (!r)
 			return -ENOMEM;
 		ret = add(r, c->id, c->prop_crtc_id, D.crtcs[D.lcd.ki].id);
+		/* sun4i_tv encodes the connector's TV mode, not the CRTC mode */
+		if (c->prop_tv_mode && (tv_mode_is_pal(&D.lcd.mode) ? c->has_tv_pal : c->has_tv_ntsc))
+			ret |= add(r, c->id, c->prop_tv_mode, tv_mode_is_pal(&D.lcd.mode) ? c->tv_pal : c->tv_ntsc);
 		ret |= add(r, D.crtcs[D.lcd.ki].id, D.crtcs[D.lcd.ki].prop_active, 1);
 		ret |= add(r, D.crtcs[D.lcd.ki].id, D.crtcs[D.lcd.ki].prop_mode_id, D.lcd.blob);
 		ret |= add_plane(r, p, D.crtcs[D.lcd.ki].id, lcd_bg_fb(), D.black_w, D.black_h, &full);
@@ -4278,6 +4281,10 @@ int display_set_panel_picture(const uint32_t *xrgb, int w, int h, uint32_t bg)
 	uint32_t *p = NULL;
 
 	if (!D.inited || !D.lcd.on)
+		return 0;
+	/* A composite screen (the RetroStone1's AMT630A) keeps its backlight on
+	 * behind HDMI: black, not the logo. */
+	if (conn_is_tv(D.conns[D.lcd.ci].type))
 		return 0;
 	if (xrgb && (w < 1 || h < 1 || w > 4096 || h > 4096))
 		return -EINVAL;
