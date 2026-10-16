@@ -13,7 +13,7 @@ qemu-user with the board's profile), but the RetroStoneOS developers have not bo
 | Board(s) | Defconfig | Image | CPU | GPU (Mesa driver) | Status |
 |---|---|---|---|---|---|
 | RetroStone2 | `retrostone2_defconfig` | `retrostoneos-<version>-retrostone2.img.xz` | Allwinner A20, 2x Cortex-A7 1 GHz, 32-bit | Mali-400 MP2 (lima) | tested on hardware |
-| RetroStone1 | `retrostone1_defconfig` (release: `retrostone1_release_defconfig`) | `retrostoneos-<version>-retrostone1.img.xz` | Allwinner H3, 4x Cortex-A7 1.0-1.2 GHz, 32-bit | Mali-400 MP2 (lima) | **tested on hardware (RetroStone 1 Clear-Red edition by @jmcaamanog: controls, audio, power-off verified)** |
+| RetroStone1 | `retrostone1_defconfig` (release: `retrostone1_release_defconfig`) | `retrostoneos-<version>-retrostone1.img.xz` | Allwinner H3, 4x Cortex-A7 1.0-1.2 GHz, 32-bit | Mali-400 MP2 (lima) | **partially tested on hardware (boards v1.3 and v1.40): works with an HDMI TV; without HDMI the board hangs and restarts (the built-in screen does not work yet)** |
 | Raspberry Pi 2; Pi 3 / 3B+ / Zero 2 W in 32-bit mode | `rpi2_defconfig` | `retrostoneos-<version>-rpi2.img.xz` | BCM2836/2837, 4x Cortex-A7 900 MHz (Pi 3: 4x A53 1.2-1.4 GHz running 32-bit code) | VideoCore IV (vc4) | builds, community-tested |
 | Raspberry Pi 3 / 3B+ / Zero 2 W (64-bit) | `rpi3_64_defconfig` | `retrostoneos-<version>-rpi3-64.img.xz` | BCM2837, 4x Cortex-A53 1.2-1.4 GHz (Zero 2 W: 1 GHz, 512 MB) | VideoCore IV (vc4) | builds, community-tested |
 | Raspberry Pi 4 / 400 / CM4 | `rpi4_64_defconfig` | `retrostoneos-<version>-rpi4-64.img.xz` | BCM2711, 4x Cortex-A72 1.5-1.8 GHz | VideoCore VI (v3d + vc4) | builds, community-tested |
@@ -103,8 +103,8 @@ UART without the menu.
 **TODO(hw), hardware testing status on physical RetroStone 1 (PCB v1.40 by @jmcaamanog, PCB v1.3 by @PaddleStroke):**
 
 1. **The built-in screen** (kernel patch 0002 + the composite support of the frontend):
-   - [x] **1. Probe.** `dmesg | grep -i -e tv -e mixer -e tcon -e drm`: sun4i-drm binds cleanly; `Composite-1` and `HDMI-A-1` are recognized. Missing `&mixer1` node in DTS fixed in commit `4e6bd91`.
-   - [ ] **2. Menu at boot on the panel** (no HDMI cable): Currently hangs early before the menu starts, causing the hardware watchdog to reset the board approximately every 15 s (black, then a 1s blue flash, then black). This behavior reproduces identically on PCB v1.3 and v1.40 even with `internal_display = none`, pointing to an early SoC/kernel hang when HDMI is not attached.
+   - [x] **1. Probe.** `dmesg | grep -i -e tv -e mixer -e tcon -e drm`: sun4i-drm binds cleanly; `Composite-1` and `HDMI-A-1` are recognized (mixer 1 was already enabled in the DTS).
+   - [ ] **2. Menu at boot on the panel** (no HDMI cable): Currently hangs early before the menu starts, causing the hardware watchdog to reset the board approximately every 15 s (black, then a 1s blue flash, then black). This behavior reproduces identically on PCB v1.3 and v1.40, and before the logger's first write (no `boot<N>` folder). `internal_display = none` does not avoid it, but it does not rule out the composite output either: the frontend then treats `Composite-1` as an external screen and still drives it when no HDMI is plugged in. Suspect: the composite start-up (patch 0002).
    - [x] **3. NTSC vs PAL.** Tested on hardware. `tv_norm = ntsc` (60 Hz) is strictly required: the AMT630A converter cannot lock onto 50 Hz PAL timings, cycling in a 1-second white screen / blue "No Signal" flash. Explicit NTSC is now guarded against PAL fallback in `frontend/src/display.c`.
    - [ ] **4. Switching.** Plug/unplug HDMI hotplug latency and transitions.
    - [ ] **5. Picture position and overscan.** AMT630A OSD position and `tv_overscan` margin settings on the panel.
