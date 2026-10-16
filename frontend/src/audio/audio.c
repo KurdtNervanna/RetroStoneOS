@@ -71,11 +71,11 @@ const char *audio_pick_device(const struct audio_config *cfg, enum audio_output 
 			if (pick < 0 && hdmi_skip-- == 0)
 				pick = card;
 		}
+		if (!hdmi && first_other < 0)
+			first_other = card;
 		if (out == AUDIO_OUT_LCD && !hdmi) {
 			if (pick < 0 && (name_has(name, "codec") || name_has(lname, "codec")))
 				pick = card;
-			if (first_other < 0)
-				first_other = card;
 		}
 		free(name);
 		free(lname);

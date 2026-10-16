@@ -14,7 +14,6 @@ name: Images
 on:
   push:
     tags: ["v*"]
-    branches: ["fix/retrostone1-board-fixes"]
   workflow_dispatch:
     inputs:
       boards:
