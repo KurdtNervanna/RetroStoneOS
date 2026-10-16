@@ -27,8 +27,8 @@
  *                             screen: the RetroStone1's composite output)
  *   tv_norm                   built-in composite screen: ntsc (720x480i  ntsc
  *                             at 59.94 Hz) | pal (720x576i at 50 Hz) |
- *                             auto (the kernel's preferred mode); ntsc
- *                             and pal fall back to each other
+ *                             auto (the kernel's preferred mode); auto
+ *                             falls back between the two
  *   tv_overscan               built-in composite screen: margin kept     0
  *                             clear on each edge, percent (0..20)
  *   internal_refresh_options  refresh rates offered for the built-in     "" (no choice)

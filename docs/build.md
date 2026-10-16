@@ -22,7 +22,7 @@ Bootlin armv7-eabihf glibc "stable" 2025.08-1 (GCC 14, C++, kernel headers 5.4),
 so no compiler is built.
 
 Ubuntu packages needed (already installed): `build-essential bc cpio file git
-libncurses-dev libssl-dev python3 rsync unzip wget`, and `python3-pil` for the
+libncurses-dev libssl-dev python3 rsync unzip wget`, and `python3-pil python3-numpy` for the
 RetroStone VC games (the rsos-vc-games asset step, docs/vc-games.md). The
 games also need a RetroStone VC checkout next to this repository
 (`../RetroStoneVC`); without one, set `BR2_PACKAGE_RSOS_VC_GAMES=n`.

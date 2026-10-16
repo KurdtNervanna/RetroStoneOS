@@ -57,9 +57,9 @@ Not tested on RetroStone1 hardware yet (docs/boards.md, "RetroStone1").
  .../allwinner,sun8i-a83t-de2-mixer.yaml       |  1 +
  drivers/clk/sunxi-ng/ccu-sun8i-h3.c           | 19 +++++-
  drivers/gpu/drm/sun4i/sun4i_tv.c              | 41 +++++++++--
- drivers/gpu/drm/sun4i/sun8i_mixer.c           | 68 ++++++++++++++++++-
+ drivers/gpu/drm/sun4i/sun8i_mixer.c           | 72 ++++++++++++++++++++-
  drivers/gpu/drm/sun4i/sun8i_mixer.h           |  8 ++-
- 7 files changed, 143 insertions(+), 15 deletions(-)
+ 7 files changed, 147 insertions(+), 15 deletions(-)
 
 diff --git a/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-display-engine.yaml b/Documentation/devicetree/bindings/display/allwinner,sun4i-a10-display-engine.yaml
 index e6088f379..999b6cf46 100644
@@ -273,7 +273,7 @@ index 31a8409b9..0f9d4dbe5 100644
  static const struct de2_fmt_info de2_formats[] = {
  	{
  		.drm_fmt = DRM_FORMAT_ARGB8888,
-@@ -400,10 +410,43 @@ static void sun8i_mixer_mode_set(struct sunxi_engine *engine,
+@@ -400,10 +410,47 @@ static void sun8i_mixer_mode_set(struct sunxi_engine *engine,
  			 interlaced ? "on" : "off");
  }
  
@@ -294,6 +294,8 @@ index 31a8409b9..0f9d4dbe5 100644
 +	regmap_bulk_write(engine->regs, SUN8I_MIXER_DCSC_COEF_REG(0),
 +			  sun8i_rgb2yuv_coef, ARRAY_SIZE(sun8i_rgb2yuv_coef));
 +	regmap_write(engine->regs, SUN8I_MIXER_DCSC_EN, 1);
++	regmap_write(engine->regs, SUN8I_MIXER_GLOBAL_DBUFF,
++		     SUN8I_MIXER_GLOBAL_DBUFF_ENABLE);
 +}
 +
 +static void sun8i_mixer_disable_color_correction(struct sunxi_engine *engine)
@@ -306,6 +308,8 @@ index 31a8409b9..0f9d4dbe5 100644
 +	DRM_DEBUG_DRIVER("Disabling color correction\n");
 +
 +	regmap_write(engine->regs, SUN8I_MIXER_DCSC_EN, 0);
++	regmap_write(engine->regs, SUN8I_MIXER_GLOBAL_DBUFF,
++		     SUN8I_MIXER_GLOBAL_DBUFF_ENABLE);
 +}
 +
  static const struct sunxi_engine_ops sun8i_engine_ops = {
@@ -320,7 +324,7 @@ index 31a8409b9..0f9d4dbe5 100644
  };
  
  static const struct regmap_config sun8i_mixer_regmap_config = {
-@@ -719,6 +762,21 @@ static const struct sun8i_mixer_cfg sun8i_h3_mixer0_cfg = {
+@@ -719,6 +766,21 @@ static const struct sun8i_mixer_cfg sun8i_h3_mixer0_cfg = {
  	.vi_num		= 1,
  };
  
@@ -342,7 +346,7 @@ index 31a8409b9..0f9d4dbe5 100644
  static const struct sun8i_mixer_cfg sun8i_r40_mixer0_cfg = {
  	.ccsc		= CCSC_MIXER0_LAYOUT,
  	.de_type	= SUN8I_MIXER_DE2,
-@@ -823,6 +881,10 @@ static const struct of_device_id sun8i_mixer_of_table[] = {
+@@ -823,6 +885,10 @@ static const struct of_device_id sun8i_mixer_of_table[] = {
  		.compatible = "allwinner,sun8i-h3-de2-mixer-0",
  		.data = &sun8i_h3_mixer0_cfg,
  	},

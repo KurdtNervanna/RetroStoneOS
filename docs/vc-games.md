@@ -64,10 +64,10 @@ Each game is a libretro core with the game built in: there is no ROM file to cop
   the same line builds the armhf core of the RetroStone2 and RetroStone1 (Cortex-A7, NEON) and the aarch64 cores of
   the Raspberry Pi / Orange Pi boards (the output folder is called `build/armhf/` whatever the architecture). No
   change to RetroStone VC was needed.
-- **Assets.** The games' assets are generated C (`games/<game>/tools/build_assets.py`), which needs **Pillow**.
-  Buildroot has no host package for it, so the package runs the build host's `/usr/bin/python3`
-  (`RSOS_VC_GAMES_PYTHON`, apt package `python3-pil`; `scripts/ci/install-deps.sh buildroot` installs it) and stops
-  with "rsos-vc-games: /usr/bin/python3 with Pillow is needed" without it.
+- **Assets.** The games' assets are generated C (`games/<game>/tools/build_assets.py`), which needs **Pillow** and **NumPy**.
+  Buildroot has no host packages for them, so the package runs the build host's `/usr/bin/python3`
+  (`RSOS_VC_GAMES_PYTHON`, apt packages `python3-pil` and `python3-numpy`; `scripts/ci/install-deps.sh buildroot` installs them) and stops
+  with "rsos-vc-games: /usr/bin/python3 with Pillow and NumPy is needed" without them.
 - **Art.** The package passes no `ART` or `CHAR_SIZE`, so the games build with RetroStone VC's default art: for
   Bomber Mole the committed set `games/bombermole/art-ai/` (the AI-generated art, placeholders only for the strips
   still to draw, 24-px characters; `make art-ai` there regenerates it from the inbox). The console shows the same

@@ -19,8 +19,8 @@ config BR2_PACKAGE_RSOS_VC_GAMES
 	  - /usr/share/rsos/licenses/retrostone-vc/.
 
 	  "make legal-info" saves the source (the synced checkout).
-	  The build needs python3 with Pillow on the build host
-	  (python3-pil) for the games' asset step.
+	  The build needs python3 with Pillow and NumPy on the build host
+	  (python3-pil, python3-numpy) for the games' asset step.
 
 # Defined even when the package is disabled: the .mk sets the local SITE from
 # it at parse time, and Buildroot parses every package .mk.

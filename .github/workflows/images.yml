@@ -59,7 +59,7 @@ jobs:
           persist-credentials: false
       - id: list
         env:
-          SELECTION: ${{ github.event_name == 'workflow_dispatch' && inputs.boards || 'release' }}
+          SELECTION: ${{ github.event_name == 'workflow_dispatch' && inputs.boards || (github.ref_type == 'tag' && 'release' || 'retrostone1') }}
         run: |
           m=$(sh scripts/ci/list-boards.sh "$SELECTION")
           echo "matrix=$m" >> "$GITHUB_OUTPUT"
