@@ -4,7 +4,7 @@
 # patch (board/retrostone1/patches/linux/0002, from Armbian), compile-tested
 # only; HDMI, the built-in buttons and stick, audio.
 #
-# ci: status=untested; the built-in screen (composite) is compile-tested only
+# ci: status=tested on hardware (menu on the built-in screen and on HDMI); games on the built-in screen not checked yet
 #
 #   make O=~/rsos/output-retrostone1 BR2_EXTERNAL=.../buildroot-external retrostone1_defconfig
 #   make O=~/rsos/output-retrostone1
