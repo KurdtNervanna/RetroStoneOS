@@ -13,7 +13,7 @@ qemu-user with the board's profile), but the RetroStoneOS developers have not bo
 | Board(s) | Defconfig | Image | CPU | GPU (Mesa driver) | Status |
 |---|---|---|---|---|---|
 | RetroStone2 | `retrostone2_defconfig` | `retrostoneos-<version>-retrostone2.img.xz` | Allwinner A20, 2x Cortex-A7 1 GHz, 32-bit | Mali-400 MP2 (lima) | tested on hardware |
-| RetroStone1 | `retrostone1_defconfig` (release: `retrostone1_release_defconfig`) | `retrostoneos-<version>-retrostone1.img.xz` | Allwinner H3, 4x Cortex-A7 1.0-1.2 GHz, 32-bit | Mali-400 MP2 (lima) | **partially tested on hardware (boards v1.3 and v1.40): works with an HDMI TV; without HDMI the board hangs and restarts (the built-in screen does not work yet)** |
+| RetroStone1 | `retrostone1_defconfig` (release: `retrostone1_release_defconfig`) | `retrostoneos-<version>-retrostone1.img.xz` | Allwinner H3, 4x Cortex-A7 1.0-1.2 GHz, 32-bit | Mali-400 MP2 (lima) | **partially tested on hardware (boards v1.3 and v1.40): the menu on the built-in screen and on an HDMI TV; switching, overscan and games on the built-in screen not checked yet** |
 | Raspberry Pi 2; Pi 3 / 3B+ / Zero 2 W in 32-bit mode | `rpi2_defconfig` | `retrostoneos-<version>-rpi2.img.xz` | BCM2836/2837, 4x Cortex-A7 900 MHz (Pi 3: 4x A53 1.2-1.4 GHz running 32-bit code) | VideoCore IV (vc4) | builds, community-tested |
 | Raspberry Pi 3 / 3B+ / Zero 2 W (64-bit) | `rpi3_64_defconfig` | `retrostoneos-<version>-rpi3-64.img.xz` | BCM2837, 4x Cortex-A53 1.2-1.4 GHz (Zero 2 W: 1 GHz, 512 MB) | VideoCore IV (vc4) | builds, community-tested |
 | Raspberry Pi 4 / 400 / CM4 | `rpi4_64_defconfig` | `retrostoneos-<version>-rpi4-64.img.xz` | BCM2711, 4x Cortex-A72 1.5-1.8 GHz | VideoCore VI (v3d + vc4) | builds, community-tested |
@@ -104,7 +104,9 @@ UART without the menu.
 
 1. **The built-in screen** (kernel patch 0002 + the composite support of the frontend):
    - [x] **1. Probe.** `dmesg | grep -i -e tv -e mixer -e tcon -e drm`: sun4i-drm binds cleanly; `Composite-1` and `HDMI-A-1` are recognized (mixer 1 was already enabled in the DTS).
-   - [ ] **2. Menu at boot on the panel** (no HDMI cable): Currently hangs early before the menu starts, causing the hardware watchdog to reset the board approximately every 15 s (black, then a 1s blue flash, then black). This behavior reproduces identically on PCB v1.3 and v1.40, and before the logger's first write (no `boot<N>` folder). `internal_display = none` does not avoid it, but it does not rule out the composite output either: the frontend then treats `Composite-1` as an external screen and still drives it when no HDMI is plugged in. Suspect: the composite start-up (patch 0002).
+   - [x] **2. Menu at boot on the panel** (no HDMI cable): works on PCB v1.3 since the FCC fix below. Before it, the
+     board froze at the first frame on the composite output and the hardware watchdog reset it about every 15 s
+     (black, then a 1 s blue flash, then black), on PCB v1.3 and v1.40 alike.
    - [x] **3. NTSC vs PAL.** Tested on hardware. `tv_norm = ntsc` (60 Hz) is strictly required: the AMT630A converter cannot lock onto 50 Hz PAL timings, cycling in a 1-second white screen / blue "No Signal" flash. Explicit NTSC is now guarded against PAL fallback in `frontend/src/display.c`.
    - [ ] **4. Switching.** Plug/unplug HDMI hotplug latency and transitions.
    - [ ] **5. Picture position and overscan.** AMT630A OSD position and `tv_overscan` margin settings on the panel.
@@ -116,6 +118,16 @@ UART without the menu.
    without strobing `SUN8I_MIXER_GLOBAL_DBUFF_ENABLE` in `SUN8I_MIXER_GLOBAL_DBUFF` (0x004) left the matrix in shadow
    registers. The TV encoder received raw RGB, displaying as solid green. Adding the `regmap_write()` latch in
    `sun8i_mixer_apply_color_correction()` in kernel patch 0002 resolves this.
+
+   **Freeze-and-reboot loop cause and fix (no FCC on mixer 1):**
+   On a DE2 mixer with a single VI channel, mainline 6.18 sets the VI plane's global alpha in the FCC block
+   (`SUN8I_MIXER_FCC_GLOBAL_ALPHA_REG`, 0xaa090), with a read-modify-write. The FCC belongs to mixer 0's video
+   enhancement unit: the H3's cut-down mixer 1 has none, and the read of the missing block locks the bus. The whole
+   board froze at the first VI plane commit on the composite output (no oops, no panic: the hardware watchdog reset
+   it). Patch 0002 gives the H3 mixer 1 configuration `no_fcc`, and the VI layer skips the FCC alpha on such a mixer.
+   Found with a debug kernel that keeps its log in RAM across the reset (pstore/ramoops) and DRM debug messages: the
+   last line was always the VI layer update of mixer 1. LibreELEC's older H3 composite patch (up to Linux 6.5)
+   probably worked because the kernels it targeted did not have that FCC alpha code yet (not checked).
 
 2. [x] **Buttons**: Verified on hardware. D-pad, A/B/X/Y, Start and Select map with 100% precision with `gpio-keys-polled`.
 3. [x] **U$15 (Power Key on PA1)**: Verified on hardware. Short press on PA1 triggers clean `rcK` shutdown.
