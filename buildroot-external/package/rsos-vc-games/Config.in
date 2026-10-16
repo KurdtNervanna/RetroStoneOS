@@ -196,6 +196,28 @@ config BR2_PACKAGE_RSOS_VC_GAMES_UNICORNHOP
 	  A unicorn hops from cloud to cloud, straight up through a sky
 	  of drifting clouds, from morning to the aurora. 1-4 players.
 
+config BR2_PACKAGE_RSOS_VC_GAMES_COSMOCORGI
+	bool "Cosmo Corgi"
+	default y
+	help
+	  A corgi astronaut flies its little rocket through space and
+	  its star shots pop the wind-up robots: a horizontal shoot 'em
+	  up. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_FISHYFEAST
+	bool "Fishy Feast"
+	default y
+	help
+	  A little fish in a big pond eats plankton and smaller fish to
+	  grow, and keeps away from the bigger ones. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_HAMSTERHAVOC
+	bool "Hamster Havoc"
+	default y
+	help
+	  A hamster in a glass-dome spaceship defends its cheese moon
+	  from waves of marching space mice. 1-4 players.
+
 endif
 
 comment "rsos-vc-games needs a toolchain w/ dynamic library"

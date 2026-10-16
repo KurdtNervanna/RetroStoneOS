@@ -40,7 +40,10 @@ RSOS_VC_GAMES_LICENSE_FILES = LICENSE-MIT LICENSE-CC-BY-NC-SA-4.0.txt THIRD_PART
 	games/raccoonrecycler/LICENSE \
 	games/snailswitch/LICENSE \
 	games/spiderswing/LICENSE \
-	games/unicornhop/LICENSE
+	games/unicornhop/LICENSE \
+	games/cosmocorgi/LICENSE \
+	games/fishyfeast/LICENSE \
+	games/hamsterhavoc/LICENSE
 # Not copied into the build directory: the developer's own builds, the
 # deliverables, the image agent's art inbox (tens of MB, not used by the
 # build: the games build with their committed art sets, e.g. Bomber Mole's
@@ -89,7 +92,10 @@ RSOS_VC_GAMES_LIST = \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_RACCOONRECYCLER),raccoonrecycler) \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_SNAILSWITCH),snailswitch) \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_SPIDERSWING),spiderswing) \
-	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_UNICORNHOP),unicornhop)
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_UNICORNHOP),unicornhop) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_COSMOCORGI),cosmocorgi) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_FISHYFEAST),fishyfeast) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_HAMSTERHAVOC),hamsterhavoc)
 # The menu entry name (the game's name: the saves are named after it) and
 # the picture of the game list (the title screen, 640x480).
 RSOS_VC_GAMES_NAME_bombermole = Bomber Mole
@@ -136,6 +142,12 @@ RSOS_VC_GAMES_NAME_spiderswing = Spider Swing
 RSOS_VC_GAMES_SHOT_spiderswing = games/spiderswing/docs/screenshots/title.png
 RSOS_VC_GAMES_NAME_unicornhop = Unicorn Hop
 RSOS_VC_GAMES_SHOT_unicornhop = games/unicornhop/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_cosmocorgi = Cosmo Corgi
+RSOS_VC_GAMES_SHOT_cosmocorgi = games/cosmocorgi/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_fishyfeast = Fishy Feast
+RSOS_VC_GAMES_SHOT_fishyfeast = games/fishyfeast/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_hamsterhavoc = Hamster Havoc
+RSOS_VC_GAMES_SHOT_hamsterhavoc = games/hamsterhavoc/docs/screenshots/title.png
 
 # The asset step (games/<game>/tools/build_assets.py) needs Pillow and NumPy,
 # which Buildroot has no host package for: the build host's own python3

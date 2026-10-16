@@ -28,6 +28,9 @@ of the menu's carousel:
 | **Snail Switch** | 1-4 | `snailswitch_libretro.so` | `/usr/share/rsos/games/retrostone/Snail Switch.snailswitch` |
 | **Spider Swing** | 1-4 | `spiderswing_libretro.so` | `/usr/share/rsos/games/retrostone/Spider Swing.spiderswing` |
 | **Unicorn Hop** | 1-4 | `unicornhop_libretro.so` | `/usr/share/rsos/games/retrostone/Unicorn Hop.unicornhop` |
+| **Cosmo Corgi** | 1-4 | `cosmocorgi_libretro.so` | `/usr/share/rsos/games/retrostone/Cosmo Corgi.cosmocorgi` |
+| **Fishy Feast** | 1-4 | `fishyfeast_libretro.so` | `/usr/share/rsos/games/retrostone/Fishy Feast.fishyfeast` |
+| **Hamster Havoc** | 1-4 | `hamsterhavoc_libretro.so` | `/usr/share/rsos/games/retrostone/Hamster Havoc.hamsterhavoc` |
 
 Each game is a libretro core with the game built in: there is no ROM file to copy, the games are part of the system
 (and of its updates).
@@ -205,7 +208,15 @@ Select+L/R the save-state slots...). A plain Select reaches the game, and the ho
 - `scripts/ci/check-defconfigs.sh`: `BR2_PACKAGE_RSOS_VC_GAMES=y` (with its source path) and `=n` both survive
   `olddefconfig` for every board.
 
-## Source pin (2026-10-12)
+## Source pin (2026-10-16)
+
+- CI builds the games from RetroStone VC `52c79c6a128328b37fb8e451a0b6aeafa876f216` (`RETROSTONE_VC_REF`): the 25 games
+  (Cosmo Corgi, Fishy Feast and Hamster Havoc join the 22). Since the previous pin, RetroStone VC changed only these
+  three games, the shared font subset (`games/common/fonts/unifont-subset.hex`) and its apps (the board games app is
+  not packaged: it does not suit the RetroStone yet). The SDK, `Makefile` and `tools/` are unchanged. The image builds
+  and `check-vc-games.py` run on the next CI image build.
+
+## Source pin (2026-10-12, previous)
 
 - CI builds the games from RetroStone VC `2dd66975511565608acf21f51bddb9093225d67f` (`RETROSTONE_VC_REF`): the 22 games
   (Unicorn Hop and the 14 games added on 2026-10-11 join the first seven). Unicorn Hop passed its RetroStone VC

@@ -3,11 +3,11 @@
 RetroStoneOS {{VERSION}}: a fast-booting firmware for the **RetroStone2** handheld (8BCraft), plus community ports
 to other boards. One SD card image per board.
 
-22 built-in RetroStone games: Bomber Mole, Beaver Rush, Biscuit Bandit, Blueberry Tumble, Crab Coconut, Duck Parade,
-Frog Reach, Hedgehog Hills, Leady Squid, Mole Marbles, Moth Around, Mouse Espresso, Nutty Branch, Otter Rapids,
-Pancake Tower, Penguin Slalom, Pogo Mamie, Raccoon Recycler, Radish Rascals, Snail Switch, Spider Swing and Unicorn Hop.
-The 21 arcade games support up to four players.
-Game source: [RetroStone VC 2dd669755115](https://github.com/PaddleStroke/RetroStoneVC/tree/2dd66975511565608acf21f51bddb9093225d67f).
+25 built-in RetroStone games: Bomber Mole, Beaver Rush, Biscuit Bandit, Blueberry Tumble, Cosmo Corgi, Crab Coconut,
+Duck Parade, Fishy Feast, Frog Reach, Hamster Havoc, Hedgehog Hills, Leady Squid, Mole Marbles, Moth Around,
+Mouse Espresso, Nutty Branch, Otter Rapids, Pancake Tower, Penguin Slalom, Pogo Mamie, Raccoon Recycler, Radish Rascals,
+Snail Switch, Spider Swing and Unicorn Hop. The 24 arcade games support up to four players.
+Game source: [RetroStone VC 52c79c6a1283](https://github.com/PaddleStroke/RetroStoneVC/tree/52c79c6a128328b37fb8e451a0b6aeafa876f216).
 
 ## Downloads
 
@@ -70,7 +70,7 @@ SD card or a kit). Sharing them for free, unchanged, is fine.
 - The other emulator cores keep their own licences (GPL, zlib, BSD and others).
 - The pre-installed games: µCity (GPL-3.0+ code, BSD-2-Clause GBT Player, CC BY-SA 4.0 graphics and music) and
   Freedoom (BSD-3-Clause); their source is in the legal-info archives.
-- The RetroStone system (22 games, [RetroStone VC](https://github.com/PaddleStroke/RetroStoneVC)):
+- The RetroStone system (25 games, [RetroStone VC](https://github.com/PaddleStroke/RetroStoneVC)):
   code under MIT, art, music, sound and levels under CC BY-NC-SA 4.0. The names and logos are not licensed.
 - Per-package licences: `legal-info/manifest.csv` in the archives below.
 

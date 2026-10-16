@@ -242,4 +242,37 @@
 		<genre>Action, Platform</genre>
 		<players>1-4</players>
 	</game>
+	<game>
+		<path>./Cosmo Corgi.cosmocorgi</path>
+		<name>Cosmo Corgi</name>
+		<desc>A corgi astronaut flies its little rocket through space, and space is full of wind-up robots: the rocket barks star shots by itself, you just fly it. Up to four players.</desc>
+		<image>./media/images/Cosmo Corgi.png</image>
+		<releasedate>20261014T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Shooter</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Fishy Feast.fishyfeast</path>
+		<name>Fishy Feast</name>
+		<desc>A little fish in a big pond: nibble plankton to grow, swallow any fish smaller than you and keep away from the bigger ones. Up to four players.</desc>
+		<image>./media/images/Fishy Feast.png</image>
+		<releasedate>20261014T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Hamster Havoc.hamsterhavoc</path>
+		<name>Hamster Havoc</name>
+		<desc>A hamster in a little glass-dome spaceship defends its cheese moon from waves of marching space mice. Up to four players.</desc>
+		<image>./media/images/Hamster Havoc.png</image>
+		<releasedate>20261013T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Shooter</genre>
+		<players>1-4</players>
+	</game>
 </gameList>
