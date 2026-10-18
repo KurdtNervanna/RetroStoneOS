@@ -43,7 +43,16 @@ RSOS_VC_GAMES_LICENSE_FILES = LICENSE-MIT LICENSE-CC-BY-NC-SA-4.0.txt THIRD_PART
 	games/unicornhop/LICENSE \
 	games/cosmocorgi/LICENSE \
 	games/fishyfeast/LICENSE \
-	games/hamsterhavoc/LICENSE
+	games/hamsterhavoc/LICENSE \
+	games/caterpillarcrawl/LICENSE \
+	games/geckogolf/LICENSE \
+	games/gopherdig/LICENSE \
+	games/jellyjam/LICENSE \
+	games/kittykibble/LICENSE \
+	games/ladybuglaps/LICENSE \
+	games/llamadrama/LICENSE \
+	games/sealshove/LICENSE \
+	games/snowballsiege/LICENSE
 # Not copied into the build directory: the developer's own builds, the
 # deliverables, the image agent's art inbox (tens of MB, not used by the
 # build: the games build with their committed art sets, e.g. Bomber Mole's
@@ -95,7 +104,16 @@ RSOS_VC_GAMES_LIST = \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_UNICORNHOP),unicornhop) \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_COSMOCORGI),cosmocorgi) \
 	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_FISHYFEAST),fishyfeast) \
-	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_HAMSTERHAVOC),hamsterhavoc)
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_HAMSTERHAVOC),hamsterhavoc) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_CATERPILLARCRAWL),caterpillarcrawl) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_GECKOGOLF),geckogolf) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_GOPHERDIG),gopherdig) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_JELLYJAM),jellyjam) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_KITTYKIBBLE),kittykibble) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_LADYBUGLAPS),ladybuglaps) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_LLAMADRAMA),llamadrama) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_SEALSHOVE),sealshove) \
+	$(if $(BR2_PACKAGE_RSOS_VC_GAMES_SNOWBALLSIEGE),snowballsiege)
 # The menu entry name (the game's name: the saves are named after it) and
 # the picture of the game list (the title screen, 640x480).
 RSOS_VC_GAMES_NAME_bombermole = Bomber Mole
@@ -148,6 +166,24 @@ RSOS_VC_GAMES_NAME_fishyfeast = Fishy Feast
 RSOS_VC_GAMES_SHOT_fishyfeast = games/fishyfeast/docs/screenshots/title.png
 RSOS_VC_GAMES_NAME_hamsterhavoc = Hamster Havoc
 RSOS_VC_GAMES_SHOT_hamsterhavoc = games/hamsterhavoc/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_caterpillarcrawl = Caterpillar Crawl
+RSOS_VC_GAMES_SHOT_caterpillarcrawl = games/caterpillarcrawl/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_geckogolf = Gecko Golf
+RSOS_VC_GAMES_SHOT_geckogolf = games/geckogolf/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_gopherdig = Gopher Dig
+RSOS_VC_GAMES_SHOT_gopherdig = games/gopherdig/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_jellyjam = Jelly Jam
+RSOS_VC_GAMES_SHOT_jellyjam = games/jellyjam/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_kittykibble = Kitty Kibble
+RSOS_VC_GAMES_SHOT_kittykibble = games/kittykibble/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_ladybuglaps = Ladybug Laps
+RSOS_VC_GAMES_SHOT_ladybuglaps = games/ladybuglaps/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_llamadrama = Llama Drama
+RSOS_VC_GAMES_SHOT_llamadrama = games/llamadrama/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_sealshove = Seal Shove
+RSOS_VC_GAMES_SHOT_sealshove = games/sealshove/docs/screenshots/title.png
+RSOS_VC_GAMES_NAME_snowballsiege = Snowball Siege
+RSOS_VC_GAMES_SHOT_snowballsiege = games/snowballsiege/docs/screenshots/title.png
 
 # The asset step (games/<game>/tools/build_assets.py) needs Pillow and NumPy,
 # which Buildroot has no host package for: the build host's own python3

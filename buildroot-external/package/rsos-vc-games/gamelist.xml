@@ -275,4 +275,103 @@
 		<genre>Action, Shooter</genre>
 		<players>1-4</players>
 	</game>
+	<game>
+		<path>./Caterpillar Crawl.caterpillarcrawl</path>
+		<name>Caterpillar Crawl</name>
+		<desc>A round green caterpillar crawls around a garden bed munching leaves: each leaf makes it longer, so mind the walls, the stones and your own tail. With friends, everyone grows as they crawl and the last one still crawling wins the round. Up to four players.</desc>
+		<image>./media/images/Caterpillar Crawl.png</image>
+		<releasedate>20261017T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Gecko Golf.geckogolf</path>
+		<name>Gecko Golf</name>
+		<desc>A little gecko in a white visor plays golf on a course that never ends, one hole per screen, over meadows, dunes, snowy hills and a candy land. Aim, hold A to charge, let go: holes in one give strokes back. Up to four players.</desc>
+		<image>./media/images/Gecko Golf.png</image>
+		<releasedate>20261017T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Sports</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Gopher Dig.gopherdig</path>
+		<name>Gopher Dig</name>
+		<desc>A gopher in a little yellow hard hat drills straight down a well of jelly-soft blocks: dig out what holds them up and they come tumbling down. Dodge them, grab the air bubbles, and see how deep you can dig. Up to four players.</desc>
+		<image>./media/images/Gopher Dig.png</image>
+		<releasedate>20261017T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Puzzle</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Jelly Jam.jellyjam</path>
+		<name>Jelly Jam</name>
+		<desc>A falling-pairs puzzle duel in a jam kitchen: put four jellies of a colour together and they melt, chains rain grey jellies into your opponent's jar. Duel the kitchen's chefs alone, or play everyone against everyone. Up to four players.</desc>
+		<image>./media/images/Jelly Jam.png</image>
+		<releasedate>20261017T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Puzzle</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Kitty Kibble.kittykibble</path>
+		<name>Kitty Kibble</name>
+		<desc>A hungry kitten eats every kibble of a room while four robot vacuums try to tidy it up. A ball of yarn turns the tables for a few seconds. Up to four players.</desc>
+		<image>./media/images/Kitty Kibble.png</image>
+		<releasedate>20261017T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Maze</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Ladybug Laps.ladybuglaps</path>
+		<name>Ladybug Laps</name>
+		<desc>Tiny ladybugs race round the garden table and through the garden, seen from above: round teacups and sugar cubes, across spilt jam and over a spoon with a hop of their wings. With friends, the screen follows the leader. Up to four players.</desc>
+		<image>./media/images/Ladybug Laps.png</image>
+		<releasedate>20261017T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Racing</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Llama Drama.llamadrama</path>
+		<name>Llama Drama</name>
+		<desc>A llama stands in an Andean meadow, and the hornets are coming: turn the long neck and spit to pop them before they sting its nose, from the morning to a starry night. Up to four players.</desc>
+		<image>./media/images/Llama Drama.png</image>
+		<releasedate>20261016T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Shooter</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Seal Shove.sealshove</path>
+		<name>Seal Shove</name>
+		<desc>Four round seals in woolly caps on a cracking ice floe, and only one may stay: belly-slide into the others and shove them into the sea. The first to 3 rounds wins the match. Up to four players.</desc>
+		<image>./media/images/Seal Shove.png</image>
+		<releasedate>20261017T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action</genre>
+		<players>1-4</players>
+	</game>
+	<game>
+		<path>./Snowball Siege.snowballsiege</path>
+		<name>Snowball Siege</name>
+		<desc>A snowball fight between snow forts, turn by turn: aim, charge and lob snowballs over the hills, with the wind changing every turn. Every splat carves the snow. Up to four players.</desc>
+		<image>./media/images/Snowball Siege.png</image>
+		<releasedate>20261017T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Strategy</genre>
+		<players>1-4</players>
+	</game>
 </gameList>

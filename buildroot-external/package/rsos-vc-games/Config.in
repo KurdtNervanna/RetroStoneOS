@@ -218,6 +218,75 @@ config BR2_PACKAGE_RSOS_VC_GAMES_HAMSTERHAVOC
 	  A hamster in a glass-dome spaceship defends its cheese moon
 	  from waves of marching space mice. 1-4 players.
 
+config BR2_PACKAGE_RSOS_VC_GAMES_CATERPILLARCRAWL
+	bool "Caterpillar Crawl"
+	default y
+	help
+	  A caterpillar crawls round a garden bed munching leaves, and
+	  grows longer with each one; with friends, the last one still
+	  crawling wins the round. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_GECKOGOLF
+	bool "Gecko Golf"
+	default y
+	help
+	  A gecko plays golf on a course that never ends, seen from the
+	  side, one hole per screen, on a budget of strokes. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_GOPHERDIG
+	bool "Gopher Dig"
+	default y
+	help
+	  A gopher in a hard hat drills down a well of soft coloured
+	  blocks, dodges the ones that fall and watches its air.
+	  1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_JELLYJAM
+	bool "Jelly Jam"
+	default y
+	help
+	  A falling-pairs puzzle duel in a jam kitchen: four jellies of
+	  a colour melt, and chains rain grey jellies on the opponent.
+	  1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_KITTYKIBBLE
+	bool "Kitty Kibble"
+	default y
+	help
+	  A kitten eats every kibble of a room while four robot vacuums
+	  try to tidy it up; a ball of yarn turns the tables.
+	  1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_LADYBUGLAPS
+	bool "Ladybug Laps"
+	default y
+	help
+	  Tiny ladybugs race round the garden table and the garden,
+	  seen from above, against bots and friends. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_LLAMADRAMA
+	bool "Llama Drama"
+	default y
+	help
+	  A llama in an Andean meadow spits at the hornets that buzz in
+	  to sting its nose, from the morning to a starry night.
+	  1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_SEALSHOVE
+	bool "Seal Shove"
+	default y
+	help
+	  Four seals on a cracking ice floe shove each other into the
+	  sea: the last one on the floe wins the round. 1-4 players.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_SNOWBALLSIEGE
+	bool "Snowball Siege"
+	default y
+	help
+	  A turn-by-turn snowball fight between snow forts, with the
+	  wind changing every turn and every splat carving the snow.
+	  1-4 players.
+
 endif
 
 comment "rsos-vc-games needs a toolchain w/ dynamic library"

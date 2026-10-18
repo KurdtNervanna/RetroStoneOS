@@ -62,9 +62,9 @@ fi
 vc_yes=$(grep -c '^y ' "$T/vc" || true)
 vc_no=$(grep -c '^n ' "$T/vc" || true)
 if [ "$vc_no" = 0 ]; then
-	echo "- **RetroStone**, first in the menu: seven built-in 8BCraft games (Bomber Mole, Leady Squid, Duck Parade, Blueberry Tumble, Beaver Rush, Pancake Tower and Pogo Mamie)." >> "$T/HOMEBREW"
+	echo "- **RetroStone**, first in the menu: the built-in 8BCraft games listed above." >> "$T/HOMEBREW"
 elif [ "$vc_yes" != 0 ]; then
-	printf -- '- The seven RetroStone games are only in some images: %s.\n' \
+	printf -- '- The RetroStone games are only in some images: %s.\n' \
 		"$(sed 's/^y \(.*\)/\1: yes/; s/^n \(.*\)/\1: no/' "$T/vc" | paste -sd ';' - | sed 's/;/; /g')" >> "$T/HOMEBREW"
 else
 	echo "- These images were built **without** the RetroStone games: the menu has no RetroStone system." >> "$T/HOMEBREW"

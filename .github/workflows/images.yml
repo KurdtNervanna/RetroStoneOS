@@ -44,7 +44,7 @@ defaults:
 env:
   # The RetroStone VC ref the images are built from: "main", or a tag or
   # commit to pin a release to.
-  RETROSTONE_VC_REF: 52c79c6a128328b37fb8e451a0b6aeafa876f216
+  RETROSTONE_VC_REF: 3fe76b277607df2da6756d5915f05e31587900d5
 
 jobs:
   boards:
@@ -149,7 +149,7 @@ jobs:
           restore-keys: |
             br-ccache-${{ matrix.board }}-
 
-      # The seven RetroStone VC games (docs/vc-games.md)
+      # The RetroStone VC games (docs/vc-games.md)
       # are built from the public PaddleStroke/RetroStoneVC, at the ref of
       # RETROSTONE_VC_REF (top of this file: a branch, a tag or a commit).
       - name: Fetch RetroStone VC

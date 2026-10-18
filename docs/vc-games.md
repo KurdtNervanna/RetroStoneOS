@@ -31,6 +31,15 @@ of the menu's carousel:
 | **Cosmo Corgi** | 1-4 | `cosmocorgi_libretro.so` | `/usr/share/rsos/games/retrostone/Cosmo Corgi.cosmocorgi` |
 | **Fishy Feast** | 1-4 | `fishyfeast_libretro.so` | `/usr/share/rsos/games/retrostone/Fishy Feast.fishyfeast` |
 | **Hamster Havoc** | 1-4 | `hamsterhavoc_libretro.so` | `/usr/share/rsos/games/retrostone/Hamster Havoc.hamsterhavoc` |
+| **Caterpillar Crawl** | 1-4 | `caterpillarcrawl_libretro.so` | `/usr/share/rsos/games/retrostone/Caterpillar Crawl.caterpillarcrawl` |
+| **Gecko Golf** | 1-4 | `geckogolf_libretro.so` | `/usr/share/rsos/games/retrostone/Gecko Golf.geckogolf` |
+| **Gopher Dig** | 1-4 | `gopherdig_libretro.so` | `/usr/share/rsos/games/retrostone/Gopher Dig.gopherdig` |
+| **Jelly Jam** | 1-4 | `jellyjam_libretro.so` | `/usr/share/rsos/games/retrostone/Jelly Jam.jellyjam` |
+| **Kitty Kibble** | 1-4 | `kittykibble_libretro.so` | `/usr/share/rsos/games/retrostone/Kitty Kibble.kittykibble` |
+| **Ladybug Laps** | 1-4 | `ladybuglaps_libretro.so` | `/usr/share/rsos/games/retrostone/Ladybug Laps.ladybuglaps` |
+| **Llama Drama** | 1-4 | `llamadrama_libretro.so` | `/usr/share/rsos/games/retrostone/Llama Drama.llamadrama` |
+| **Seal Shove** | 1-4 | `sealshove_libretro.so` | `/usr/share/rsos/games/retrostone/Seal Shove.sealshove` |
+| **Snowball Siege** | 1-4 | `snowballsiege_libretro.so` | `/usr/share/rsos/games/retrostone/Snowball Siege.snowballsiege` |
 
 Each game is a libretro core with the game built in: there is no ROM file to copy, the games are part of the system
 (and of its updates).
@@ -59,7 +68,7 @@ Each game is a libretro core with the game built in: there is no ROM file to cop
 |---|---|---|
 | `BR2_PACKAGE_RSOS_VC_GAMES` | `y` in every defconfig | `scripts/ci/build-board.sh` turns it off when there is no checkout (`RSOS_CI_VC_GAMES=auto`) |
 | `BR2_PACKAGE_RSOS_VC_GAMES_SOURCE_DIR` | `$(BR2_EXTERNAL_RETROSTONE_PATH)/../../RetroStoneVC` | the checkout (Buildroot's `local` site method) |
-| `BR2_PACKAGE_RSOS_VC_GAMES_BOMBERMOLE`, `..._LEADYSQUID`, `..._DUCKPARADE`, `..._BLUEBERRYTUMBLE`, `..._BEAVERRUSH`, `..._PANCAKETOWER`, `..._POGOMAMIE` | `y` | one core per game |
+| `BR2_PACKAGE_RSOS_VC_GAMES_<GAME>` (`..._BOMBERMOLE`, `..._LEADYSQUID`, ... `..._SNOWBALLSIEGE`: the 34 games of the table) | `y` | one core per game |
 
 - **Build.** The RetroStone VC `Makefile`'s cross target, once per game:
   `make GAME=<game> ARM_CC=$(TARGET_CC) ARM_AR=$(TARGET_AR) ARM_FLAGS="$(TARGET_CFLAGS)" build/armhf/<game>_libretro.so`.
@@ -208,7 +217,23 @@ Select+L/R the save-state slots...). A plain Select reaches the game, and the ho
 - `scripts/ci/check-defconfigs.sh`: `BR2_PACKAGE_RSOS_VC_GAMES=y` (with its source path) and `=n` both survive
   `olddefconfig` for every board.
 
-## Source pin (2026-10-16)
+## Source pin (2026-10-18, RetroStoneOS 0.1.2)
+
+- CI builds the games from RetroStone VC `3fe76b277607df2da6756d5915f05e31587900d5` (`RETROSTONE_VC_REF`): the 34
+  games (Caterpillar Crawl, Gecko Golf, Gopher Dig, Jelly Jam, Kitty Kibble, Ladybug Laps, Llama Drama, Seal Shove and
+  Snowball Siege join the 25). They are the games of the RetroStone app's Arcade tab (every game but Bomber Mole),
+  plus Bomber Mole. Since the previous pin, RetroStone VC also changed the other games (the phone's portrait layouts)
+  and the SDK: the opt-in tall screen (`rs_screen_tall()`, `rs_screen_zoom()`), which only a frontend that asks for a
+  height turns on; the libretro frontend does not, so the cores run at 320x240 as before. `Makefile` and `tools/` are
+  unchanged.
+- Checked locally (WSL, a clean clone of that commit): the package (`make rsos-vc-games`, `retrostone2_defconfig`,
+  its own output folder, Buildroot's Bootlin armv7-eabihf GCC) built and installed the 34 games and
+  `check-vc-games.py` passed. At `9375bd76`, four commits of portrait layouts (four games' `draw.c`) before the pin,
+  `make rsos-vc-games-legal-info` archived the source and the 34 game licences, and the 34 cores also cross-built for
+  aarch64 (Ubuntu's GCC, the 64-bit boards); no core has a TEXTREL or needs more than `libc`, `libm` and the loader.
+  The image builds run in CI; the new games on the device are a hardware check (TODO(hw)).
+
+## Source pin (2026-10-16, previous)
 
 - CI builds the games from RetroStone VC `52c79c6a128328b37fb8e451a0b6aeafa876f216` (`RETROSTONE_VC_REF`): the 25 games
   (Cosmo Corgi, Fishy Feast and Hamster Havoc join the 22). Since the previous pin, RetroStone VC changed only these
@@ -216,7 +241,7 @@ Select+L/R the save-state slots...). A plain Select reaches the game, and the ho
   not packaged: it does not suit the RetroStone yet). The SDK, `Makefile` and `tools/` are unchanged. The image builds
   and `check-vc-games.py` run on the next CI image build.
 
-## Source pin (2026-10-12, previous)
+## Source pin (2026-10-12)
 
 - CI builds the games from RetroStone VC `2dd66975511565608acf21f51bddb9093225d67f` (`RETROSTONE_VC_REF`): the 22 games
   (Unicorn Hop and the 14 games added on 2026-10-11 join the first seven). Unicorn Hop passed its RetroStone VC
