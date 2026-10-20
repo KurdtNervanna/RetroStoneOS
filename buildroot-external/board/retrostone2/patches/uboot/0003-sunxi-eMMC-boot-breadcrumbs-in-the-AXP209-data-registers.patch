@@ -1,0 +1,41 @@
+From: RetroStoneOS <noreply@example.invalid>
+Subject: [PATCH] sunxi: eMMC boot breadcrumbs in the AXP209 data registers
+
+The RetroStone2 Pro starts from its eMMC once RetroStoneOS is installed
+there. With no serial console, the SPL and U-Boot proper leave a marker in
+the AXP209 data registers REG0E/REG0F when they run from the eMMC, read at
+the next start from the microSD (rsos-storage report).
+---
+--- a/board/sunxi/board.c	2026-10-20 13:30:49.965329560 -0400
++++ b/board/sunxi/board.c	2026-10-20 13:30:49.981921451 -0400
+@@ -589,6 +589,18 @@
+ 	defined CONFIG_AXP803_POWER
+ 	power_failed = axp_init();
+ 
++	/*
++	 * RetroStone2: started from the eMMC (Settings > Storage > Install to
++	 * internal storage): a breadcrumb in the AXP209's last data registers,
++	 * which keep it while the battery is in. With no serial console, the
++	 * next start from the microSD shows how far it got (rsos-storage's
++	 * eMMC report): 5a e1 = this SPL ran, 5a e2 = U-Boot proper ran.
++	 */
++	if (!power_failed && sunxi_get_boot_device() == BOOT_DEVICE_MMC2) {
++		pmic_bus_write(0x0e, 0x5a);
++		pmic_bus_write(0x0f, 0xe1);
++	}
++
+ 	if (IS_ENABLED(CONFIG_AXP_DISABLE_BOOT_ON_POWERON) && !power_failed) {
+ 		u8 boot_reason;
+ 
+@@ -849,6 +861,11 @@
+ 		env_set("mmc_bootdev", "0");
+ 	} else if (boot == BOOT_DEVICE_MMC2) {
+ 		env_set("mmc_bootdev", "1");
++		/* RetroStone2: the eMMC breadcrumb, U-Boot proper reached */
++		if (!pmic_bus_init()) {
++			pmic_bus_write(0x0e, 0x5a);
++			pmic_bus_write(0x0f, 0xe2);
++		}
+ 	}
+ 
+ 	/* Set fdtfile to match the FIT configuration chosen in SPL. */

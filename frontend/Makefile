@@ -897,6 +897,7 @@ install: $(BINS) update-install
 	$(if $(WEB),install -m 0644 $(WEB) $(DESTDIR)$(DATADIR)/web/)
 	install -m 0644 third_party/sdl-gamecontrollerdb/gamecontrollerdb.txt $(DESTDIR)$(DATADIR)/gamecontrollerdb.txt
 	install -m 0644 src/transfer/data-README.txt $(DESTDIR)$(DATADIR)/data-README.txt
+	install -m 0644 assets/credits.txt $(DESTDIR)$(DATADIR)/credits.txt
 	install -m 0644 $(SPLASH) $(DESTDIR)$(DATADIR)/splash.rle
 	$(if $(CATALOGS),install -m 0644 $(CATALOGS) $(DESTDIR)$(DATADIR)/locale/)
 	printf '%s\n' "$(RSOS_VERSION_STRING)" > $(DESTDIR)$(SYSCONFDIR)/rsos-version

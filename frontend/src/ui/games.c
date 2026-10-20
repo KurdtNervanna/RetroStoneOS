@@ -940,6 +940,69 @@ bool games_match(const char *name, const char *query)
 	return false;
 }
 
+static int cmp_strp(const void *a, const void *b)
+{
+	return strcmp(*(char *const *)a, *(char *const *)b);
+}
+
+/* Covers downloaded by rsos-covers (Settings > Game lists > Download game
+ * covers): <rom_dir>/media/covers/<ROM file name without extension>.jpg (or
+ * .png), for the games the gamelist.xml gave no image. One readdir; the
+ * folder joins the change detection (and the scan cache's validation). */
+static void apply_covers(struct scan *sc, const char *rom_dir)
+{
+	static const char *const exts[] = { "jpg", "png" };
+	char dir[1024], **names = NULL;
+	int n = 0, cap = 0;
+	struct stat st;
+	struct dirent *de;
+	DIR *d;
+
+	snprintf(dir, sizeof(dir), "%s/media/covers", rom_dir);
+	if (stat(dir, &st) < 0 || !S_ISDIR(st.st_mode))
+		return;
+	if (sc->ndirs < MAX_DIRS) {
+		sc->dirs[sc->ndirs] = xstrdup(dir);
+		sc->dir_mtime[sc->ndirs++] = games_dir_stamp(dir, &st);
+	}
+	d = opendir(dir);
+	if (!d)
+		return;
+	while ((de = readdir(d))) {
+		if (de->d_name[0] == '.')
+			continue;
+		if (n == cap) {
+			cap = cap ? cap * 2 : 256;
+			names = xrealloc(names, sizeof(char *) * (size_t)cap);
+		}
+		names[n++] = xstrdup(de->d_name);
+	}
+	closedir(d);
+	qsort(names, (size_t)n, sizeof(char *), cmp_strp);
+	for (int i = 0; n && i < sc->n; i++) {
+		struct game *g = &sc->games[i];
+		const char *base = strrchr(g->path, '/');
+		char stem[512], want[600], *dot, *key = want;
+
+		if (g->image)
+			continue;
+		strlcpy_(stem, base ? base + 1 : g->path, sizeof(stem));
+		dot = strrchr(stem, '.');
+		if (dot && dot != stem)
+			*dot = 0;
+		for (size_t e = 0; e < ARRAY_SIZE(exts); e++) {
+			snprintf(want, sizeof(want), "%s.%s", stem, exts[e]);
+			if (bsearch(&key, names, (size_t)n, sizeof(char *), cmp_strp)) {
+				g->image = arena_printf(sc->a, "%s/%s", dir, want);
+				break;
+			}
+		}
+	}
+	for (int i = 0; i < n; i++)
+		free(names[i]);
+	free(names);
+}
+
 struct gamelist *games_load(const char *system, const char *rom_dir,
 			    const char *cache_dir, const char *alt_gamelists,
 			    struct games_load_stats *st)
@@ -990,6 +1053,7 @@ struct gamelist *games_load(const char *system, const char *rom_dir,
 	}
 	if (have_gl)
 		apply_gamelist(&sc, glpath);
+	apply_covers(&sc, rom_dir);
 	st->xml_us = ui_now_us() - t;
 	/* hidden games (gamelist.xml hidden=true) stay in the list, flagged: the
 	 * loader drops them unless "Show hidden games" is on (ES) */
@@ -1074,6 +1138,59 @@ bool games_equal(const struct gamelist *a, const struct gamelist *b)
 		if (!game_eq(&a->games[i], &b->games[i]))
 			return false;
 	return true;
+}
+
+static const char *dup_or_null(struct arena *a, const char *s)
+{
+	return s ? arena_strdup(a, s) : NULL;
+}
+
+void games_merge(struct gamelist *dst, const struct gamelist *src)
+{
+	int n;
+
+	if (!dst || !src || src == dst)
+		return;
+	if (src->n) {
+		n = dst->n + src->n;
+		dst->games = xrealloc(dst->games, (size_t)n * sizeof(*dst->games));
+		for (int i = 0; i < src->n; i++) {
+			const struct game *s = &src->games[i];
+			struct game *g = &dst->games[dst->n + i];
+
+			*g = *s;
+			g->system = dst->system;
+			g->path = dup_or_null(&dst->arena, s->path);
+			g->rel = dup_or_null(&dst->arena, s->rel);
+			g->name = dup_or_null(&dst->arena, s->name);
+			g->desc = dup_or_null(&dst->arena, s->desc);
+			g->image = dup_or_null(&dst->arena, s->image);
+			g->thumbnail = dup_or_null(&dst->arena, s->thumbnail);
+			g->marquee = dup_or_null(&dst->arena, s->marquee);
+			g->video = dup_or_null(&dst->arena, s->video);
+			g->developer = dup_or_null(&dst->arena, s->developer);
+			g->publisher = dup_or_null(&dst->arena, s->publisher);
+			g->genre = dup_or_null(&dst->arena, s->genre);
+			g->players = dup_or_null(&dst->arena, s->players);
+			g->core = dup_or_null(&dst->arena, s->core);
+			g->scale = dup_or_null(&dst->arena, s->scale);
+			g->cpu = dup_or_null(&dst->arena, s->cpu);
+		}
+		dst->n = n;
+		dst->has_media |= src->has_media;
+	}
+	/* change detection covers the merged folders too */
+	if (src->ndirs) {
+		n = dst->ndirs + src->ndirs;
+		dst->dirs = xrealloc(dst->dirs, (size_t)n * sizeof(*dst->dirs));
+		dst->dir_mtime = xrealloc(dst->dir_mtime, (size_t)n * sizeof(*dst->dir_mtime));
+		for (int i = 0; i < src->ndirs; i++) {
+			dst->dirs[dst->ndirs + i] = xstrdup(src->dirs[i]);
+			dst->dir_mtime[dst->ndirs + i] = src->dir_mtime[i];
+		}
+		dst->ndirs = n;
+	}
+	dst->from_cache = dst->from_cache && src->from_cache;
 }
 
 uint64_t games_digest(const struct gamelist *gl, uint64_t h)

@@ -285,6 +285,10 @@ struct ui_config {
 	 * storage screen (ui_data_problem): run with --format-confirmed. The
 	 * string must outlive the UI. */
 	const char *data_partition_helper; /* "/usr/libexec/rsos/data-partition" */
+	/* the RetroStone2 Pro's storage (eMMC, M.2 SATA, game libraries of
+	 * the other disks; storage.c); missing / NULL / "": Settings > Storage
+	 * has no Pro section. The string must outlive the UI. */
+	const char *storage_helper;  /* "/usr/bin/rsos-storage" */
 	const char *wpa_conf;        /* "/data/rsos/wpa_supplicant.conf" */
 	const char *version;         /* fallback version string */
 	const char *default_theme;   /* "rsos-dark" (RSOS_DEFAULT_THEME) */

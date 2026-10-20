@@ -31,6 +31,7 @@ UI_SRCS := \
 	$(UI_DIR)/src/ui/menu.c \
 	$(UI_DIR)/src/ui/screens.c \
 	$(UI_DIR)/src/ui/transfer_ui.c \
+	$(UI_DIR)/src/ui/storage.c \
 	$(UI_DIR)/src/ui/update_ui.c \
 	$(UI_DIR)/src/ui/ui.c \
 	$(UI_DIR)/src/gfx/gfx.c \

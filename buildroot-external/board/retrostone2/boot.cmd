@@ -71,6 +71,8 @@
 #
 # Optional settings, also in the U-Boot environment (fw_setenv):
 #   rsos_overlays   e.g. "emmc sata": /boot/overlays/<name>.dtbo to apply
+#                   (Settings > Storage writes it through rsos-storage;
+#                   "emmc" is implied when booted from the eMMC)
 #                   "cpu-lowvolt" (a test that may freeze the board) is
 #                   one-shot: applied with rsos_lowvolt=trial, which
 #                   rsos-boot-ok clears when that boot is confirmed (or given
@@ -91,6 +93,37 @@
 # prefix.)
 
 bootstage mark boot.scr
+
+# The disk of the system (bootcmd's rsos_sysdev: 0 = microSD, 1 = the Pro's
+# eMMC after Settings > Storage > Install to internal storage; the eMMC also
+# when U-Boot started from a starter card, a microSD with only the boot
+# loader and games). Linux names them the same way (DT aliases: mmcblk0 =
+# microSD, mmcblk1 = eMMC). With the system on the eMMC, its overlay is always
+# applied: the base DT has mmc2 disabled, and Linux could not find its root
+# filesystem without it. U-Boot's environment is on the disk it started from
+# (mmc_bootdev): rsos.envdev tells Linux (rcS: /dev/rsos-disk).
+l_dev=0
+if test "${rsos_sysdev}" = 1; then
+	l_dev=1
+elif test "${mmc_bootdev}" = 1; then
+	l_dev=1
+fi
+l_envdev=0
+if test "${mmc_bootdev}" = 1; then
+	l_envdev=1
+fi
+l_ovs="${rsos_overlays}"
+if test ${l_dev} = 1; then
+	l_hasemmc=0
+	for l_ov in ${rsos_overlays}; do
+		if test "${l_ov}" = "emmc"; then
+			l_hasemmc=1
+		fi
+	done
+	if test ${l_hasemmc} = 0; then
+		l_ovs="emmc ${rsos_overlays}"
+	fi
+fi
 
 l_save=0
 # First boot (no saved environment yet): store the defaults, so that
@@ -167,7 +200,7 @@ if test ${l_fallback} = 1; then
 		l_off=1
 	elif test "${rsos_bad}" = "${l_other}"; then
 		echo "rsos: slot ${rsos_slot} failed too often, slot ${l_other} is marked bad: staying on ${rsos_slot}"
-	elif test -e mmc 0:${l_opart} /boot/zImage; then
+	elif test -e mmc ${l_dev}:${l_opart} /boot/zImage; then
 		if test "${rsos_fallback}" != "${l_other}" || test "${rsos_good}" = "${l_other}"; then
 			echo "rsos: slot ${rsos_slot} failed too often, falling back to slot ${l_other}"
 			setenv rsos_fallback ${rsos_slot}
@@ -218,8 +251,8 @@ fi
 # cpu-lowvolt: one boot at a time until a boot with it is confirmed (a
 # freeze at 1.0 V must not come back after every watchdog reset).
 l_lowvolt=0
-if test -n "${rsos_overlays}"; then
-	for l_ov in ${rsos_overlays}; do
+if test -n "${l_ovs}"; then
+	for l_ov in ${l_ovs}; do
 		if test "${l_ov}" = "cpu-lowvolt"; then
 			l_lowvolt=1
 		fi
@@ -271,26 +304,26 @@ fi
 # tens of ms in total, spread over the initcalls). The release build
 # (BR2_RETROSTONE_RELEASE, docs/build.md "Release build") removes both words:
 # post-build.sh deletes " initcall_debug log_buf_len=1M" from this line.
-setenv bootargs "console=ttyS0,115200 root=/dev/mmcblk0p${l_part} rootfstype=ext4 rootwait ro quiet panic=10 consoleblank=0 driver_async_probe=dw-apb-uart,musb-sunxi,sun4i-ts,axp20x-i2c initcall_debug log_buf_len=1M rsos.slot=${rsos_slot} rsos.boot=${l_state} ${rsos_extraargs}"
+setenv bootargs "console=ttyS0,115200 root=/dev/mmcblk${l_dev}p${l_part} rootfstype=ext4 rootwait ro quiet panic=10 consoleblank=0 driver_async_probe=dw-apb-uart,musb-sunxi,sun4i-ts,axp20x-i2c initcall_debug log_buf_len=1M rsos.slot=${rsos_slot} rsos.boot=${l_state} rsos.envdev=mmcblk${l_envdev} ${rsos_extraargs}"
 
 bootstage mark load-zImage
-if load mmc 0:${l_part} ${kernel_addr_r} /boot/zImage; then
+if load mmc ${l_dev}:${l_part} ${kernel_addr_r} /boot/zImage; then
 	bootstage mark zImage-loaded
-	if load mmc 0:${l_part} ${fdt_addr_r} /boot/sun7i-a20-retrostone2.dtb; then
+	if load mmc ${l_dev}:${l_part} ${fdt_addr_r} /boot/sun7i-a20-retrostone2.dtb; then
 		bootstage mark dtb-loaded
-		if test -n "${rsos_overlays}"; then
+		if test -n "${l_ovs}"; then
 			fdt addr ${fdt_addr_r}
 			fdt resize 65536
-			for l_ov in ${rsos_overlays}; do
+			for l_ov in ${l_ovs}; do
 				if test "${l_ov}" = "cpu-lowvolt" && test ${l_lowvolt} = 0; then
 					true
-				elif load mmc 0:${l_part} ${fdtoverlay_addr_r} /boot/overlays/${l_ov}.dtbo; then
+				elif load mmc ${l_dev}:${l_part} ${fdtoverlay_addr_r} /boot/overlays/${l_ov}.dtbo; then
 					if fdt apply ${fdtoverlay_addr_r}; then
 						echo "rsos: overlay ${l_ov} applied"
 					else
 						# A failed fdt apply leaves the DT in an undefined state
 						echo "rsos: overlay ${l_ov} failed, reloading the base DT"
-						load mmc 0:${l_part} ${fdt_addr_r} /boot/sun7i-a20-retrostone2.dtb
+						load mmc ${l_dev}:${l_part} ${fdt_addr_r} /boot/sun7i-a20-retrostone2.dtb
 						fdt addr ${fdt_addr_r}
 						fdt resize 65536
 					fi
@@ -319,7 +352,7 @@ setenv rsos_ok 1
 setenv rsos_tries 0
 setenv rsos_fails 0
 setenv rsos_p
-if test ${rsos_rounds} -lt ${l_maxrounds} && test "${rsos_bad}" != "${l_other}" && test -e mmc 0:${l_opart} /boot/zImage; then
+if test ${rsos_rounds} -lt ${l_maxrounds} && test "${rsos_bad}" != "${l_other}" && test -e mmc ${l_dev}:${l_opart} /boot/zImage; then
 	echo "rsos: switching to slot ${l_other}"
 	setenv rsos_fallback ${rsos_slot}
 	setenv rsos_slot ${l_other}

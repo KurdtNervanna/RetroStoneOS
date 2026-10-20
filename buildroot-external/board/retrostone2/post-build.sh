@@ -45,6 +45,26 @@ mkdir -p "$TARGET/usr/libexec/rsos"
 # them to shutdown.txt on the next boot (tools/rsos-axpstamp.c).
 "$CC" -O2 -s -Wall -Wextra -Werror -o "$TARGET/usr/libexec/rsos/axpstamp" \
 	"$BOARD_DIR/tools/rsos-axpstamp.c"
+# /usr/libexec/rsos/memtest: the quick DRAM check of the faster memory trial
+# (Settings > Power > Memory speed; rsos-boot-ok, tools/rsos-memtest.c).
+"$CC" -O2 -s -Wall -Wextra -Werror -o "$TARGET/usr/libexec/rsos/memtest" \
+	"$BOARD_DIR/tools/rsos-memtest.c"
+
+# --- The boot loader, for "Install to internal storage" on the Pro
+# (rsos-storage install writes it at 8 KiB on the eMMC): the image's own
+# U-Boot, built before the root filesystem is finalised. Its sha256 sits next
+# to it, so the installer can check its copy and the write.
+UBOOT_BIN=$BINARIES_DIR/u-boot-sunxi-with-spl.bin
+if [ ! -f "$UBOOT_BIN" ]; then
+	echo "post-build.sh: $UBOOT_BIN missing (the eMMC installer needs it)" >&2
+	exit 1
+fi
+# rsos-storage: Settings > Storage on the Pro (eMMC, M.2 SATA, game disks).
+# (Windows checkouts lose the executable bit: board/common/post-build.sh.)
+chmod 0755 "$TARGET/usr/bin/rsos-storage"
+mkdir -p "$TARGET/usr/share/rsos/bootloader"
+cp "$UBOOT_BIN" "$TARGET/usr/share/rsos/bootloader/u-boot-sunxi-with-spl.bin"
+(cd "$TARGET/usr/share/rsos/bootloader" && sha256sum u-boot-sunxi-with-spl.bin > u-boot-sunxi-with-spl.bin.sha256)
 
 # --- WiFi/BT firmware names.
 # brcmfmac asks for brcm/brcmfmac<chip>-sdio.<board compatible>.{bin,txt},

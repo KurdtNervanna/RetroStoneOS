@@ -394,7 +394,14 @@ void ui_assets_invalidate(struct ui *ui, bool look);
 void ui_io_sample(struct ui *ui, struct ui_io *io);
 
 /* loader.c - game lists: snapshot, background loading, carousel */
+#define LOADER_MAX_LIBS 3
 void loader_init(struct ui *ui);
+/* The game libraries of the other disks (storage.c: <root>/roms/<system>/,
+ * merged into the lists). false: lists are loading, try again later; true:
+ * taken (a change reloads the lists when the carousel is back on top). */
+bool loader_set_libraries(struct ui *ui, const char *const *roots, int n);
+/* Drops the scan caches of a system (every library). */
+void ui_invalidate_system(struct ui *ui, const char *system);
 bool loader_step(struct ui *ui);          /* from ui_update(); true: redraw */
 int loader_timeout(const struct ui *ui);
 void loader_pause(struct ui *ui, bool pause);
@@ -552,7 +559,39 @@ void webshare_open(struct ui *ui);
 /* The Windows file share (ui->cfg.smb_helper), next to the network
  * transfer: available (the helper is installed), start (with the transfer's
  * PIN), stop; the helper's end comes back as a job (UI_JOB_SMB*). */
-enum { UI_JOB_SMB = 40, UI_JOB_SMB_STOP = 41 };
+enum { UI_JOB_SMB = 40, UI_JOB_SMB_STOP = 41, UI_JOB_STORAGE = 42, UI_JOB_STORAGE_TASK = 43 };
+
+/* storage.c - the RetroStone2 Pro's storage (ui->cfg.storage_helper):
+ * Settings > Storage items, the eMMC install and the other disk tasks, the
+ * game libraries of the other disks. Nothing happens when the helper is
+ * missing (storage_available() false). */
+void storage_init(struct ui *ui);
+bool storage_available(const struct ui *ui);
+void storage_poll(struct ui *ui);                 /* every ui_update() */
+int storage_timeout(const struct ui *ui, int64_t now_ms);
+void storage_job_done(struct ui *ui, const struct hw_job_result *r);
+void storage_menu_items(struct ui *ui, struct menu *m);
+/* true when it was one of the storage items */
+bool storage_menu_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir);
+/* true when the items changed (the menu is built again) */
+bool storage_menu_changed(void);
+/* Settings > Game lists > Download game covers (rsos-covers, the libretro
+ * thumbnail server): asks, then runs it behind the task page. */
+void covers_start(struct ui *ui);
+/* Settings > Game lists > Group multi-disc games: an .m3u for every set of
+ * "(Disc N)" files that has none, so each game is one entry (the discs are
+ * swapped in the in-game menu). */
+void discs_group(struct ui *ui);
+/* Settings > Power > Memory speed (the RetroStone2's DRAM clock, U-Boot SPL
+ * through the AXP209): the level in use or asked for (0 normal, 1 = 432 MHz,
+ * 2 = 480 MHz; -1 unknown), whether the last try failed, the clock now. */
+bool memspeed_available(void);
+int memspeed_get(bool *failed, int *mhz);
+int memspeed_set(int level);
+/* Where Import games can copy the games: [0] = /data (root NULL), then the
+ * mounted game disks (their roots, holding roms/), with their names.
+ * 0 when there is no other disk (no choice to offer). */
+int storage_import_targets(struct ui *ui, const char **roots, const char **labels, int max);
 bool smb_available(struct ui *ui);
 void smb_start(struct ui *ui);
 void smb_stop(struct ui *ui);

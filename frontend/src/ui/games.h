@@ -94,6 +94,10 @@ struct gamelist *games_load(const char *system, const char *rom_dir,
 			    struct games_load_stats *st);
 /* Hash of the core extension lists of a system (part of the cache keys). */
 uint64_t games_ext_key(const char *system);
+/* Appends src's games (copied) to dst, and src's folders to dst's change
+ * detection: one list for a system whose games are on several disks (the
+ * Pro's game libraries, Settings > Storage). Not sorted: the loader sorts. */
+void games_merge(struct gamelist *dst, const struct gamelist *src);
 /* Same games (paths, names, metadata) in the same order. */
 bool games_equal(const struct gamelist *a, const struct gamelist *b);
 /* Folds a list into a hash (tests and logs: "the final state equals a full load"). */

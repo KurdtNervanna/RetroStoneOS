@@ -1,0 +1,79 @@
+From: RetroStoneOS <noreply@example.invalid>
+Subject: [PATCH] sunxi: A20 DRAM clock chosen at every start, with a trial
+
+The RetroStone2 can run its DRAM faster than the Lime defaults (384 MHz):
+the SPL reads the wanted level from an AXP209 data register, uses the
+matching DDR3-1066F timings, and falls back by itself when Linux did not
+confirm the last start at that speed.
+---
+--- a/board/sunxi/dram_sun5i_auto.c	2026-10-20 18:12:20.740264918 -0400
++++ b/board/sunxi/dram_sun5i_auto.c	2026-10-20 18:12:20.792886645 -0400
+@@ -32,7 +32,68 @@
+ 	.dqs_gating_delay = CONFIG_DRAM_DQS_GATING_DELAY,
+ };
+ 
++#ifdef CONFIG_MACH_SUN7I
++#include <asm/arch/pmic_bus.h>
++
++/*
++ * RetroStone2: the memory clock is chosen at every start (Settings > Power >
++ * Memory speed in RetroStoneOS), through the AXP209 data register REG0D,
++ * which the PMIC keeps while the battery is in: <state> << 4 | <level>.
++ * Level 1 = 432 MHz, 2 = 480 MHz, each with the DDR3-1066F timings of
++ * dram_timings_sun4i.h for that clock (those of the A20 boards that run
++ * there, Cubietruck, Bananapi). States: A requested, B trial running, C
++ * confirmed by Linux after a stable start and a memory test, F failed.
++ * A and C start the level as a trial (B), so any start that Linux does not
++ * confirm (freeze, crash, power cut) finds B at the next start: the normal
++ * clock and timings are used, and F is stored. Anything else (0 after the
++ * battery was out): the normal clock, untouched.
++ */
++#define RSOS_DRAM_REG	0x0d
++
++static const struct {
++	u16 clock;
++	u8 cas;
++	u32 tpr0, tpr1, tpr2, emr2;
++} rsos_dram_levels[3] = {
++	[1] = { 432, 7, 0x2cb16690, 0xa0b0, 0x22e00, 0x8 },	/* DDR3-1066F 7-6-6-17 */
++	[2] = { 480, 7, 0x32b27790, 0xa0c0, 0x23200, 0x8 },	/* DDR3-1066F 7-7-7-18 */
++};
++
++static void rsos_dram_choose(struct dram_para *para)
++{
++	u8 v, lvl;
++
++	if (pmic_bus_read(RSOS_DRAM_REG, &v))
++		return;
++	lvl = v & 0x0f;
++	if (lvl < 1 || lvl > 2)
++		return;
++	switch (v & 0xf0) {
++	case 0xa0:
++	case 0xc0:
++		if (pmic_bus_write(RSOS_DRAM_REG, 0xb0 | lvl))
++			return;		/* no trial without its marker */
++		break;
++	case 0xb0:
++		pmic_bus_write(RSOS_DRAM_REG, 0xf0 | lvl);
++		return;
++	default:
++		return;
++	}
++	para->clock = rsos_dram_levels[lvl].clock;
++	para->cas = rsos_dram_levels[lvl].cas;
++	para->tpr0 = rsos_dram_levels[lvl].tpr0;
++	para->tpr1 = rsos_dram_levels[lvl].tpr1;
++	para->tpr2 = rsos_dram_levels[lvl].tpr2;
++	para->emr2 = rsos_dram_levels[lvl].emr2;
++	para->active_windowing = 1;
++}
++#endif
++
+ unsigned long sunxi_dram_init(void)
+ {
++#ifdef CONFIG_MACH_SUN7I
++	rsos_dram_choose(&dram_para);
++#endif
+ 	return dramc_init(&dram_para);
+ }

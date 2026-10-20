@@ -30,10 +30,10 @@ enum {
 	ID_BTNTEST = 20, ID_PADCFG, ID_P1, ID_CZ, ID_PORT0,
 	ID_WIFI = 30, ID_SSID, ID_PSK, ID_ETH, ID_BT, ID_NETSTATUS,
 	ID_THEME0 = 40,
-	ID_FAVFIRST = 70, ID_COLLECTIONS, ID_REFRESH,
+	ID_FAVFIRST = 70, ID_COLLECTIONS, ID_REFRESH, ID_COVERS, ID_DISCS,
 	ID_EMMC = 75, ID_SATA, ID_IMPORT, ID_EJECT, ID_USBPROMPT, ID_FREE, ID_EXPORT, ID_SAVESBK,
 	ID_WEBSHARE = 190, ID_HOSTNAME, ID_WEBIDLE, ID_WEBBG, ID_SMB,
-	ID_REBOOT = 80, ID_POWEROFF, ID_DIM, ID_OFF, ID_GAUGE, ID_AUTOOFF,
+	ID_REBOOT = 80, ID_POWEROFF, ID_DIM, ID_OFF, ID_GAUGE, ID_AUTOOFF, ID_MEMSPEED, ID_MEMINFO,
 	ID_TIME = 140, ID_TZ, ID_YEAR, ID_MONTH, ID_DAY, ID_HOUR, ID_MIN, ID_SETTIME, ID_NOW,
 	ID_TZ0 = 160,
 	ID_FAV = 90, ID_GAMECORE, ID_SYSCORE, ID_LAUNCH, ID_FILE,
@@ -1016,6 +1016,10 @@ void screens_job_done(struct ui *ui, const struct hw_job_result *r)
 		smb_job_done(ui, r);
 		return;
 	}
+	if (r->tag == UI_JOB_STORAGE || r->tag == UI_JOB_STORAGE_TASK) {
+		storage_job_done(ui, r);
+		return;
+	}
 	if (r->tag >= JOB_WIFI && r->tag <= JOB_BT) {
 		int i = r->tag - JOB_WIFI;
 		static const char *const names[3] = { "WiFi", "Ethernet", "Bluetooth" };
@@ -1109,6 +1113,14 @@ static void lists_item(struct ui *ui, struct menu *m, struct menu_item *it, int 
 			ui_toastf(ui, "%s", _("Game lists refreshed"));
 		}
 		break;
+	case ID_COVERS:
+		if (dir == 0)
+			covers_start(ui);
+		break;
+	case ID_DISCS:
+		if (dir == 0)
+			discs_group(ui);
+		break;
 	}
 }
 
@@ -1129,6 +1141,10 @@ static void open_lists(struct ui *ui)
 	it = menu_add(m, MI_TOGGLE, ID_SHOWHIDDEN, _("Show hidden games"));
 	it->on = settings_get_bool(ui->settings, "show_hidden", false);
 	menu_add(m, MI_ACTION, ID_REFRESH, _("Refresh game lists"));
+	/* TRANSLATORS: Settings > Game lists: box pictures from the libretro thumbnail server */
+	menu_add(m, MI_ACTION, ID_COVERS, _("Download game covers"));
+	/* TRANSLATORS: Settings > Game lists: one entry per multi-disc game (.m3u playlists) */
+	menu_add(m, MI_ACTION, ID_DISCS, _("Group multi-disc games"));
 	m->on_item = lists_item;
 	menu_open(ui, m);
 }
@@ -1213,7 +1229,8 @@ static void storage_item(struct ui *ui, struct menu *m, struct menu_item *it, in
 	const char *buttons[3];
 	int r;
 
-	(void)m;
+	if (storage_menu_item(ui, m, it, dir))
+		return;
 	switch (it->id) {
 	case ID_IMPORT:
 	case ID_EXPORT:
@@ -1248,12 +1265,28 @@ static void storage_item(struct ui *ui, struct menu *m, struct menu_item *it, in
 		    reboot_choice, NULL);
 }
 
+static void storage_items(struct ui *ui, struct menu *m);
+
 static void storage_refresh(struct ui *ui, struct menu *m)
 {
-	struct menu_item *it = menu_find(m, ID_FREE);
+	struct menu_item *it;
 	uint64_t fr, tot;
 	char a[32], b[32];
 
+	/* the Pro's disks changed (a card in or out, a task done): again */
+	if (storage_menu_changed()) {
+		int id = m->cursor >= 0 && m->cursor < m->n ? m->items[m->cursor].id : 0;
+
+		m->n = 0;
+		storage_items(ui, m);
+		m->cursor = MIN(m->cursor, MAX(m->n - 1, 0));
+		for (int i = 0; id && i < m->n; i++)
+			if (m->items[i].id == id)
+				m->cursor = i;
+		m->top = MIN(m->top, m->cursor);
+		ui->dirty = true;
+	}
+	it = menu_find(m, ID_FREE);
 	if (it && hw_storage(ui->cfg.roms_dir, &fr, &tot)) {
 		i18n_format_size(fr, a, sizeof(a));
 		i18n_format_size(tot, b, sizeof(b));
@@ -1279,9 +1312,8 @@ static bool has_storage_overlay(const struct ui *ui, const char *name)
 	return false;
 }
 
-static void open_storage(struct ui *ui)
+static void storage_items(struct ui *ui, struct menu *m)
 {
-	struct menu *m = menu_new(ui, _("Storage"), K_STORAGE);
 	struct menu_item *it;
 
 	menu_add(m, MI_INFO, ID_FREE, _("Game storage"));
@@ -1293,6 +1325,11 @@ static void open_storage(struct ui *ui)
 		menu_add(m, MI_ACTION, ID_EJECT, _("Eject USB drive"));
 		it = menu_add(m, MI_TOGGLE, ID_USBPROMPT, _("Ask when a USB drive is plugged in"));
 		it->on = settings_get_bool(ui->settings, "usb_import_prompt", true);
+	}
+	/* The RetroStone2 Pro (rsos-storage): eMMC, M.2, install, game disks */
+	if (storage_available(ui)) {
+		storage_menu_items(ui, m);
+		return;
 	}
 	/* The board's opt-in device tree overlays (board profile:
 	 * storage_overlays; the RetroStone2's eMMC and SATA) */
@@ -1306,6 +1343,13 @@ static void open_storage(struct ui *ui)
 		it = menu_add(m, MI_TOGGLE, ID_SATA, _("M.2 SATA drive"));
 		it->on = hw_env_has_overlay(ui->cfg.boot_env, "sata");
 	}
+}
+
+static void open_storage(struct ui *ui)
+{
+	struct menu *m = menu_new(ui, _("Storage"), K_STORAGE);
+
+	storage_items(ui, m);
 	m->on_item = storage_item;
 	m->on_refresh = storage_refresh;
 	m->refresh_every = 3000;
@@ -1396,6 +1440,40 @@ static void info_refresh(struct ui *ui, struct menu *m)
 			 ui->cfg.input ? input_device_count(ui->cfg.input) : 0);
 }
 
+/* System information > Credits: <res_dir>/credits.txt, generated from the
+ * git history (scripts/support/update-credits.sh): "## " lines are section
+ * titles, other "#" lines comments, the rest one name per line. */
+static void open_credits(struct ui *ui)
+{
+	struct menu *m = menu_new(ui, _("Credits"), K_INFO);
+	char path[1100], line[256];
+	FILE *f;
+
+	snprintf(path, sizeof(path), "%s/credits.txt", ui->cfg.res_dir);
+	f = fopen(path, "r");
+	if (f) {
+		while (m->n < (int)(sizeof(m->items) / sizeof(m->items[0])) && fgets(line, sizeof(line), f)) {
+			line[strcspn(line, "\r\n")] = 0;
+			if (!strncmp(line, "## ", 3))
+				menu_add(m, MI_HEADER, 0, line + 3);
+			else if (line[0] && line[0] != '#')
+				menu_add(m, MI_INFO, 0, line);
+		}
+		fclose(f);
+	}
+	if (!m->n)
+		/* TRANSLATORS: System information > Credits, when the list is missing */
+		menu_add(m, MI_INFO, 0, _("No credits list on this system"))->disabled = true;
+	menu_open(ui, m);
+}
+
+static void info_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
+{
+	(void)m;
+	if (it->id == ID_INFO0 + 10 && !dir)
+		open_credits(ui);
+}
+
 static void open_info(struct ui *ui)
 {
 	struct menu *m = menu_new(ui, _("System information"), K_INFO);
@@ -1413,6 +1491,9 @@ static void open_info(struct ui *ui)
 	menu_add(m, MI_INFO, ID_INFO0 + 5, _("Games"));
 	menu_add(m, MI_INFO, ID_INFO0 + 6, _("Input devices"));
 	menu_add(m, MI_INFO, ID_INFO0 + 7, _("CPU temperature"));
+	/* TRANSLATORS: System information: the people who made RetroStoneOS */
+	menu_add(m, MI_ACTION, ID_INFO0 + 10, _("Credits"));
+	m->on_item = info_item;
 	m->on_refresh = info_refresh;
 	m->refresh_every = 2000;
 	menu_open(ui, m);
@@ -1440,6 +1521,17 @@ static const char *const g_gauge_vals[] = { "auto", "voltage", "axp" };
 /* TRANSLATORS: how the battery level is measured: automatic, from the voltage,
  * or the power chip's (AXP) fuel gauge */
 static const char *const g_gauge_labels[] = { N_("Automatic"), N_("Voltage"), N_("AXP fuel gauge") };
+
+/* TRANSLATORS: Settings > Power > Memory speed: the DRAM clock (normal 384 MHz,
+ * +12 % = 432 MHz, +25 % = 480 MHz) */
+static const char *const g_mem_labels[] = { N_("Normal"), N_("Faster (+12 %)"), N_("Fastest (+25 %)") };
+
+static void mem_restart(struct ui *ui, int choice, void *user)
+{
+	(void)user;
+	if (choice == 0)
+		ui_power(ui, UI_REBOOT);
+}
 
 static void power_setting(struct ui *ui, const char *key, const char *value)
 {
@@ -1481,6 +1573,23 @@ static void power_item(struct ui *ui, struct menu *m, struct menu_item *it, int 
 	case ID_GAUGE:
 		power_setting(ui, "battery_gauge", g_gauge_vals[it->val]);
 		break;
+	case ID_MEMSPEED: {
+		/* TRANSLATORS: dialog buttons, uppercase, short */
+		const char *const buttons[] = { _("RESTART NOW"), _("LATER"), NULL };
+
+		if (memspeed_set(it->val) < 0) {
+			message_open(ui, _("The setting could not be saved."));
+			break;
+		}
+		dialog_open(ui, it->val ?
+			    /* TRANSLATORS: Settings > Power > Memory speed, a faster level chosen */
+			    _("The next start tries the faster memory speed. After 30 seconds without a problem, "
+			      "a quick memory test confirms it. If the console freezes, hold the power button "
+			      "to turn it off: it then starts at the normal speed by itself.") :
+			    /* TRANSLATORS: Settings > Power > Memory speed, back to normal */
+			    _("Restart required: the change applies at the next start."), buttons, mem_restart, NULL);
+		break;
+	}
 	}
 }
 
@@ -1507,6 +1616,29 @@ static void open_power(struct ui *ui)
 	it = menu_add(m, MI_CHOICE, ID_GAUGE, _("Battery gauge"));
 	set_choices(it, g_gauge_labels, 3, index_of(g_gauge_vals, 3,
 		    settings_get(ui->settings, "battery_gauge", "auto")));
+	/* The RetroStone2's DRAM clock (U-Boot's SPL, the AXP209 register) */
+	if (memspeed_available()) {
+		bool failed;
+		int mhz, lvl = memspeed_get(&failed, &mhz);
+
+		/* TRANSLATORS: Settings > Power section header */
+		menu_add(m, MI_HEADER, 0, _("Performance"));
+		/* the state first: the choice is the last row (always in view) */
+		if (failed) {
+			/* TRANSLATORS: Settings > Power: the faster memory did not work on this unit */
+			it = menu_add(m, MI_INFO, ID_MEMINFO, _("Last faster try failed"));
+			/* TRANSLATORS: value: the console went back to the normal memory speed */
+			strlcpy_(it->value, _("normal speed"), sizeof(it->value));
+			it->disabled = true;
+		} else if (mhz > 0) {
+			it = menu_add(m, MI_INFO, ID_MEMINFO, _("Memory clock now"));
+			snprintf(it->value, sizeof(it->value), "%d MHz", mhz);
+			it->disabled = true;
+		}
+		/* TRANSLATORS: Settings > Power: the DRAM clock */
+		it = menu_add(m, MI_CHOICE, ID_MEMSPEED, _("Memory speed"));
+		set_choices(it, g_mem_labels, 3, lvl < 0 ? 0 : lvl);
+	}
 	m->on_item = power_item;
 	menu_open(ui, m);
 }

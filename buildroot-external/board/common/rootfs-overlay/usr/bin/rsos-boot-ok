@@ -146,7 +146,32 @@ refund() {
 		case "$_f" in [1-9]) fw_setenv rsos_fails $((_f - 1)) ;; esac
 	fi
 	[ "$(get rsos_lowvolt)" != trial ] || fw_setenv rsos_lowvolt
+	# a faster memory trial: try it again at the next start (an orderly
+	# shutdown is no failure)
+	[ -x "$AXP" ] && "$AXP" dram-retry 2> /dev/null
 	echo refunded > "$RUN/boot-state"
+}
+
+# The RetroStone2's faster memory (Settings > Power > Memory speed): U-Boot's
+# SPL runs every start at the chosen DRAM clock as a trial (AXP209 REG0D,
+# /usr/libexec/rsos/axpstamp). Once the start is stable, a memory test; then
+# the trial is confirmed, or marked failed and the console restarts at the
+# normal speed (data must not be written with a memory that flips bits).
+AXP=/usr/libexec/rsos/axpstamp
+dram_trial() {
+	[ -x "$AXP" ] && [ -x /usr/libexec/rsos/memtest ] || return 0
+	set -- $("$AXP" dram-get 2> /dev/null)
+	[ "$1" = trial ] || return 0
+	if /usr/libexec/rsos/memtest 96 2 > "$RUN/memtest.txt" 2>&1; then
+		"$AXP" dram-ok
+		msg "memory at $3 MHz: test passed, confirmed"
+		return 0
+	fi
+	"$AXP" dram-fail
+	msg "memory at $3 MHz: test FAILED ($(cat "$RUN/memtest.txt")): back to the normal speed, restarting"
+	sync
+	reboot
+	exit 1
 }
 
 case "$1" in
@@ -193,4 +218,5 @@ if [ -n "$fe" ] && ! kill -0 "$fe" 2> /dev/null; then
 	msg "the frontend restarted, not confirming (its new instance starts over)"
 	exit 1
 fi
+dram_trial
 confirm

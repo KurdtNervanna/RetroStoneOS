@@ -138,6 +138,7 @@ enum {
 	ID_B_BIOS, ID_B_SETTINGS, ID_B_GAME, ID_B_START,
 	ID_TREE0 = 30, ID_TREE_ALL = 60,
 	ID_DRIVE0 = 70,
+	ID_I_DEST = 90, ID_I_DESTNOTE,
 };
 /* ui->scan_orphan: scans whose screen was closed, freed when they end */
 enum { ORPHAN_PLAN = 1, ORPHAN_TREES = 2, ORPHAN_BACKUP = 4 };
@@ -191,8 +192,7 @@ static bool find_drive(struct ui *ui, const char *mp, struct transfer_usb_drive 
 static void invalidate(struct ui *ui, char ids[][TRANSFER_SYSID_MAX], int n)
 {
 	for (int i = 0; i < n; i++) {
-		if (ui->cfg.cache_dir[0])
-			games_invalidate(ui->cfg.cache_dir, ids[i]);
+		ui_invalidate_system(ui, ids[i]);
 		LOGI("transfer: %s changed", ids[i]);
 	}
 	if (n)
@@ -302,6 +302,10 @@ struct import_ctx {
 	struct transfer_plan *plan;
 	int err;
 	struct transfer_import_opts o;
+	/* Copy games to (the Pro's other disks, storage.c): 0 = /data; else
+	 * dest_root, a game disk, and only the games are copied there */
+	int dest;
+	char dest_root[TRANSFER_PATH_MAX];
 };
 
 static void import_items(struct ui *ui, struct menu *m);
@@ -326,7 +330,7 @@ static void start_plan(struct ui *ui, struct menu *m, struct import_ctx *c)
 
 	for (int i = 0; i < c->nroots; i++)
 		roots[i] = c->roots[i];
-	r = TR(ui)->plan_start_trees(roots, c->nroots, data_root(ui));
+	r = TR(ui)->plan_start_trees(roots, c->nroots, c->dest_root[0] ? c->dest_root : data_root(ui));
 	if (r < 0) {
 		c->err = r;
 		c->state = IS_PLAN;
@@ -451,6 +455,29 @@ static void import_item(struct ui *ui, struct menu *m, struct menu_item *it, int
 	case ID_I_SHOTS:
 		c->o.screenshots = it->on;
 		break;
+	case ID_I_DEST: {
+		const char *roots[4], *labels[4];
+		int n = storage_import_targets(ui, roots, labels, 4);
+
+		if (it->val < 0 || it->val >= n || it->val == c->dest)
+			break;
+		c->dest = it->val;
+		strlcpy_(c->dest_root, roots[it->val] ? roots[it->val] : "", sizeof(c->dest_root));
+		/* another disk: only the games (BIOS files, saves and themes are
+		 * read from /data) */
+		TR(ui)->import_defaults(&c->o);
+		if (c->dest)
+			c->o.bios = c->o.saves = c->o.themes = c->o.screenshots = false;
+		LOGI("usb: import: games to %s", c->dest_root[0] ? c->dest_root : data_root(ui));
+		if (c->plan)
+			TR(ui)->plan_free(c->plan);
+		c->plan = NULL;
+		c->err = 0;
+		start_plan(ui, m, c);
+		import_items(ui, m);
+		ui->dirty = true;
+		break;
+	}
 	case ID_I_COPY:
 		if (dir || !c->plan)
 			break;
@@ -589,6 +616,24 @@ static void import_items(struct ui *ui, struct menu *m)
 		tfmt(it->value, sizeof(it->value), _n("%d file", "%d files", p->unknown_files[i]),
 		     p->unknown_files[i]);
 	}
+	{
+		/* Copy games to: the Pro's other disks (storage.c) */
+		const char *roots[4], *labels[4];
+		int nd = storage_import_targets(ui, roots, labels, 4);
+
+		if (nd > 0) {
+			/* TRANSLATORS: import option: the disk that receives the games
+			 * (SD card, Internal storage, M.2 drive) */
+			it = add(m, MI_CHOICE, ID_I_DEST, _("Copy games to"));
+			for (int i = 0; i < nd; i++)
+				it->choices[i] = labels[i];
+			it->nchoices = nd;
+			it->val = CLAMP(c->dest, 0, nd - 1);
+			tcpy(it->value, labels[it->val], sizeof(it->value));
+		} else {
+			c->dest = 0;
+		}
+	}
 	if (!any) {
 		add(m, MI_INFO, 0, _("Nothing new on this drive"))->disabled = true;
 		add(m, MI_ACTION, ID_I_EJECT, _("Eject"));
@@ -596,27 +641,31 @@ static void import_items(struct ui *ui, struct menu *m)
 	}
 	/* TRANSLATORS: menu section header: what to copy (toggles follow) */
 	add(m, MI_HEADER, 0, C_("import section", "Copy"));
+	if (c->dest) {
+		/* TRANSLATORS: import, with "Copy games to" another disk */
+		add(m, MI_INFO, ID_I_DESTNOTE, _("Only the games go to this drive"))->disabled = true;
+	}
 	if (p->rom_files || p->rom_copy) {
 		/* TRANSLATORS: toggle: copy the games */
 		it = add(m, MI_TOGGLE, ID_I_ROMS, _("Games"));
 		it->on = c->o.roms;
 		it->disabled = !p->rom_copy && !p->replace;
 	}
-	if (p->bios_files) {
+	if (p->bios_files && !c->dest) {
 		it = add(m, MI_TOGGLE, ID_I_BIOS, _("BIOS files"));
 		it->on = c->o.bios;
 		it->disabled = !p->bios_copy;
 	}
-	if (p->save_files) {
+	if (p->save_files && !c->dest) {
 		it = add(m, MI_TOGGLE, ID_I_SAVES, _("Saves & save states"));
 		it->on = c->o.saves;
 	}
-	if (p->theme_files) {
+	if (p->theme_files && !c->dest) {
 		it = add(m, MI_TOGGLE, ID_I_THEMES, _("Themes"));
 		it->on = c->o.themes;
 		it->disabled = !p->theme_copy;
 	}
-	if (p->shot_files) {
+	if (p->shot_files && !c->dest) {
 		it = add(m, MI_TOGGLE, ID_I_SHOTS, _("Screenshots"));
 		it->on = c->o.screenshots;
 		it->disabled = !p->shot_copy;

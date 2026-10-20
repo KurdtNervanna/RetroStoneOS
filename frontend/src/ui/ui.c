@@ -56,6 +56,7 @@ void ui_config_defaults(struct ui_config *cfg)
 	cfg->update_helper = "/usr/bin/rsos-update";   /* used only if it is there */
 	cfg->smb_helper = "/usr/bin/rsos-smb";         /* the same */
 	cfg->data_partition_helper = "/usr/libexec/rsos/data-partition";
+	cfg->storage_helper = "/usr/bin/rsos-storage"; /* used only if it is there */
 	cfg->wpa_conf = "/data/rsos/wpa_supplicant.conf";
 	cfg->version = RSOS_VERSION;
 	cfg->default_theme = RSOS_DEFAULT_THEME;
@@ -1059,6 +1060,7 @@ struct ui *ui_create(const struct ui_config *cfg)
 	 * included) would be drawn with an all-zero, invisible style */
 	ui_refresh_look(ui);
 	loader_init(ui);
+	storage_init(ui);
 	prefetch_init(ui);        /* its thread starts after the first frame */
 	ui->snapshot_depth = -1;
 	ui->created_at = ui_now_ms();
@@ -1304,6 +1306,7 @@ bool ui_update(struct ui *ui, int64_t now_ms)
 	transfer_poll(ui);
 	update_poll(ui);                /* the system updater's helper (update_ui.c) */
 	data_problem_poll(ui);          /* /data unreadable: the storage screen (screens.c) */
+	storage_poll(ui);               /* the Pro's disks and game libraries (storage.c) */
 	if (ui->reload_pending && ui_top(ui) && ui_top(ui)->kind == SCR_SYSVIEW) {
 		ui->reload_pending = false;
 		ui_reload_games(ui, false);
@@ -1353,6 +1356,7 @@ int ui_timeout_ms(const struct ui *ui, int64_t now_ms)
 		MINT(0);
 	if (ui->bright_until)
 		MINT(MAX(0, ui->bright_until - now_ms));
+	MINT(storage_timeout(ui, now_ms));
 	if (hw_jobs_running())
 		MINT(100);
 	if (ui->flush_at)

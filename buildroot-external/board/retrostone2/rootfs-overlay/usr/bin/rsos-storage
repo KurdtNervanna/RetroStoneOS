@@ -1,0 +1,878 @@
+#!/bin/sh
+# rsos-storage: the RetroStone2 "Pro" storage (the 16 GB eMMC U23 and the
+# M.2 SATA slot J1), for Settings > Storage.
+#
+#   rsos-storage status            the state, "key=value" lines (also in
+#                                  /run/rsos/storage-status)
+#   rsos-storage overlay <emmc|sata> <on|off>
+#                                  rsos_overlays in the U-Boot environment
+#                                  (boot.cmd applies them; restart needed)
+#   rsos-storage install [--keep-data] [--games]
+#                                  copy RetroStoneOS to the eMMC so that the
+#                                  console starts without a microSD
+#   rsos-storage sd-starter        after an install, from the microSD: keep only
+#                                  its boot loader and games (a starter card)
+#   rsos-storage sd-full           started by a starter card: make the card a
+#                                  full system again (the eMMC's, copied back)
+#   rsos-storage sd-games          booted from the eMMC: turn the inserted
+#                                  RetroStoneOS microSD into a games card (its
+#                                  boot loader and system partitions go, its
+#                                  RETROSTONE partition and games stay)
+#   rsos-storage format <sd|m2>    erase that disk: one exFAT RETROSTONE
+#                                  partition with the roms/ folders
+#   rsos-storage refresh           mount the game libraries of the disks that
+#                                  are not the system disk (/run/rsos/media/
+#                                  <emmc|sd|m2>), unmount the ones that left
+#   rsos-storage boot              once per boot, from rcS after the menu is up
+#   rsos-storage eject <emmc|sd|m2>
+#
+# Boot order of the A20 boot ROM: microSD (mmc0), NAND (none), eMMC (mmc2),
+# SPI, USB (FEL). A microSD that carries a boot loader (eGON.BT0 at 8 KiB)
+# therefore always starts first: a freshly flashed RetroStoneOS card is the
+# way back. A games card has none, so the console starts from the eMMC.
+#
+# The installer writes the same layout as the SD card image (genimage.cfg):
+#   8 KiB     U-Boot (with SPL)          written LAST: until then the eMMC
+#                                        cannot start, whatever happens
+#   1 MiB     U-Boot environment         zeroed (U-Boot's defaults, then
+#                                        boot.scr saves its own)
+#   MBR 2     rootfs A, 512 MiB          the running slot, verified
+#   MBR 3     rootfs B, 512 MiB          empty until the first update
+#   MBR 1     data, exFAT RETROSTONE     to the end of the eMMC: settings,
+#                                        saves, BIOS files, themes (and the
+#                                        games with --games)
+# --keep-data (the eMMC already holds RetroStoneOS): only the boot loader and
+# the system are rewritten, its data partition is left as it is.
+# The microSD stays untouched and bootable, so a power cut at any point
+# leaves a console that starts from the card; the next install starts over.
+#
+# Progress, for the menu: "<percent> <step>" in /run/rsos/storage-progress
+# (steps: prepare system verify data games bootloader done; "error <reason>"
+# when it stops: notsd noemmc toosmall nospace busy layout write verify
+# format mount copy bootloader nosd notemmc notrsos), also on stdout. Every
+# step goes to the kernel log too ("rsos-storage: ..."), hence to
+# RETROSTONE/rsos/logs/boot<N>/dmesg.txt.
+
+PATH=/usr/bin:/usr/sbin:/bin:/sbin
+export PATH
+
+[ -r /usr/libexec/rsos/board.sh ] && . /usr/libexec/rsos/board.sh
+BOOT_DISK=${RSOS_STORAGE_BOOT_DISK:-${RSOS_DISK:-/dev/mmcblk0}}
+# the disk U-Boot started from (its environment; rcS links it): the microSD
+# also when the system runs from the eMMC through a starter card
+ENV_DISK=${RSOS_STORAGE_ENV_DISK:-$(readlink /dev/rsos-disk 2> /dev/null)}
+ENV_DISK=${ENV_DISK:-$BOOT_DISK}
+SD=${RSOS_STORAGE_SD:-/dev/mmcblk0}
+EMMC=${RSOS_STORAGE_EMMC:-/dev/mmcblk1}
+RUN=${RSOS_RUN:-/run/rsos}
+DATA=${RSOS_DATA_MNT:-/data}
+SHARE=${RSOS_SHARE:-/usr/share/rsos}
+MEDIA=$RUN/media
+STATUS=$RUN/storage-status
+PROGRESS=$RUN/storage-progress
+LIBS=$RUN/libraries
+LOCK=$RUN/storage.lock
+KMSG=${RSOS_KMSG:-/dev/kmsg}
+BOOTLOADER=$SHARE/bootloader/u-boot-sunxi-with-spl.bin
+LABEL=RETROSTONE
+
+# The image layout (genimage.cfg), in 512-byte sectors
+ROOT_A_START=8192
+ROOT_B_START=1056768
+ROOT_SIZE=1048576
+DATA_START=2105344
+# a data partition of at least 1 GiB
+MIN_SECTORS=$((DATA_START + 2097152))
+
+mkdir -p "$RUN" "$MEDIA" 2> /dev/null
+
+msg() {
+	echo "rsos-storage: $*" >&2
+	{ echo "<5>rsos-storage: $*" > "$KMSG"; } 2> /dev/null
+	# kept on the card too (the boot logger copies dmesg only now and then)
+	if [ -d "$DATA/rsos/logs" ]; then
+		read -r _up _ < /proc/uptime
+		echo "$(date '+%F %T' 2> /dev/null) [$_up] $*" >> "$DATA/rsos/logs/storage.log" 2> /dev/null
+	fi
+}
+
+progress() { # <percent> <step>
+	echo "$1 $2" > "$PROGRESS.tmp" && mv -f "$PROGRESS.tmp" "$PROGRESS"
+	echo "progress $1 $2"
+}
+
+fail() { # <reason> <message>
+	echo "error $1" > "$PROGRESS.tmp" && mv -f "$PROGRESS.tmp" "$PROGRESS"
+	msg "failed ($1): $2"
+	echo "error $1"
+	exit 1
+}
+
+# --------------------------------------------------------------- disks
+part() { # <disk> <n>: /dev/mmcblk1p2, /dev/sda1
+	case "$1" in
+	*[0-9]) echo "$1p$2" ;;
+	*) echo "$1$2" ;;
+	esac
+}
+
+sectors() { # <disk>: its size in 512-byte sectors (0: absent)
+	_s=0
+	[ -r "/sys/class/block/${1##*/}/size" ] && read -r _s < "/sys/class/block/${1##*/}/size"
+	echo "${_s:-0}"
+}
+
+present() { # <disk>
+	[ -b "$1" ] && [ "$(sectors "$1")" -gt 0 ]
+}
+
+# The M.2 SATA disk: the first sd* disk behind the A20's AHCI controller (USB
+# sticks are sd* disks too, behind a USB host).
+m2_disk() {
+	for _b in /sys/block/sd*; do
+		[ -e "$_b" ] || continue
+		case "$(readlink -f "$_b")" in
+		*/1c18000.sata/*|*/ata[0-9]*) echo "/dev/${_b##*/}"; return 0 ;;
+		esac
+	done
+	return 1
+}
+
+has_bootloader() { # <disk>: an Allwinner boot header at 8 KiB (the boot ROM starts it)
+	[ "$(dd if="$1" bs=1 skip=8196 count=8 2> /dev/null)" = "eGON.BT0" ]
+}
+
+# RetroStoneOS' layout: the boot loader, and the rootfs A entry where the
+# image puts it.
+is_rsos() { # <disk>
+	has_bootloader "$1" || return 1
+	sfdisk --dump "$1" 2> /dev/null | grep -q "^$(part "$1" 2) : start= *$ROOT_A_START, size= *$ROOT_SIZE,"
+}
+
+fstype() { # <partition>
+	blkid -o value -s TYPE "$1" 2> /dev/null
+}
+
+# The disk's game partition: entry 1 (RetroStoneOS, a games card made here,
+# or most cards formatted on a PC)
+data_part() { # <disk>
+	_p=$(part "$1" 1)
+	[ -b "$_p" ] && echo "$_p"
+}
+
+# What a disk holds, for the menu:
+#   rsos      RetroStoneOS (boots)          bootable  another system that boots
+#   games     a RETROSTONE-style game disk  other     something else
+#   starter   the boot loader and a game partition, no system (a starter card)
+#   empty     no partition table
+disk_state() { # <disk>
+	if is_rsos "$1"; then
+		echo rsos
+	elif has_bootloader "$1"; then
+		case "$(fstype "$(part "$1" 1)" 2> /dev/null)" in
+		exfat|vfat) [ ! -b "$(part "$1" 2)" ] && echo starter || echo bootable ;;
+		*) echo bootable ;;
+		esac
+	elif ! sfdisk --dump "$1" > /dev/null 2>&1; then
+		echo empty
+	else
+		_p=$(data_part "$1")
+		case "$(fstype "$_p" 2> /dev/null)" in
+		exfat|vfat) echo games ;;
+		*) echo other ;;
+		esac
+	fi
+}
+
+boot_name() {
+	case "$BOOT_DISK" in
+	"$SD") echo sd ;;
+	"$EMMC") echo emmc ;;
+	*) echo other ;;
+	esac
+}
+
+overlays() {
+	fw_printenv -n rsos_overlays 2> /dev/null
+}
+
+wait_parts() { # <disk> <n>...
+	_d=$1
+	shift
+	_i=0
+	while [ $_i -lt 30 ]; do
+		_ok=1
+		for _n; do
+			[ -b "$(part "$_d" "$_n")" ] || _ok=0
+		done
+		[ $_ok = 1 ] && return 0
+		usleep 100000 2> /dev/null || sleep 1
+		_i=$((_i + 1))
+	done
+	return 1
+}
+
+reread() { # <disk>
+	blockdev --rereadpt "$1" 2> /dev/null || partx --update "$1" 2> /dev/null
+}
+
+mounted_from() { # <disk>: mount points of its partitions
+	awk -v d="$1" 'index($1, d) == 1 { print $2 }' /proc/mounts
+}
+
+drop_caches() {
+	sync
+	echo 3 > /proc/sys/vm/drop_caches 2> /dev/null
+}
+
+# ------------------------------------------------------------ libraries
+# A library: <disk>'s game partition mounted on $MEDIA/<name>, listed in
+# $LIBS ("<name> <mount point>") when it has a roms/ folder.
+lib_mounted() { # <name>
+	grep -q " $MEDIA/$1 " /proc/mounts
+}
+
+lib_umount() { # <name>
+	if lib_mounted "$1"; then
+		sync
+		umount "$MEDIA/$1" 2> /dev/null || umount -l "$MEDIA/$1" 2> /dev/null
+		msg "library $1 unmounted"
+	fi
+	rmdir "$MEDIA/$1" 2> /dev/null
+	return 0
+}
+
+lib_mount() { # <name> <partition>
+	lib_mounted "$1" && return 0
+	_t=$(fstype "$2")
+	mkdir -p "$MEDIA/$1"
+	case "$_t" in
+	exfat)
+		# VolumeDirty (unplugged or powered off while mounted): check first
+		if [ -n "$(dd if="$2" bs=1 skip=106 count=1 2> /dev/null)" ]; then
+			msg "library $1: $2 was not unmounted cleanly, checking it"
+			fsck.exfat -p "$2" > /dev/null 2>&1
+		fi
+		mount -t exfat -o noatime "$2" "$MEDIA/$1" 2> /dev/null ||
+			{ fsck.exfat -p "$2" > /dev/null 2>&1 && mount -t exfat -o noatime "$2" "$MEDIA/$1" 2> /dev/null; }
+		;;
+	vfat)
+		mount -t vfat -o noatime,utf8,shortname=mixed "$2" "$MEDIA/$1" 2> /dev/null
+		;;
+	*)
+		false
+		;;
+	esac || { rmdir "$MEDIA/$1" 2> /dev/null; return 1; }
+	msg "library $1: $2 ($_t) mounted on $MEDIA/$1"
+}
+
+write_libs() {
+	: > "$LIBS.tmp"
+	for _n in emmc sd m2; do
+		lib_mounted "$_n" && [ -d "$MEDIA/$_n/roms" ] && echo "$_n $MEDIA/$_n" >> "$LIBS.tmp"
+	done
+	if ! cmp -s "$LIBS.tmp" "$LIBS" 2> /dev/null; then
+		mv -f "$LIBS.tmp" "$LIBS"
+	else
+		rm -f "$LIBS.tmp"
+	fi
+}
+
+refresh() {
+	for _n in emmc sd m2; do
+		case $_n in
+		emmc) _d=$EMMC ;;
+		sd) _d=$SD ;;
+		m2) _d=$(m2_disk) || _d= ;;
+		esac
+		# the disk left (card pulled): its mount goes too
+		if [ -z "$_d" ] || [ "$_d" = "$BOOT_DISK" ] || ! present "$_d"; then
+			lib_umount $_n
+			continue
+		fi
+		_p=$(data_part "$_d") || { lib_umount $_n; continue; }
+		lib_mount $_n "$_p"
+	done
+	write_libs
+	status > /dev/null
+}
+
+# --------------------------------------------------------------- status
+status() {
+	{
+		echo "boot=$(boot_name)"
+		# started by a starter card: the system on the eMMC, U-Boot on the SD
+		[ "$ENV_DISK" != "$BOOT_DISK" ] && [ "$ENV_DISK" = "$SD" ] && echo "starter=1"
+		[ -e /sys/bus/platform/devices/1c11000.mmc ] && echo "emmc_ctrl=enabled"
+		if present "$EMMC"; then
+			echo "emmc=present"
+			echo "emmc_mb=$(($(sectors "$EMMC") / 2048))"
+			[ "$EMMC" = "$BOOT_DISK" ] || echo "emmc_state=$(disk_state "$EMMC")"
+		else
+			echo "emmc=absent"
+		fi
+		if [ "$SD" != "$BOOT_DISK" ]; then
+			if present "$SD"; then
+				echo "sd=present"
+				echo "sd_mb=$(($(sectors "$SD") / 2048))"
+				echo "sd_state=$(disk_state "$SD")"
+			else
+				echo "sd=absent"
+			fi
+		fi
+		if [ -d /sys/bus/platform/devices/1c18000.sata ]; then
+			echo "sata=enabled"
+		else
+			echo "sata=disabled"
+		fi
+		if _m=$(m2_disk); then
+			echo "m2=present"
+			echo "m2_mb=$(($(sectors "$_m") / 2048))"
+			echo "m2_state=$(disk_state "$_m")"
+		else
+			echo "m2=absent"
+		fi
+		echo "overlays=$(overlays)"
+		for _n in emmc sd m2; do
+			if lib_mounted $_n && [ -d "$MEDIA/$_n/roms" ]; then
+				echo "lib_$_n=$MEDIA/$_n"
+			fi
+		done
+	} > "$STATUS.tmp"
+	# (not "{ ... } && mv": the group's status is its last test's, false
+	# when no library is mounted)
+	mv -f "$STATUS.tmp" "$STATUS"
+	cat "$STATUS"
+}
+
+# -------------------------------------------------------------- overlay
+overlay() { # <emmc|sata> <on|off>
+	case "$1" in emmc|sata) ;; *) echo "rsos-storage: unknown overlay $1" >&2; exit 2 ;; esac
+	_new=
+	for _o in $(overlays); do
+		[ "$_o" = "$1" ] || _new="$_new $_o"
+	done
+	[ "$2" = on ] && _new="$_new $1"
+	_new=${_new# }
+	if [ -n "$_new" ]; then
+		fw_setenv rsos_overlays "$_new" || exit 1
+	else
+		fw_setenv rsos_overlays || exit 1
+	fi
+	msg "rsos_overlays=\"$_new\" (applies at the next start)"
+	status > /dev/null
+}
+
+# ------------------------------------------------------------- installer
+make_layout() { # <mount point>
+	_sys=$(cat "$SHARE/rom-folders" 2> /dev/null)
+	[ -n "$_sys" ] || _sys="arcade gb gba gbc gamegear mastersystem megadrive n64 neogeo nes psx snes"
+	for _s in $_sys; do
+		mkdir -p "$1/roms/$_s"
+	done
+}
+
+copy_progress() { # <src> <dst> <from %> <to %> <step>: cp -R with progress (du of the copy)
+	_total=$(du -sk "$1" 2> /dev/null | cut -f1)
+	[ -n "$_total" ] && [ "$_total" -gt 0 ] || _total=1
+	cp -R "$1/." "$2/" 2> "$RUN/storage-cp.err" &
+	_pid=$!
+	while kill -0 $_pid 2> /dev/null; do
+		sleep 2
+		_done=$(du -sk "$2" 2> /dev/null | cut -f1)
+		_pct=$(($3 + (${_done:-0} * ($4 - $3)) / _total))
+		[ $_pct -gt $4 ] && _pct=$4
+		progress $_pct "$5"
+	done
+	wait $_pid
+}
+
+install() {
+	_keep=0
+	_games=0
+	for _a; do
+		case "$_a" in
+		--keep-data) _keep=1 ;;
+		--games) _games=1 ;;
+		esac
+	done
+	progress 0 prepare
+	msg "install to $EMMC (keep-data=$_keep games=$_games), from $BOOT_DISK"
+	[ "$BOOT_DISK" = "$SD" ] || fail notsd "the system does not run from the microSD"
+	present "$EMMC" || fail noemmc "no eMMC ($EMMC): Settings > Storage > Internal eMMC, then restart"
+	[ "$(sectors "$EMMC")" -ge $MIN_SECTORS ] || fail toosmall "$EMMC is too small"
+	[ -f "$BOOTLOADER" ] && (cd "${BOOTLOADER%/*}" && sha256sum -c -s "${BOOTLOADER##*/}.sha256") ||
+		fail bootloader "$BOOTLOADER missing or damaged"
+
+	# the running slot: root=/dev/mmcblk0p2 or p3
+	read -r _cl < "${RSOS_CMDLINE:-/proc/cmdline}"
+	_root=${_cl##*root=}
+	_root=${_root%% *}
+	case "$_root" in
+	"$(part "$SD" 2)"|"$(part "$SD" 3)") ;;
+	*) fail notsd "root=$_root is not a slot of $SD" ;;
+	esac
+	[ "$(sectors "$_root")" -eq $ROOT_SIZE ] || fail layout "$_root is not $ROOT_SIZE sectors"
+
+	if [ $_keep = 1 ]; then
+		is_rsos "$EMMC" || fail layout "--keep-data: $EMMC does not hold RetroStoneOS"
+	fi
+
+	# nothing of the eMMC may stay mounted (its library)
+	lib_umount emmc
+	write_libs
+	[ -z "$(mounted_from "$EMMC")" ] || fail busy "$(mounted_from "$EMMC" | tr '\n' ' ')is mounted"
+
+	# room for the data (the games with --games)
+	if [ $_keep = 0 ]; then
+		_room=$(( ($(sectors "$EMMC") - DATA_START) / 2 * 95 / 100 ))
+		_need=0
+		for _d in rsos bios saves states screenshots themes; do
+			[ -d "$DATA/$_d" ] && _need=$((_need + $(du -sk "$DATA/$_d" | cut -f1)))
+		done
+		[ $_games = 1 ] && _need=$((_need + $(du -sk "$DATA/roms" | cut -f1)))
+		msg "data to copy: $_need KiB, room: $_room KiB"
+		[ $_need -lt $_room ] || fail nospace "$_need KiB to copy, $_room KiB on the eMMC"
+	fi
+
+	# 1. The eMMC can no longer start (boot loader, environment, trace area
+	# zeroed) before anything else changes on it.
+	dd if=/dev/zero of="$EMMC" bs=1024 seek=8 count=4088 conv=fsync 2> /dev/null ||
+		fail write "cannot write $EMMC"
+	if [ $_keep = 0 ]; then
+		# the last MiB (data-partition's conversion marker) too
+		_last=$(( $(sectors "$EMMC") / 2048 - 1 ))
+		dd if=/dev/zero of="$EMMC" bs=1M seek=$_last count=1 conv=fsync 2> /dev/null
+		_id=
+		read -r _u < /proc/sys/kernel/random/uuid
+		_id=0x${_u%%-*}
+		printf 'label: dos\nlabel-id: %s\nunit: sectors\n\nstart=%s, type=7\nstart=%s, size=%s, type=83, bootable\nstart=%s, size=%s, type=83\n' \
+			"$_id" $DATA_START $ROOT_A_START $ROOT_SIZE $ROOT_B_START $ROOT_SIZE |
+			sfdisk --quiet --no-reread --wipe always --wipe-partitions always "$EMMC" > /dev/null 2>&1 ||
+			fail write "cannot write the partition table of $EMMC"
+		msg "partition table written (disk id $_id)"
+	fi
+	reread "$EMMC"
+	wait_parts "$EMMC" 1 2 3 || fail layout "the partitions of $EMMC did not appear"
+	progress 3 prepare
+
+	# 2. The system (the running slot, read-only: a consistent copy)
+	_dst=$(part "$EMMC" 2)
+	_chunks=$((ROOT_SIZE / 32768))      # 16 MiB each
+	_i=0
+	while [ $_i -lt $_chunks ]; do
+		dd if="$_root" of="$_dst" bs=1M count=16 skip=$((_i * 16)) seek=$((_i * 16)) conv=fsync 2> /dev/null ||
+			fail write "cannot write $_dst (chunk $_i)"
+		_i=$((_i + 1))
+		progress $((3 + _i * 47 / _chunks)) system
+	done
+	msg "system copied from $_root to $_dst"
+	# slot B: empty (no file system signature left from before)
+	dd if=/dev/zero of="$(part "$EMMC" 3)" bs=1M count=4 conv=fsync 2> /dev/null
+
+	# 3. Read it back from the eMMC itself (not the page cache)
+	drop_caches
+	_i=0
+	while [ $_i -lt $_chunks ]; do
+		_a=$(dd if="$_root" bs=1M count=16 skip=$((_i * 16)) 2> /dev/null | sha256sum)
+		_b=$(dd if="$_dst" bs=1M count=16 skip=$((_i * 16)) 2> /dev/null | sha256sum)
+		[ "$_a" = "$_b" ] || fail verify "$_dst differs from $_root (chunk $_i)"
+		_i=$((_i + 1))
+		progress $((50 + _i * 15 / _chunks)) verify
+	done
+	msg "system verified"
+
+	# 4. The data partition
+	_mnt=$RUN/install-mnt
+	mkdir -p "$_mnt"
+	_ov=
+	for _o in $(overlays); do
+		[ "$_o" = emmc ] || _ov="$_ov $_o"
+	done
+	_ov=${_ov# }
+	if [ $_keep = 0 ]; then
+		progress 66 data
+		mkfs.exfat -L "$LABEL" "$(part "$EMMC" 1)" > /dev/null 2>&1 || fail format "mkfs.exfat failed"
+		mount -t exfat -o noatime "$(part "$EMMC" 1)" "$_mnt" || fail mount "cannot mount the new data partition"
+		make_layout "$_mnt"
+		mkdir -p "$_mnt/bios" "$_mnt/saves" "$_mnt/states" "$_mnt/screenshots" "$_mnt/themes" "$_mnt/rsos"
+		[ -f "$DATA/README.txt" ] && cp "$DATA/README.txt" "$_mnt/README.txt"
+		# settings, game database, controller set-up...: not the caches,
+		# the logs, the conversion stamp of the microSD, and (without the
+		# games) not the homebrew marker, so the eMMC gets its own copy
+		for _e in "$DATA"/rsos/* "$DATA"/rsos/.[!.]*; do
+			[ -e "$_e" ] || continue
+			case "${_e##*/}" in
+			cache|logs|.conversion-done) continue ;;
+			homebrew-seeded) [ $_games = 1 ] || continue ;;
+			esac
+			cp -R "$_e" "$_mnt/rsos/" 2>> "$RUN/storage-cp.err" || fail copy "cannot copy $_e"
+		done
+		for _d in bios saves states screenshots themes; do
+			[ -d "$DATA/$_d" ] || continue
+			cp -R "$DATA/$_d/." "$_mnt/$_d/" 2>> "$RUN/storage-cp.err" || fail copy "cannot copy $DATA/$_d"
+		done
+		progress 70 data
+		if [ $_games = 1 ]; then
+			copy_progress "$DATA/roms" "$_mnt/roms" 70 95 games || fail copy "cannot copy the games"
+			msg "games copied"
+		fi
+	else
+		mount -t exfat -o noatime "$(part "$EMMC" 1)" "$_mnt" 2> /dev/null ||
+			fail mount "cannot mount the data partition of $EMMC"
+		mkdir -p "$_mnt/rsos"
+	fi
+	# the overlays of this unit (the M.2 SATA drive), set by "rsos-storage
+	# boot" at the first start from the eMMC (its environment is new)
+	if [ -n "$_ov" ]; then
+		echo "$_ov" > "$_mnt/rsos/pending-overlays"
+	else
+		rm -f "$_mnt/rsos/pending-overlays"
+	fi
+	sync
+	umount "$_mnt" || fail mount "cannot unmount the data partition"
+	rmdir "$_mnt" 2> /dev/null
+	progress 96 bootloader
+
+	# 5. Last: the boot loader. From now on the eMMC starts (when no microSD
+	# with a boot loader is in the slot).
+	dd if="$BOOTLOADER" of="$EMMC" bs=1024 seek=8 conv=fsync 2> /dev/null || fail bootloader "cannot write the boot loader"
+	drop_caches
+	_size=$(wc -c < "$BOOTLOADER")
+	dd if="$EMMC" bs=1024 skip=8 count=$(( (_size + 1023) / 1024 )) 2> /dev/null | head -c "$_size" |
+		cmp -s - "$BOOTLOADER" || fail bootloader "the boot loader on $EMMC does not read back"
+	sync
+	msg "install finished: the console can start from $EMMC"
+	progress 100 done
+	refresh > /dev/null
+}
+
+# ------------------------------------------------------ games card / format
+sd_games() {
+	progress 0 prepare
+	[ "$BOOT_DISK" = "$EMMC" ] || fail notemmc "the system does not run from the eMMC"
+	present "$SD" || fail nosd "no microSD"
+	not_env_disk "$SD"
+	is_rsos "$SD" || fail notrsos "the microSD does not hold RetroStoneOS"
+	lib_umount sd
+	write_libs
+	[ -z "$(mounted_from "$SD")" ] || fail busy "the microSD is in use"
+	# boot loader, environment, trace: gone (the boot ROM skips the card)
+	dd if=/dev/zero of="$SD" bs=1024 seek=8 count=4088 conv=fsync 2> /dev/null || fail write "cannot write $SD"
+	progress 40 prepare
+	# the two system partitions: their file systems, then their entries
+	dd if=/dev/zero of="$(part "$SD" 2)" bs=1M count=4 conv=fsync 2> /dev/null
+	dd if=/dev/zero of="$(part "$SD" 3)" bs=1M count=4 conv=fsync 2> /dev/null
+	sfdisk --quiet --no-reread --delete "$SD" 2 3 > /dev/null 2>&1 || fail write "cannot change the partition table of $SD"
+	reread "$SD"
+	sync
+	msg "the microSD is a games card now (its RETROSTONE partition is kept)"
+	progress 100 done
+	refresh > /dev/null
+}
+
+# The starter card (the Pro whose boot ROM does not start the eMMC, see
+# docs/pro-storage.md): the running microSD keeps its boot loader and its
+# RETROSTONE partition (games), its two system partitions leave the MBR. At
+# the next start its U-Boot finds no boot.scr on the card and starts the
+# system on the eMMC (bootcmd), its environment stays on the card. Run right
+# after an install, from the microSD: the MBR is rewritten (--no-reread: the
+# running system keeps its partitions until the restart), nothing else on the
+# card changes, and the boot state is reset for the eMMC's slot A.
+# A freshly flashed card brings the full microSD system back.
+sd_starter() {
+	progress 0 prepare
+	[ "$BOOT_DISK" = "$SD" ] || fail notsd "the system does not run from the microSD"
+	is_rsos "$SD" || fail notrsos "the microSD does not hold RetroStoneOS"
+	present "$EMMC" && is_rsos "$EMMC" || fail noemmc "RetroStoneOS is not installed on the eMMC"
+	_size=$(wc -c < "$BOOTLOADER")
+	dd if="$EMMC" bs=1024 skip=8 count=$(( (_size + 1023) / 1024 )) 2> /dev/null | head -c "$_size" |
+		cmp -s - "$BOOTLOADER" || fail notrsos "the eMMC's system is not this one: install again first"
+	# the eMMC holds one system, in slot A (the installer's)
+	printf 'rsos_slot a\nrsos_ok 1\nrsos_tries 0\nrsos_fails 0\nrsos_rounds 0\nrsos_bad\nrsos_fallback\n' > "$RUN/starter-env"
+	fw_setenv -s "$RUN/starter-env" || fail write "cannot write the boot state"
+	rm -f "$RUN/starter-env"
+	progress 50 prepare
+	sync
+	sfdisk --quiet --no-reread --delete "$SD" 2 3 > /dev/null 2>&1 || fail write "cannot change the partition table of $SD"
+	sync
+	msg "the microSD is a starter card now: at the next start its boot loader starts the system on the eMMC"
+	progress 100 done
+}
+
+# Back from a starter card: the running system (on the eMMC) is copied to the
+# card's slot A again, its two system entries go back into its MBR (sd-starter
+# only removed them), the settings, saves, BIOS files and themes are copied
+# back to the card's RETROSTONE partition, and the boot state is reset for
+# slot A: at the next start the card's U-Boot finds its boot.scr again and
+# the console runs from the card. The eMMC keeps RetroStoneOS (and becomes a
+# game disk again). The card's boot loader is the one already there.
+sd_full() {
+	progress 0 prepare
+	[ "$BOOT_DISK" = "$EMMC" ] && [ "$ENV_DISK" = "$SD" ] || fail notstarter "not started by a starter card"
+	[ "$(disk_state "$SD")" = starter ] || fail notstarter "the microSD is not a starter card"
+	sfdisk --dump "$SD" 2> /dev/null | grep -q "^$(part "$SD" 1) : start= *$DATA_START," ||
+		fail layout "the microSD's RETROSTONE partition is not where the image puts it"
+	read -r _cl < "${RSOS_CMDLINE:-/proc/cmdline}"
+	_root=${_cl##*root=}
+	_root=${_root%% *}
+	case "$_root" in
+	"$(part "$EMMC" 2)"|"$(part "$EMMC" 3)") ;;
+	*) fail notstarter "root=$_root is not a slot of $EMMC" ;;
+	esac
+	[ "$(sectors "$_root")" -eq $ROOT_SIZE ] || fail layout "$_root is not $ROOT_SIZE sectors"
+
+	# 1. The two system entries back (the card's RETROSTONE partition stays
+	# mounted: no re-read, the kernel is told about the two new ones)
+	printf 'start=%s, size=%s, type=83, bootable\n' $ROOT_A_START $ROOT_SIZE |
+		sfdisk --quiet --no-reread -N 2 "$SD" > /dev/null 2>&1 || fail write "cannot write the partition table of $SD"
+	printf 'start=%s, size=%s, type=83\n' $ROOT_B_START $ROOT_SIZE |
+		sfdisk --quiet --no-reread -N 3 "$SD" > /dev/null 2>&1 || fail write "cannot write the partition table of $SD"
+	partx --add --nr 2:3 "$SD" 2> /dev/null || partx --update "$SD" 2> /dev/null
+	wait_parts "$SD" 2 3 || fail layout "the system partitions of $SD did not appear"
+	msg "the microSD's system partitions are back in its partition table"
+	progress 3 system
+
+	# 2. The running system to the card's slot A, then read back
+	_dst=$(part "$SD" 2)
+	_chunks=$((ROOT_SIZE / 32768))
+	_i=0
+	while [ $_i -lt $_chunks ]; do
+		dd if="$_root" of="$_dst" bs=1M count=16 skip=$((_i * 16)) seek=$((_i * 16)) conv=fsync 2> /dev/null ||
+			fail write "cannot write $_dst (chunk $_i)"
+		_i=$((_i + 1))
+		progress $((3 + _i * 47 / _chunks)) system
+	done
+	dd if=/dev/zero of="$(part "$SD" 3)" bs=1M count=4 conv=fsync 2> /dev/null
+	drop_caches
+	_i=0
+	while [ $_i -lt $_chunks ]; do
+		_a=$(dd if="$_root" bs=1M count=16 skip=$((_i * 16)) 2> /dev/null | sha256sum)
+		_b=$(dd if="$_dst" bs=1M count=16 skip=$((_i * 16)) 2> /dev/null | sha256sum)
+		[ "$_a" = "$_b" ] || fail verify "$_dst differs from $_root (chunk $_i)"
+		_i=$((_i + 1))
+		progress $((50 + _i * 30 / _chunks)) verify
+	done
+	msg "system copied from $_root to $_dst and verified"
+
+	# 3. Settings, saves, BIOS files, themes: the eMMC's (in use) to the card
+	progress 82 data
+	_m=$MEDIA/sd
+	lib_mounted sd || lib_mount sd "$(part "$SD" 1)" || fail mount "cannot mount the microSD's RETROSTONE partition"
+	mkdir -p "$_m/rsos"
+	for _e in "$DATA"/rsos/* "$DATA"/rsos/.[!.]*; do
+		[ -e "$_e" ] || continue
+		case "${_e##*/}" in
+		cache|logs|.conversion-done|pending-overlays) continue ;;
+		esac
+		cp -R "$_e" "$_m/rsos/" 2>> "$RUN/storage-cp.err" || fail copy "cannot copy $_e"
+	done
+	for _d in bios saves states screenshots themes; do
+		[ -d "$DATA/$_d" ] || continue
+		mkdir -p "$_m/$_d"
+		cp -R "$DATA/$_d/." "$_m/$_d/" 2>> "$RUN/storage-cp.err" || fail copy "cannot copy $DATA/$_d"
+	done
+	# the card's scan caches knew another system's lists
+	rm -rf "$_m/rsos/cache"
+	sync
+
+	# 4. The card's boot state: its own slot A
+	printf 'rsos_slot a\nrsos_ok 1\nrsos_tries 0\nrsos_fails 0\nrsos_rounds 0\nrsos_bad\nrsos_fallback\n' > "$RUN/full-env"
+	fw_setenv -s "$RUN/full-env" || fail write "cannot write the boot state"
+	rm -f "$RUN/full-env"
+	sync
+	msg "the microSD holds a full system again: at the next start the console runs from it"
+	progress 100 done
+}
+
+# Never erase or strip the card the console starts from (its U-Boot)
+not_env_disk() { # <disk>
+	[ "$1" != "$ENV_DISK" ] || fail busy "$1 holds the boot loader the console starts from"
+}
+
+format_disk() { # <sd|m2>
+	progress 0 prepare
+	case "$1" in
+	sd) _d=$SD ;;
+	m2) _d=$(m2_disk) || fail nosd "no M.2 drive" ;;
+	*) echo "rsos-storage: format sd|m2" >&2; exit 2 ;;
+	esac
+	[ "$_d" != "$BOOT_DISK" ] || fail busy "$_d is the system disk"
+	not_env_disk "$_d"
+	present "$_d" || fail nosd "no $_d"
+	lib_umount "$1"
+	write_libs
+	[ -z "$(mounted_from "$_d")" ] || fail busy "$_d is in use"
+	dd if=/dev/zero of="$_d" bs=1M count=4 conv=fsync 2> /dev/null || fail write "cannot write $_d"
+	printf 'label: dos\nunit: sectors\n\nstart=2048, type=7\n' |
+		sfdisk --quiet --no-reread --wipe always --wipe-partitions always "$_d" > /dev/null 2>&1 ||
+		fail write "cannot write the partition table of $_d"
+	reread "$_d"
+	wait_parts "$_d" 1 || fail layout "the partition of $_d did not appear"
+	progress 30 data
+	mkfs.exfat -L "$LABEL" "$(part "$_d" 1)" > /dev/null 2>&1 || fail format "mkfs.exfat failed"
+	lib_mount "$1" "$(part "$_d" 1)" || fail mount "cannot mount the new partition"
+	make_layout "$MEDIA/$1"
+	[ -f "$DATA/README.txt" ] && cp "$DATA/README.txt" "$MEDIA/$1/README.txt"
+	sync
+	msg "$_d formatted as a game disk"
+	progress 100 done
+	refresh > /dev/null
+}
+
+# --------------------------------------------------------------- report
+# rsos/logs/emmc-report.txt on the system disk, at every start while the eMMC
+# is visible: what is on the eMMC, whether U-Boot ever ran from it (it saves
+# its environment there at its first start), the eMMC registers that decide
+# how it answers at power-on, and the logs a start from it left on its data
+# partition (copied to rsos/logs/emmc/). Read-only on the eMMC.
+EXT_CSD_FIELDS="162:RST_n_FUNCTION 177:BOOT_BUS_CONDITIONS 178:BOOT_CONFIG_PROT 179:PARTITION_CONFIG 183:BUS_WIDTH 185:HS_TIMING 192:EXT_CSD_REV 226:BOOT_SIZE_MULT"
+
+ext_csd_byte() { # <hex string> <byte>
+	echo "$1" | cut -c$(($2 * 2 + 1))-$(($2 * 2 + 2))
+}
+
+report() {
+	[ "$EMMC" != "$BOOT_DISK" ] && present "$EMMC" || return 0
+	[ -d "$DATA/rsos/logs" ] || return 0
+	_r=$DATA/rsos/logs/emmc-report.txt
+	{
+		echo "eMMC report, $(date '+%F %T' 2> /dev/null), system on $BOOT_DISK"
+		echo "eMMC $EMMC: $(sectors "$EMMC") sectors, $(cat /sys/block/${EMMC##*/}/device/name 2> /dev/null)," \
+			"manfid $(cat /sys/block/${EMMC##*/}/device/manfid 2> /dev/null)," \
+			"date $(cat /sys/block/${EMMC##*/}/device/date 2> /dev/null)"
+		echo "state: $(disk_state "$EMMC")"
+		if has_bootloader "$EMMC"; then
+			_size=$(wc -c < "$BOOTLOADER")
+			if dd if="$EMMC" bs=1024 skip=8 count=$(( (_size + 1023) / 1024 )) 2> /dev/null | head -c "$_size" |
+				cmp -s - "$BOOTLOADER"; then
+				echo "boot loader at 8 KiB: yes, the same as this system's"
+			else
+				echo "boot loader at 8 KiB: yes, a DIFFERENT one"
+			fi
+		else
+			echo "boot loader at 8 KiB: none"
+		fi
+		# the eMMC's hardware boot partitions: a boot ROM that honours
+		# PARTITION_CONFIG reads them before the user area
+		for _b in boot0 boot1; do
+			_d=/dev/${EMMC##*/}$_b
+			[ -b "$_d" ] || continue
+			_at=
+			[ "$(dd if="$_d" bs=1 skip=4 count=8 2> /dev/null)" = "eGON.BT0" ] && _at="$_at 0"
+			[ "$(dd if="$_d" bs=1 skip=8196 count=8 2> /dev/null)" = "eGON.BT0" ] && _at="$_at 8KiB"
+			[ "$(dd if="$_d" bs=1 skip=131076 count=8 2> /dev/null)" = "eGON.BT0" ] && _at="$_at 128KiB"
+			_nz=$(dd if="$_d" bs=4096 count=64 2> /dev/null | od -An -tx1 | tr -d ' \n0' | wc -c)
+			echo "hardware partition $_b: boot loader at:${_at:- none}; first 256 KiB $([ "$_nz" -gt 0 ] && echo "has data" || echo "all zero")"
+			[ -n "$_at" ] && dd if="$_d" bs=1 skip=$(case "$_at" in " 0"*) echo 0 ;; *8KiB*) echo 8192 ;; *) echo 131072 ;; esac) count=64 2> /dev/null | od -An -c | head -4
+		done
+		echo "--- partition table"
+		sfdisk --dump "$EMMC" 2>&1
+		for _n in 1 2 3; do
+			[ -b "$(part "$EMMC" $_n)" ] && echo "$(part "$EMMC" $_n): $(blkid "$(part "$EMMC" $_n)" 2> /dev/null)"
+		done
+		echo "--- U-Boot environment on the eMMC (set by U-Boot when it started from it)"
+		printf '%s 0x100000 0x10000\n%s 0x110000 0x10000\n' "$EMMC" "$EMMC" > "$RUN/fw_env.emmc.config"
+		fw_printenv -c "$RUN/fw_env.emmc.config" 2>&1 | grep -E "rsos_|mmc_bootdev|Warning|Bad CRC|bootcmd=" | cut -c1-200
+		echo "--- EXT_CSD"
+		grep -q " /sys/kernel/debug " /proc/mounts || mount -t debugfs debugfs /sys/kernel/debug 2> /dev/null
+		_x=
+		for _f in /sys/kernel/debug/mmc*/mmc*:*/ext_csd; do
+			case "$_f" in */mmc1:*) read -r _x < "$_f" 2> /dev/null ;; esac
+		done
+		if [ -n "$_x" ]; then
+			for _fd in $EXT_CSD_FIELDS; do
+				echo "  ${_fd#*:} [${_fd%%:*}] = 0x$(ext_csd_byte "$_x" "${_fd%%:*}")"
+			done
+		else
+			echo "  (not readable: $(ls -d /sys/kernel/debug/mmc* 2> /dev/null | tr '\n' ' '))"
+		fi
+		echo "--- AXP209 data registers at this start (REG04-0F)"
+		_a=$(cat "$RUN/axp-data" 2> /dev/null)
+		echo "  ${_a:-(not read)}"
+		case "$_a" in
+		*" 5a e2") echo "  => the last start from the eMMC reached U-Boot proper (the SPL loaded it)" ;;
+		*" 5a e1") echo "  => the last start from the eMMC ran the SPL, which did NOT start U-Boot proper" ;;
+		*) echo "  => no sign of a start from the eMMC: the boot ROM did not run our SPL (or no attempt since the last shutdown)" ;;
+		esac
+		echo "--- logs a start from the eMMC left"
+		_m=
+		if lib_mounted emmc; then
+			_m=$MEDIA/emmc
+		elif [ "$(fstype "$(part "$EMMC" 1)")" = exfat ]; then
+			_m=$RUN/emmc-ro
+			mkdir -p "$_m"
+			mount -t exfat -o ro "$(part "$EMMC" 1)" "$_m" 2> /dev/null || _m=
+		fi
+		if [ -n "$_m" ] && [ -d "$_m/rsos/logs" ]; then
+			rm -rf "$DATA/rsos/logs/emmc"
+			mkdir -p "$DATA/rsos/logs/emmc"
+			cp -R "$_m/rsos/logs/." "$DATA/rsos/logs/emmc/" 2> /dev/null
+			echo "copied to rsos/logs/emmc/: $(ls "$_m/rsos/logs" | tr '\n' ' ')"
+		else
+			echo "none"
+		fi
+		[ "$_m" = "$RUN/emmc-ro" ] && { umount "$_m"; rmdir "$_m"; }
+	} > "$_r.tmp" 2>&1
+	mv -f "$_r.tmp" "$_r"
+	sync
+}
+
+# ----------------------------------------------------------------- boot
+boot() {
+	# first start from the eMMC: the overlays the microSD had (M.2 SATA)
+	if [ "$BOOT_DISK" = "$EMMC" ] && [ -f "$DATA/rsos/pending-overlays" ]; then
+		read -r _ov < "$DATA/rsos/pending-overlays"
+		if [ -n "$_ov" ] && fw_setenv rsos_overlays "$_ov"; then
+			msg "rsos_overlays=\"$_ov\" carried over from the microSD (applies at the next start)"
+		fi
+		rm -f "$DATA/rsos/pending-overlays"
+	fi
+	# the SATA link comes up a moment after the driver (rcS loads it)
+	if [ -d /sys/bus/platform/devices/1c18000.sata ]; then
+		_i=0
+		while ! m2_disk > /dev/null && [ $_i -lt 50 ]; do
+			usleep 200000 2> /dev/null || sleep 1
+			_i=$((_i + 1))
+		done
+	fi
+	refresh > /dev/null
+	report
+}
+
+# ----------------------------------------------------------------- main
+cmd=$1
+[ $# -gt 0 ] && shift
+case "$cmd" in
+status)
+	status
+	;;
+overlay)
+	overlay "$@"
+	;;
+install|sd-games|sd-starter|sd-full|format|refresh|boot|eject)
+	# one at a time: the quick ones wait their turn, a task waits a moment
+	# for one of them (a refresh at boot) but not for another task
+	exec 9> "$LOCK"
+	case "$cmd" in
+	refresh|boot|eject) flock 9 ;;
+	*) flock -w 30 9 ;;
+	esac || fail busy "another rsos-storage runs"
+	case "$cmd" in
+	install) install "$@" ;;
+	sd-games) sd_games ;;
+	sd-starter) sd_starter ;;
+	sd-full) sd_full ;;
+	format) format_disk "$@" ;;
+	refresh) refresh ;;
+	boot) boot ;;
+	eject)
+		case "$1" in emmc|sd|m2) lib_umount "$1"; write_libs; status > /dev/null ;; esac
+		;;
+	esac
+	;;
+*)
+	sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2
+	exit 2
+	;;
+esac

@@ -77,6 +77,13 @@ struct loader {
 	/* ---- worker configuration (read-only while it runs) ---- */
 	char roms_dir[1024], cache_dir[1024], alt[1024];
 	char builtin_dir[1024];          /* read-only <dir>/<system>/ folders ("" = none) */
+	/* The game libraries of the other disks (Settings > Storage on the Pro:
+	 * the eMMC or microSD the system does not run from, the M.2 drive):
+	 * <lib_roms>/<system>/ merged into the system's list, each with its own
+	 * scan cache (lib_cache). Changed only while no worker runs
+	 * (loader_set_libraries). */
+	char lib_roms[LOADER_MAX_LIBS][1024], lib_cache[LOADER_MAX_LIBS][1024];
+	int nlibs;
 	bool use_cache;
 	int64_t delay_us;              /* test hook: RSOS_LOADER_DELAY_MS per system */
 	/* ---- main thread only ---- */
@@ -136,6 +143,38 @@ static bool find_rom_folder(const char *builtin_dir, const char *roms_dir, const
 	return false;
 }
 
+/* The system's games on the other disks, merged into r->gl (thread-safe). */
+static void load_libs(struct loader *L, const struct sysdef *sd, struct lres *r)
+{
+	for (int i = 0; i < L->nlibs; i++) {
+		char dir[1100];
+		struct gamelist *gl;
+		struct games_load_stats st;
+
+		if (!find_rom_folder(NULL, L->lib_roms[i], sd, dir, sizeof(dir)))
+			continue;
+		gl = games_load(sd->name, dir, L->use_cache ? L->lib_cache[i] : NULL, NULL, &st);
+		r->st.read_us += st.read_us;
+		r->st.stat_us += st.stat_us;
+		r->st.parse_us += st.parse_us;
+		r->st.scan_us += st.scan_us;
+		r->st.xml_us += st.xml_us;
+		r->st.save_us += st.save_us;
+		r->st.ndirs += st.ndirs;
+		r->st.from_cache = r->st.from_cache && st.from_cache;
+		if (!gl)
+			continue;
+		if (!r->gl) {
+			r->gl = gl;
+			continue;
+		}
+		if (gl->n)
+			LOGI("ui: %s: %d games from %s", sd->name, gl->n, dir);
+		games_merge(r->gl, gl);
+		games_free(gl);
+	}
+}
+
 static bool has_folder_alias(const struct sysdef *sd)
 {
 	for (int i = 0; i < 4 && sd->folders[i]; i++)
@@ -154,7 +193,7 @@ static struct lres *load_one(struct loader *L, int sidx)
 	r->sidx = sidx;
 	if (!sd)
 		return r;
-	if (L->empty_mt[sidx] && !has_folder_alias(sd)) {
+	if (L->empty_mt[sidx] && !has_folder_alias(sd) && !L->nlibs) {
 		/* empty last time: its stamp (one stat() and one readdir:
 		 * games_dir_stamp) says whether it still is (and one more stat()
 		 * that no read-only folder came with a system update).
@@ -182,6 +221,8 @@ static struct lres *load_one(struct loader *L, int sidx)
 		}
 	}
 	if (!find_rom_folder(L->builtin_dir, L->roms_dir, sd, dir, sizeof(dir))) {
+		r->st.from_cache = true;
+		load_libs(L, sd, r);
 		r->st.dir_us = r->st.total_us = ui_now_us() - t0;
 		return r;
 	}
@@ -224,6 +265,14 @@ static struct lres *load_one(struct loader *L, int sidx)
 			games_free(gl);
 		}
 	}
+	/* the other disks' games (not for the read-only built-in systems) */
+	if (L->nlibs) {
+		char builtin[1100];
+
+		snprintf(builtin, sizeof(builtin), "%s/%s", L->builtin_dir, sd->name);
+		if (!L->builtin_dir[0] || strcmp(dir, builtin))
+			load_libs(L, sd, r);
+	}
 	r->st.dir_us += tf;
 	r->st.total_us = ui_now_us() - t0;   /* folder lookup included */
 	return r;
@@ -254,6 +303,8 @@ static void warm_lists(struct loader *L, struct fswarm_stats *st)
 	char scan[1100], *p[2];
 
 	fswarm((const char *const[]){ L->roms_dir }, 1, FSW_CHILDREN, st);
+	for (int i = 0; i < L->nlibs; i++)
+		fswarm((const char *const[]){ L->lib_roms[i] }, 1, FSW_CHILDREN, st);
 	snprintf(scan, sizeof(scan), "%s/scan", L->cache_dir);
 	p[0] = L->use_cache ? scan : NULL;
 	p[1] = L->alt;
@@ -1344,8 +1395,8 @@ void ui_reload_games(struct ui *ui, bool force)
 		L->lists[s] = L->pend[s] = NULL;
 		L->has_pend[s] = L->done[s] = false;
 		L->state[s] = LS_TODO;
-		if (force && ui->cfg.cache_dir[0])
-			games_invalidate(ui->cfg.cache_dir, systems_get(s)->name);
+		if (force)
+			ui_invalidate_system(ui, systems_get(s)->name);
 	}
 	free_coll(L);
 	L->ndone = L->nreplaced = 0;
@@ -1374,6 +1425,50 @@ void ui_reload_games(struct ui *ui, bool force)
 		finish(ui);
 	carousel_sync(ui, true);
 	LOGI("ui: game lists reloaded in %lld ms", (long long)(ui_now_us() - t0) / 1000);
+}
+
+bool loader_set_libraries(struct ui *ui, const char *const *roots, int n)
+{
+	struct loader *L = ui->ld;
+	bool same;
+
+	if (!L || L->th_started || L->want_worker || (L->started && !L->complete))
+		return false;               /* not while lists load: later */
+	if (n > LOADER_MAX_LIBS)
+		n = LOADER_MAX_LIBS;
+	same = n == L->nlibs;
+	for (int i = 0; same && i < n; i++) {
+		char r[1024];
+
+		snprintf(r, sizeof(r), "%s/roms", roots[i]);
+		same = !strcmp(r, L->lib_roms[i]);
+	}
+	if (same)
+		return true;
+	for (int i = 0; i < n; i++) {
+		const char *base = strrchr(roots[i], '/');
+
+		snprintf(L->lib_roms[i], sizeof(L->lib_roms[i]), "%s/roms", roots[i]);
+		snprintf(L->lib_cache[i], sizeof(L->lib_cache[i]), "%s/lib-%s", ui->cfg.cache_dir,
+			 base ? base + 1 : roots[i]);
+		LOGI("ui: game library %s", L->lib_roms[i]);
+	}
+	L->nlibs = n;
+	LOGI("ui: %d game librar%s on other disks: reloading the lists", n, n == 1 ? "y" : "ies");
+	if (L->started)
+		ui->reload_pending = true;
+	return true;
+}
+
+void ui_invalidate_system(struct ui *ui, const char *system)
+{
+	struct loader *L = ui->ld;
+
+	if (!ui->cfg.cache_dir[0])
+		return;
+	games_invalidate(ui->cfg.cache_dir, system);
+	for (int i = 0; L && i < L->nlibs; i++)
+		games_invalidate(L->lib_cache[i], system);
 }
 
 void ui_debug_state(struct ui *ui, char *buf, size_t n)

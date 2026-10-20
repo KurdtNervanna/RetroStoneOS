@@ -11,6 +11,7 @@
  *   hold:<button>:<ms>     press, keep it down (key repeat runs), release
  *   combo:<b1>+<b2>:<ms>   hold two buttons together (button test exit)
  *   wait:<ms>              let virtual time pass
+ *   sleep:<ms>             real time passes (a helper process runs), then settle
  *   shot:<file.png>        screenshot now
  *   size:<W>x<H>           switch the logical size (LCD <-> HDMI relayout)
  *   theme:<name>           switch theme
@@ -276,6 +277,10 @@ static int run_script(struct preview *p, const char *script)
 			settle(p, atoi(tok + 5));
 			if (p->now < end)
 				p->now = end;
+			settle(p, 16);
+		} else if (!strncmp(tok, "sleep:", 6)) {
+			usleep((useconds_t)atoi(tok + 6) * 1000);
+			p->now += atoi(tok + 6);
 			settle(p, 16);
 		} else if (!strncmp(tok, "size:", 5)) {
 			int w, h;
@@ -1004,6 +1009,7 @@ int main(int argc, char **argv)
 	cfg.net_helper = "/bin/false";
 	cfg.update_helper = "";          /* --update-helper: Settings > System update */
 	cfg.smb_helper = "";             /* --smb-helper: the Windows file share */
+	cfg.storage_helper = "";         /* --storage-helper: the Pro's storage (RSOS_RUN for its files) */
 	cfg.boot_env = "";
 	roms[0] = data[0] = cache[0] = themes_user[0] = cores[0] = 0;
 
@@ -1066,6 +1072,8 @@ int main(int argc, char **argv)
 			cfg.update_helper = v;    /* e.g. tests/fake-rsos-update.sh */
 		else if (OPT("--smb-helper"))
 			cfg.smb_helper = v;       /* Settings > Network > Windows file share */
+		else if (OPT("--storage-helper"))
+			cfg.storage_helper = v;   /* Settings > Storage, the Pro's disks */
 		else {
 			usage();
 			return 2;

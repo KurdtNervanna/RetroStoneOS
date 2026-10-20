@@ -25,8 +25,27 @@ CONFIG_BOOTDELAY=0
 # stays reachable on a development build by pressing a key on the UART
 # during the (zero) boot delay: the bootcmd does not run then. Release
 # builds never stop (uboot-release.fragment).
+# The boot loader runs from the disk the boot ROM started (board/sunxi/board.c
+# sets mmc_bootdev: 0 = microSD, 1 = the Pro's eMMC, U-Boot's mmc1 with
+# MMC_SUNXI_SLOT_EXTRA=2 below; 0 when it is unset: FEL). The system
+# (rsos_sysdev) is normally on the same disk. Starter card (the Pro, see
+# docs/pro-storage.md): a microSD that kept only its boot loader and its game
+# partition, because the A20 boot ROM does not start this eMMC 5.0: no
+# boot.scr on the card, so the system comes from the eMMC (mmc 1). U-Boot's
+# environment stays on the card it started from.
 CONFIG_USE_BOOTCOMMAND=y
-CONFIG_BOOTCOMMAND="if test \"${rsos_verbose}\" = 1; then setenv silent; else setenv silent 1; fi; setenv silent_linux no; if test \"${rsos_slot}\" = b; then load mmc 0:3 ${scriptaddr} /boot/boot.scr && source ${scriptaddr}; fi; load mmc 0:2 ${scriptaddr} /boot/boot.scr && source ${scriptaddr}; setenv silent; load mmc 0:3 ${scriptaddr} /boot/boot.scr && source ${scriptaddr}; bootflow scan -lb; poweroff"
+CONFIG_BOOTCOMMAND="if test \"${rsos_verbose}\" = 1; then setenv silent; else setenv silent 1; fi; setenv silent_linux no; if test \"${mmc_bootdev}\" != 1; then setenv mmc_bootdev 0; fi; setenv rsos_sysdev ${mmc_bootdev}; if test ${mmc_bootdev} = 0; then if test -e mmc 0:2 /boot/boot.scr; then true; elif test -e mmc 0:3 /boot/boot.scr; then true; elif test -e mmc 1:2 /boot/boot.scr; then setenv rsos_sysdev 1; fi; fi; if test \"${rsos_slot}\" = b; then load mmc ${rsos_sysdev}:3 ${scriptaddr} /boot/boot.scr && source ${scriptaddr}; fi; load mmc ${rsos_sysdev}:2 ${scriptaddr} /boot/boot.scr && source ${scriptaddr}; setenv silent; load mmc ${rsos_sysdev}:3 ${scriptaddr} /boot/boot.scr && source ${scriptaddr}; bootflow scan -lb; poweroff"
+
+# Boot from the Pro's eMMC (Settings > Storage > Install to internal storage):
+# the A20 boot ROM tries the microSD (mmc0) first, then NAND (none here), then
+# mmc2, the eMMC. U-Boot's eMMC support is the one of the A20-OLinuXino-LIME-eMMC
+# (same wiring: mmc2 on PC6-PC11, 4-bit, 3.3 V, reset on PC16): its device
+# tree is the Lime's plus the enabled mmc2, and MMC_SUNXI_SLOT_EXTRA=2 makes
+# the eMMC U-Boot's mmc1 (sunxi-u-boot.dtsi alias). The environment then lives
+# on the disk that was booted (mmc_get_env_dev()), at the same offsets. On a
+# unit without the eMMC, nothing reads mmc1 unless booted from it.
+CONFIG_DEFAULT_DEVICE_TREE="sun7i-a20-olinuxino-lime-emmc"
+CONFIG_MMC_SUNXI_SLOT_EXTRA=2
 
 # Boot timing (docs/build.md, "Boot time"): bootstage records U-Boot's steps,
 # and boot.scr adds its own ("bootstage mark", patches/uboot/0001). The
@@ -107,7 +126,7 @@ CONFIG_ENV_MMC_DEVICE_INDEX=0
 CONFIG_ENV_MMC_EMMC_HW_PARTITION=0
 CONFIG_CMD_SAVEENV=y
 CONFIG_CMD_SETEXPR=y
-# boot.cmd: "test -e mmc 0:<part> /boot/zImage" before falling back to the
+# boot.cmd: "test -e mmc <dev>:<part> /boot/zImage" before falling back to the
 # other slot, "poweroff" when no slot can be booted (AXP209 through the DM
 # PMIC's axp_sysreset; TODO(hw): check that it really cuts the power).
 CONFIG_CMD_FS_GENERIC=y

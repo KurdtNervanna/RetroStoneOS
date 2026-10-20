@@ -17,6 +17,11 @@ rsos_board_late_audio() {
 # rcS, in the background, after the USB storage modules.
 # SATA ("Pro" units, sata overlay): libata/ahci_sunxi are modules; the
 # platform device only exists when the overlay enabled the controller.
+# Then the game libraries of the other disks (rsos-storage boot: the eMMC
+# or the microSD that the system does not run from, the M.2 drive), and the
+# first start from the eMMC carries the microSD's overlays over. In the
+# background: the SATA link takes a moment to come up.
 rsos_board_late_storage() {
 	[ -d /sys/bus/platform/devices/1c18000.sata ] && modprobe -q ahci_sunxi
+	[ -x /usr/bin/rsos-storage ] && /usr/bin/rsos-storage boot < /dev/null > /dev/null 2>&1 &
 }
