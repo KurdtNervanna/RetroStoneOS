@@ -1458,7 +1458,8 @@ static bool tcp_client_on(const char *path, unsigned port)
  * once a second): a USB import, export or backup while it copies (not while
  * it waits for the player: a duplicate question, or a summary nobody has
  * read yet, review), the web share or the SMB share with a client, an OS
- * update download/install, the storage being formatted, the game list still
+ * update download/install, a storage task or game cover download (also in the
+ * background), the storage being formatted, the game list still
  * loading, a game whose core cannot save a state (an idle power-off would
  * lose it) or a benchmark. When the last one ends, the countdown starts
  * over. The dim and screen-off stages go on meanwhile.
@@ -1489,6 +1490,8 @@ static void idle_busy_check(bool force)
 		why = "smb-client";
 	else if (M.ui && ui_update_busy(M.ui))
 		why = "os-update";
+	else if (M.ui && ui_storage_busy(M.ui))
+		why = "storage-or-covers";
 	else if (M.ui && !M.in_game && !ui_is_loaded(M.ui))
 		why = "loading";
 	power_set_busy(why != NULL, why);

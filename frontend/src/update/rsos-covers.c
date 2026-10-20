@@ -448,6 +448,9 @@ int main(int argc, char **argv)
 	signal(SIGTERM, on_term);
 	signal(SIGINT, on_term);
 	signal(SIGPIPE, SIG_IGN);
+	/* it may run in the background while a game plays: below the emulator */
+	if (nice(10) < 0)
+		fprintf(stderr, "rsos-covers: nice: %s\n", strerror(errno));
 
 	f = fopen(req, "r");
 	if (!f) {

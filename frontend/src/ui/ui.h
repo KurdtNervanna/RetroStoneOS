@@ -450,6 +450,9 @@ void ui_set_charge_mode(struct ui *ui, bool on);
 bool ui_is_loaded(const struct ui *ui);
 /* An OS update is being downloaded or installed (no idle power-off). */
 bool ui_update_busy(const struct ui *ui);
+/* A storage task (eMMC install, starter card, disk erase) or a game cover
+ * download runs, also in the background (no idle power-off; storage.c). */
+bool ui_storage_busy(const struct ui *ui);
 /* True once every game list has been loaded/validated (the background
  * loader is done and the carousel matches a full load). */
 bool ui_lists_complete(const struct ui *ui);

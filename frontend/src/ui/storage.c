@@ -527,6 +527,12 @@ static void task_render(struct ui *ui, struct screen *scr, struct gfx_surface *s
 		font_draw(s, f, x + (w - lines[i].width) / 2, font_baseline_in_box(f, y + i * tlh, tlh),
 			  text + lines[i].start, lines[i].len, ms->text);
 	y += MAX(n, 1) * tlh + pad;
+	if (S.state == TS_RUNNING && S.kind == TASK_COVERS) {
+		static const struct help_prompt bg[] = { { "b", N_("continue in the background") } };
+
+		help_draw(ui, s, &ui->menu_help, bg, 1);
+		return;
+	}
 	if (S.state == TS_RUNNING)
 		return;
 	y = MAX(y, MIN(by, H - bh - pad));
@@ -551,8 +557,19 @@ static void task_button(struct ui *ui, struct screen *scr, enum input_btn b, enu
 	bool two = done_buttons(&b0, &b1) == 2;
 
 	(void)scr;
-	if (t == IN_NAV_RELEASE || S.state == TS_RUNNING)
-		return;                    /* nothing stops a running task */
+	if (t == IN_NAV_RELEASE)
+		return;
+	if (S.state == TS_RUNNING) {
+		/* nothing stops a running task; the cover download can go on in
+		 * the background (storage_job_done says when it is done) */
+		if (S.kind == TASK_COVERS && b == IN_B && t == IN_NAV_PRESS) {
+			LOGI("storage: covers continue in the background");
+			ui_pop(ui);
+			/* TRANSLATORS: toast: the cover download goes on while the player plays */
+			ui_toastf(ui, "%s", _("Game covers: downloading in the background"));
+		}
+		return;
+	}
 	if (b == IN_LEFT || b == IN_RIGHT) {
 		S.sel = two ? !S.sel : 0;
 		ui->dirty = true;
@@ -636,10 +653,27 @@ static const struct screen_ops task_ops = {
 	.describe = task_describe,
 };
 
+static void task_page_open(struct ui *ui)
+{
+	struct screen *s;
+
+	if (S.task)
+		return;
+	s = xcalloc(1, sizeof(*s));
+	s->ops = &task_ops;
+	if (ui_push(ui, s))
+		S.task = s;
+}
+
+bool ui_storage_busy(const struct ui *ui)
+{
+	(void)ui;
+	return S.job != 0;
+}
+
 static void task_start(struct ui *ui, int kind)
 {
 	const char *a1 = "install", *a2 = NULL, *a3 = NULL;
-	struct screen *s;
 	int id;
 
 	switch (kind) {
@@ -670,6 +704,11 @@ static void task_start(struct ui *ui, int kind)
 		a2 = "m2";
 		break;
 	}
+	if (S.job) {
+		/* TRANSLATORS: a storage task or cover download is still running */
+		message_open(ui, _("Please wait: another task is still running."));
+		return;
+	}
 	unlink(ST_PROGRESS);
 	if (kind == TASK_COVERS) {
 		const char *argv[] = { COVERS_HELPER, "--progress", ST_PROGRESS, "--missing",
@@ -690,11 +729,9 @@ static void task_start(struct ui *ui, int kind)
 	S.state = TS_RUNNING;
 	S.pct = 0;
 	S.sel = 0;
+	S.d1 = S.d2 = S.d3 = 0;
 	S.step[0] = S.reason[0] = 0;
-	s = xcalloc(1, sizeof(*s));
-	s->ops = &task_ops;
-	if (ui_push(ui, s))
-		S.task = s;
+	task_page_open(ui);
 }
 
 void storage_job_done(struct ui *ui, const struct hw_job_result *r)
@@ -728,6 +765,21 @@ void storage_job_done(struct ui *ui, const struct hw_job_result *r)
 	}
 	S.sel = 0;
 	apply_libraries(ui);
+	if (S.kind == TASK_COVERS && !S.task) {
+		char t[160];
+
+		/* the lists take the covers at the next return to the carousel (no
+		 * screen is pulled away); the scan caches knew no covers */
+		for (int i = 0; i < systems_count(); i++)
+			ui_invalidate_system(ui, systems_get(i)->name);
+		ui->reload_pending = true;
+		if (S.state == TS_DONE)
+			/* TRANSLATORS: toast at the end of a cover download that ran in the background */
+			snprintf(t, sizeof(t), _("Game covers: %d found, %d not found"), S.d1, S.d2);
+		else
+			snprintf(t, sizeof(t), "%s", reason_text(S.reason));
+		ui_toast_long(ui, "%s", t);
+	}
 	ui->dirty = true;
 }
 
@@ -1100,6 +1152,11 @@ void covers_start(struct ui *ui)
 	char ip[64], t[512];
 	int n = 0, nsys = 0;
 	FILE *f;
+
+	if (S.job && S.kind == TASK_COVERS) {
+		task_page_open(ui);      /* running in the background: show it */
+		return;
+	}
 
 	if (access(COVERS_HELPER, X_OK) != 0) {
 		/* TRANSLATORS: Settings > Game lists > Download game covers, on a system without the helper */
