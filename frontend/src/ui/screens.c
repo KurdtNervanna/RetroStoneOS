@@ -47,7 +47,7 @@ enum {
 /* batch 2 (their own range) */
 enum {
 	ID_SEARCHALL = 400, ID_RESUMEBOOT, ID_FFSPEED, ID_SHOWHIDDEN, ID_SORT, ID_RUMBLE,
-	ID_GSCALE = 410, ID_GCPU, ID_GSEARCH, ID_GHIDE, ID_GDELETE, ID_GPLAYTIME,
+	ID_GSCALE = 410, ID_GCPU, ID_GSEARCH, ID_GHIDE, ID_GDELETE, ID_GPLAYTIME, ID_GRENAME,
 };
 
 enum { JOB_WIFI = 1, JOB_ETH, JOB_BT };
@@ -2438,6 +2438,154 @@ static void game_delete_ask(struct ui *ui, struct game *g)
 	dialog_select(d, 1);
 }
 
+/*
+ * Rename this game (so that Download game covers finds it, or just a nicer
+ * name): the keyboard with the file name without its extension; the file is
+ * renamed in its folder (the extension kept), and what goes by its name
+ * follows: its cover (media/covers/), its saves and save states
+ * (<data>/saves|states/<system>/<name>.*: a zipped game's go by the file in
+ * the zip, unchanged), its favorite, play time and settings (gamedb). A .cue
+ * or .m3u keeps the track / disc files it lists (they are not renamed).
+ */
+struct ren_ctx {
+	char system[32], path[1024], rel[1024], root[1024], stem[256], ext[32];
+};
+
+static struct ren_ctx g_ren;
+
+/* <dir>/<old>.<x> -> <dir>/<new>.<x>, for every <x>; never over a file */
+static int rename_by_stem(const char *dir, const char *old_stem, const char *new_stem)
+{
+	DIR *dh = opendir(dir);
+	struct dirent *de;
+	size_t l = strlen(old_stem);
+	int n = 0;
+
+	while (dh && (de = readdir(dh))) {
+		char a[1400], b[1400];
+
+		if (strncmp(de->d_name, old_stem, l) || de->d_name[l] != '.')
+			continue;
+		snprintf(a, sizeof(a), "%s/%s", dir, de->d_name);
+		snprintf(b, sizeof(b), "%s/%s%s", dir, new_stem, de->d_name + l);
+		if (access(b, F_OK) == 0) {
+			LOGW("ui: rename: %s exists, %s kept", b, a);
+			continue;
+		}
+		if (rename(a, b) == 0)
+			n++;
+		else
+			LOGW("ui: rename %s: %s", a, strerror(errno));
+	}
+	if (dh)
+		closedir(dh);
+	return n;
+}
+
+static void rename_cover_answer(struct ui *ui, int choice, void *user)
+{
+	(void)user;
+	if (choice == 0)
+		covers_start_one(ui, g_ren.system, g_ren.root, g_ren.path);
+}
+
+static void rename_done(struct ui *ui, const char *text, bool ok, void *user)
+{
+	char name[256], newpath[1300], newrel[1300], dir[1100], root[1024], sub[1100];
+	const char *slash;
+	size_t l;
+	int nsaves = 0;
+
+	(void)user;
+	if (!ok || !text)
+		return;
+	strlcpy_(name, text, sizeof(name));
+	/* no spaces at the ends (the keyboard makes them easily) */
+	while (name[0] == ' ')
+		memmove(name, name + 1, strlen(name));
+	l = strlen(name);
+	while (l && name[l - 1] == ' ')
+		name[--l] = 0;
+	if (!l || !strcmp(name, g_ren.stem))
+		return;
+	if (strpbrk(name, "/\\:*?\"<>|") || name[0] == '.') {
+		/* TRANSLATORS: Rename this game: the characters a file name cannot have on the card */
+		message_open(ui, _("A game name cannot start with a dot or contain / \\ : * ? \" < > |"));
+		return;
+	}
+	path_dirname(g_ren.path, dir, sizeof(dir));
+	snprintf(newpath, sizeof(newpath), "%s/%s%s", dir, name, g_ren.ext);
+	if (access(newpath, F_OK) == 0) {
+		/* TRANSLATORS: Rename this game: the new name is taken */
+		message_open(ui, _("Another game already has this name."));
+		return;
+	}
+	if (rename(g_ren.path, newpath) < 0) {
+		char msg[400];
+
+		/* TRANSLATORS: Rename this game failed; %s is the system's reason */
+		snprintf(msg, sizeof(msg), _("The game could not be renamed (%s)."), strerror(errno));
+		message_open(ui, msg);
+		return;
+	}
+	LOGI("ui: renamed %s -> %s", g_ren.path, newpath);
+	/* what goes by its name */
+	snprintf(sub, sizeof(sub), "%s/media/covers", g_ren.root);
+	rename_by_stem(sub, g_ren.stem, name);
+	path_dirname(ui->cfg.data_dir, root, sizeof(root));
+	snprintf(sub, sizeof(sub), "%s/saves/%s", root, g_ren.system);
+	nsaves += rename_by_stem(sub, g_ren.stem, name);
+	snprintf(sub, sizeof(sub), "%s/states/%s", root, g_ren.system);
+	nsaves += rename_by_stem(sub, g_ren.stem, name);
+	slash = strrchr(g_ren.rel, '/');
+	if (slash)
+		snprintf(newrel, sizeof(newrel), "%.*s/%s%s", (int)(slash - g_ren.rel), g_ren.rel, name, g_ren.ext);
+	else
+		snprintf(newrel, sizeof(newrel), "%s%s", name, g_ren.ext);
+	if (gamedb_rename(ui->db, g_ren.system, g_ren.rel, newrel))
+		gamedb_save(ui->db);
+	LOGI("ui: rename: %d save/state files followed", nsaves);
+	strlcpy_(g_ren.path, newpath, sizeof(g_ren.path));
+	strlcpy_(g_ren.rel, newrel, sizeof(g_ren.rel));
+	strlcpy_(g_ren.stem, name, sizeof(g_ren.stem));
+	ui_invalidate_system(ui, g_ren.system);
+	ui_reload_games(ui, false);
+	/* TRANSLATORS: toast after Rename this game */
+	ui_toastf(ui, "%s", _("Game renamed"));
+	/* a cover under the new name? (the game has none, or the helper says) */
+	snprintf(sub, sizeof(sub), "%s/media/covers/%s.jpg", g_ren.root, name);
+	if (access(sub, F_OK) != 0 && covers_can_start()) {
+		/* TRANSLATORS: dialog buttons, uppercase, short */
+		const char *const buttons[] = { _("SEARCH"), _("NO"), NULL };
+
+		/* TRANSLATORS: after Rename this game */
+		dialog_open(ui, _("Look for a cover with the new name now?"), buttons, rename_cover_answer, NULL);
+	}
+}
+
+static void game_rename_ask(struct ui *ui, struct game *g)
+{
+	const char *base = path_basename(g->path), *dot;
+	size_t lp = strlen(g->path), lr = strlen(g->rel);
+
+	if (game_is_builtin(ui, g) || lr + 1 >= lp)
+		return;
+	memset(&g_ren, 0, sizeof(g_ren));
+	strlcpy_(g_ren.system, g->system, sizeof(g_ren.system));
+	strlcpy_(g_ren.path, g->path, sizeof(g_ren.path));
+	strlcpy_(g_ren.rel, g->rel, sizeof(g_ren.rel));
+	/* the system's ROM folder (the covers' parent): the path without rel */
+	snprintf(g_ren.root, sizeof(g_ren.root), "%.*s", (int)(lp - lr - 1), g->path);
+	strlcpy_(g_ren.stem, base, sizeof(g_ren.stem));
+	dot = strrchr(base, '.');
+	if (dot && dot != base) {
+		strlcpy_(g_ren.ext, dot, sizeof(g_ren.ext));
+		g_ren.stem[dot - base] = 0;
+	}
+	/* TRANSLATORS: on-screen keyboard title: the game's new file name */
+	osk_open(ui, _("Rename game"), g_ren.stem, false, rename_done, NULL);
+}
+
 static void game_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
 {
 	struct game *g = game_ref_find(m);
@@ -2488,6 +2636,10 @@ static void game_item(struct ui *ui, struct menu *m, struct menu_item *it, int d
 		break;
 	case ID_GHIDE:
 		game_hide(ui, m, g, it->on);
+		break;
+	case ID_GRENAME:
+		if (!dir)
+			game_rename_ask(ui, g);
 		break;
 	case ID_GDELETE:
 		if (dir == 0)
@@ -2614,6 +2766,9 @@ void game_options_open(struct ui *ui, struct sysent *se, struct game *g)
 	if (!game_is_builtin(ui, g))
 		/* TRANSLATORS: game options: delete the game's file from the SD card (asks first) */
 		menu_add(m, MI_ACTION, ID_GDELETE, _("Delete this game"));
+	if (!game_is_builtin(ui, g))
+		/* TRANSLATORS: game options: change the game's file name (covers are found by it) */
+		menu_add(m, MI_ACTION, ID_GRENAME, _("Rename this game"));
 	/* TRANSLATORS: game options: the time spent playing this game */
 	it = menu_add(m, MI_INFO, ID_GPLAYTIME, _("Play time"));
 	ui_format_playtime(g->playtime, it->value, sizeof(it->value));

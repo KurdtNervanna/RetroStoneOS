@@ -974,6 +974,12 @@ void osk_set_title(struct screen *s, const char *title)
 		strlcpy_(((struct osk *)s)->title, title, sizeof(((struct osk *)s)->title));
 }
 
+void osk_set_text(struct screen *s, const char *text)
+{
+	if (screen_is_osk(s))
+		strlcpy_(((struct osk *)s)->text, text, sizeof(((struct osk *)s)->text));
+}
+
 /* The keyboard has no timer: no update, no timeout (never the dialog's). */
 static bool osk_update(struct ui *ui, struct screen *s)
 {

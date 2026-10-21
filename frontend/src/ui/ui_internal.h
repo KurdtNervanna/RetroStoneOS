@@ -531,6 +531,8 @@ struct screen *osk_open(struct ui *ui, const char *title, const char *initial, b
 void osk_set_live(struct screen *osk, void (*on_change)(struct ui *ui, struct screen *osk, const char *text,
 							 void *user));
 void osk_set_title(struct screen *osk, const char *title);
+/* Replaces the keyboard's text (the preview tool's type: token). */
+void osk_set_text(struct screen *osk, const char *text);
 
 /* screens.c */
 void settings_open_main(struct ui *ui);
@@ -582,6 +584,10 @@ bool storage_menu_changed(void);
 /* Settings > Game lists > Download game covers (rsos-covers, the libretro
  * thumbnail server): asks, then runs it behind the task page. */
 void covers_start(struct ui *ui);
+/* One game's cover (after Rename this game), when the helper and a network
+ * are there and nothing else runs. */
+bool covers_can_start(void);
+void covers_start_one(struct ui *ui, const char *system, const char *root, const char *path);
 /* Settings > Game lists > Group multi-disc games: an .m3u for every set of
  * "(Disc N)" files that has none, so each game is one entry (the discs are
  * swapped in the in-game menu). */

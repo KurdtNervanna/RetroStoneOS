@@ -138,6 +138,9 @@ void gamedb_set_hidden(struct gamedb *db, struct game *g, bool hidden);
 void gamedb_set_scale(struct gamedb *db, struct game *g, const char *scale);
 void gamedb_set_cpu(struct gamedb *db, struct game *g, const char *cpu);
 void gamedb_forget(struct gamedb *db, const char *system, const char *rel);
+/* A renamed game file keeps its favorite, play time, history and per-game
+ * settings (the entry of rel moves to new_rel). false if it had none. */
+bool gamedb_rename(struct gamedb *db, const char *system, const char *rel, const char *new_rel);
 /* The stored play time of a game (0 if none), without a list entry. */
 int64_t gamedb_playtime(struct gamedb *db, const char *system, const char *rel);
 int gamedb_save(struct gamedb *db);

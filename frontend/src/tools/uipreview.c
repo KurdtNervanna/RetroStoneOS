@@ -12,6 +12,7 @@
  *   combo:<b1>+<b2>:<ms>   hold two buttons together (button test exit)
  *   wait:<ms>              let virtual time pass
  *   sleep:<ms>             real time passes (a helper process runs), then settle
+ *   type:<text>            the on-screen keyboard's text (_ = space)
  *   shot:<file.png>        screenshot now
  *   size:<W>x<H>           switch the logical size (LCD <-> HDMI relayout)
  *   theme:<name>           switch theme
@@ -277,6 +278,17 @@ static int run_script(struct preview *p, const char *script)
 			settle(p, atoi(tok + 5));
 			if (p->now < end)
 				p->now = end;
+			settle(p, 16);
+		} else if (!strncmp(tok, "type:", 5)) {
+			/* the on-screen keyboard's text (_ = space), then OK with START */
+			char t[256];
+
+			strlcpy_(t, tok + 5, sizeof(t));
+			for (char *c = t; *c; c++)
+				if (*c == '_')
+					*c = ' ';
+			if (!ui_debug_type_text(p->ui, t))
+				fprintf(stderr, "uipreview: type: no keyboard on screen\n");
 			settle(p, 16);
 		} else if (!strncmp(tok, "sleep:", 6)) {
 			usleep((useconds_t)atoi(tok + 6) * 1000);

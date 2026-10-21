@@ -1405,6 +1405,26 @@ void gamedb_set_cpu(struct gamedb *db, struct game *g, const char *cpu)
 }
 
 /* A deleted game: its line goes (the play time, the favorite...). */
+bool gamedb_rename(struct gamedb *db, const char *system, const char *rel, const char *new_rel)
+{
+	struct dbent *e = db_find(db, system, rel, false), *clash;
+
+	if (!e)
+		return false;
+	/* an entry already under the new name (a game of that name existed
+	 * once): it goes, the renamed game's data win */
+	if ((clash = db_find(db, system, new_rel, false)) && clash != e) {
+		clash->favorite = clash->hidden = false;
+		clash->lastplayed = clash->playtime = 0;
+		clash->playcount = 0;
+		clash->core = clash->scale = clash->cpu = NULL;
+	}
+	free(e->rel);
+	e->rel = xstrdup(new_rel);
+	db->dirty = true;
+	return true;
+}
+
 void gamedb_forget(struct gamedb *db, const char *system, const char *rel)
 {
 	struct dbent *e = db_find(db, system, rel, false);

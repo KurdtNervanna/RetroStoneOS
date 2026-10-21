@@ -1438,3 +1438,26 @@ int memspeed_set(int level)
 	LOGI("power: memory speed level %d requested (applies at the next start, as a trial)", level);
 	return 0;
 }
+
+/* One game's cover (after Rename this game): the same task, a one-line
+ * request. Quietly nothing without the helper or a network. */
+bool covers_can_start(void)
+{
+	char ip[64];
+
+	return access(COVERS_HELPER, X_OK) == 0 && !S.job && hw_has_ipv4(ip, sizeof(ip));
+}
+
+void covers_start_one(struct ui *ui, const char *system, const char *root, const char *path)
+{
+	FILE *f;
+
+	if (!covers_can_start())
+		return;
+	f = fopen(S.p_request, "w");
+	if (!f)
+		return;
+	fprintf(f, "%s\t%s\t%s\n", system, root, path);
+	fclose(f);
+	task_start(ui, TASK_COVERS);
+}

@@ -474,6 +474,9 @@ void ui_debug_assets(struct ui *ui, char *buf, size_t n);
  * digest=<hex>" (top=carousel|list:<system>:<games>|other; the digest covers
  * every entry and game, and is only meaningful once complete). */
 void ui_debug_state(struct ui *ui, char *buf, size_t n);
+/* Tests and the preview tool: the on-screen keyboard on top gets this text
+ * (false if the top screen is not the keyboard). */
+bool ui_debug_type_text(struct ui *ui, const char *text);
 /* Switches the theme (like Settings > Theme) and saves it. */
 void ui_select_theme(struct ui *ui, const char *name);
 /*

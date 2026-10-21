@@ -1786,3 +1786,14 @@ static void render_power_overlays(struct ui *ui, struct gfx_surface *s)
 			      0xfff0f0f0u);
 	}
 }
+
+bool ui_debug_type_text(struct ui *ui, const char *text)
+{
+	struct screen *top = ui_top(ui);
+
+	if (!top || !screen_is_osk(top))
+		return false;
+	osk_set_text(top, text);
+	ui->dirty = true;
+	return true;
+}
