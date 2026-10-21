@@ -543,6 +543,10 @@ void ui_apply_boot_settings(struct ui *ui);
 
 /* transfer_ui.c */
 void import_open(struct ui *ui, const char *mp, const char *label);
+/* The same from one of the console's own drives (Move games between drives):
+ * root holds roms/; no Eject; never itself as the destination; a "Delete
+ * from <label> after copying" toggle. */
+void import_open_drive(struct ui *ui, const char *root, const char *label);
 /* Settings > Storage: pick a drive (if several), then the flow */
 enum { USB_ACT_IMPORT = 0, USB_ACT_EXPORT, USB_ACT_SAVES };
 void transfer_usb_action(struct ui *ui, int action);

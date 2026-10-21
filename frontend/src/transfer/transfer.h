@@ -341,6 +341,13 @@ struct transfer_import_opts {
 	bool saves;              /* true: saves and states (and settings files) */
 	bool themes;             /* true */
 	bool screenshots;        /* true (a backup's screenshots/) */
+	/* Move, not copy (between the console's own drives, Settings > Storage
+	 * > Move games between drives): the game files (roms/, never BIOS,
+	 * saves, themes) that are on the destination at the end (copied, or
+	 * already there identical) are deleted from the source, after
+	 * everything was flushed. A file kept because it differed is not.
+	 * false (default): a copy. */
+	bool move_games;
 	/* Differing files. "All" answers are remembered separately for saves
 	 * and for everything else, for the rest of the import. */
 	enum transfer_dup dup_files;   /* ASK */
@@ -374,6 +381,7 @@ struct transfer_progress {
 	int skipped;                   /* identical + kept (+ too big for a backup) */
 	int failed;
 	int conflicts_kept;            /* saves kept (subset of kept) */
+	int moved;                     /* move_games: source files deleted at the end */
 	int err;                       /* negative errno when FAILED */
 	char errmsg[160];              /* human readable, for FAILED / last failure */
 	uint32_t rate_kbs;             /* recent throughput */

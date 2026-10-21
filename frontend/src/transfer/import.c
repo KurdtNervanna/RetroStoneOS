@@ -1235,12 +1235,73 @@ out:
 	return e;
 }
 
+/* move_games: the source files to delete once the copy is flushed */
+struct move_list {
+	char **v;
+	int n, cap;
+};
+
+static void move_add(struct move_list *m, const char *src)
+{
+	if (m->n == m->cap) {
+		int cap = m->cap ? m->cap * 2 : 256;
+		char **v = realloc(m->v, sizeof(*v) * (size_t)cap);
+
+		if (!v)
+			return;                 /* not deleted: a copy is fine too */
+		m->v = v;
+		m->cap = cap;
+	}
+	if ((m->v[m->n] = strdup(src)))
+		m->n++;
+}
+
+/* src and <root>/<rel> hold the same bytes (move_games, an item the plan
+ * found identical by its size and date) */
+static bool same_bytes(const char *src, const char *root, const char *rel)
+{
+	char dst[TRANSFER_PATH_MAX * 2], *a = malloc(65536), *b = malloc(65536);
+	FILE *fa = NULL, *fb = NULL;
+	bool same = false;
+
+	snprintf(dst, sizeof(dst), "%s/%s", root, rel);
+	if (!a || !b || !(fa = fopen(src, "rb")) || !(fb = fopen(dst, "rb")))
+		goto out;
+	for (;;) {
+		size_t na = fread(a, 1, 65536, fa), nb = fread(b, 1, 65536, fb);
+
+		if (na != nb || memcmp(a, b, na))
+			break;
+		if (na < 65536) {
+			same = feof(fa) && feof(fb);
+			break;
+		}
+	}
+out:
+	if (fa)
+		fclose(fa);
+	if (fb)
+		fclose(fb);
+	free(a);
+	free(b);
+	return same;
+}
+
+static void move_free(struct move_list *m)
+{
+	for (int i = 0; i < m->n; i++)
+		free(m->v[i]);
+	free(m->v);
+	memset(m, 0, sizeof(*m));
+}
+
 static int run_import(struct transfer_plan *p, const struct transfer_import_opts *o,
 		      struct run *r, volatile int *cancel)
 {
 	struct transfer_progress *pr = r->pr;
+	struct move_list mv = { 0 };
 	char a[32];
-	int rootfd, fatal = 0, cpe;
+	int rootfd, fatal = 0, cpe, kept_before = 0;
 
 	memset(pr, 0, sizeof(*pr));
 	pr->state = TRANSFER_RUNNING;
@@ -1293,6 +1354,7 @@ static int run_import(struct transfer_plan *p, const struct transfer_import_opts
 			fatal = -ECANCELED;
 			break;
 		}
+		kept_before = pr->kept;
 		tr_strlcpy(pr->current, it->dst, sizeof(pr->current));
 		if (it->action != TRANSFER_SAME) {
 			/* the next file to copy is read ahead while this one is flushed */
@@ -1306,9 +1368,17 @@ static int run_import(struct transfer_plan *p, const struct transfer_import_opts
 		}
 		if (it->action == TRANSFER_SAME) {
 			pr->identical++;
+			/* "the same" was decided from the size and the date: before the
+			 * source may go, the bytes must be the same too */
+			if (o->move_games && it->kind == TRANSFER_ROM && same_bytes(it->src, p->dst_root, it->dst))
+				move_add(&mv, it->src);
 		} else if ((e = copy_item(rootfd, it, r, cancel)) >= 0) {
 			if (e == 1)
 				pr->copied++;
+			/* on the destination now: written, or identical (not kept
+			 * because it differed: the kept counter did not move) */
+			if (o->move_games && it->kind == TRANSFER_ROM && pr->kept == kept_before)
+				move_add(&mv, it->src);
 		} else if (e == -ECANCELED) {
 			fatal = e;
 			break;
@@ -1334,6 +1404,26 @@ done:
 		fsync(rootfd);
 		close(rootfd);
 	}
+	/* move_games: the sources go only now, once every copy is on the disk
+	 * (a power cut before leaves a game on both drives, never on neither) */
+	if (mv.n) {
+		struct stat ss, ds;
+
+		sync();
+		if (stat(p->src_root, &ss) == 0 && stat(p->dst_root, &ds) == 0 &&
+		    ss.st_dev == ds.st_dev && ss.st_ino == ds.st_ino) {
+			tr_log("import: move refused, the source is the destination (%s)", p->src_root);
+		} else {
+			for (int i = 0; i < mv.n; i++)
+				if (unlink(mv.v[i]) == 0)
+					pr->moved++;
+				else
+					tr_log("import: move: cannot delete %s: %s", mv.v[i], strerror(errno));
+			sync();
+			tr_log("import: moved %d game files (deleted from %s)", pr->moved, p->src_root);
+		}
+	}
+	move_free(&mv);
 	if (r->srcfd >= 0)
 		close(r->srcfd);
 	r->srcfd = -1;

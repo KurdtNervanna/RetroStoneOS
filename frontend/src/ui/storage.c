@@ -38,7 +38,7 @@
 
 enum {
 	ID_ST_EMMC = 500, ID_ST_INSTALL, ID_ST_BOOTINFO, ID_ST_SATA, ID_ST_M2, ID_ST_M2FORMAT,
-	ID_ST_SD, ID_ST_SDGAMES, ID_ST_SDFORMAT, ID_ST_SDWARN, ID_ST_SDSTARTER, ID_ST_SDFULL, ID_ST_LIB0 = 520,
+	ID_ST_SD, ID_ST_SDGAMES, ID_ST_SDFORMAT, ID_ST_SDWARN, ID_ST_SDSTARTER, ID_ST_SDFULL, ID_ST_MOVE, ID_ST_LIB0 = 520,
 };
 
 enum { TASK_INSTALL = 1, TASK_INSTALL_KEEP, TASK_SDGAMES, TASK_FORMAT_SD, TASK_FORMAT_M2, TASK_SDSTARTER, TASK_COVERS, TASK_SDFULL };
@@ -912,6 +912,13 @@ void storage_menu_items(struct ui *ui, struct menu *m)
 			}
 		}
 	}
+	/* games from one drive to another (the import screen, local source) */
+	if (S.st.lib[0][0] || S.st.lib[1][0] || S.st.lib[2][0]) {
+		/* TRANSLATORS: Settings > Storage section header: the drives that hold games */
+		menu_add(m, MI_HEADER, 0, _("Game drives"));
+		/* TRANSLATORS: Settings > Storage action: copy or move games from one drive to another */
+		menu_add(m, MI_ACTION, ID_ST_MOVE, _("Move games between drives"));
+	}
 	/* free space of the other disks' libraries */
 	for (int i = 0; i < 3; i++) {
 		uint64_t fr, tot;
@@ -1004,6 +1011,41 @@ static void install_ask(struct ui *ui)
 	dialog_select(d, 2);
 }
 
+/* Move games between drives: the drives (the system disk's /data first) */
+static const char *g_move_roots[4], *g_move_labels[4];
+static int g_move_n;
+
+static void move_from_choice(struct ui *ui, int choice, void *user)
+{
+	(void)user;
+	if (choice >= 0 && choice < g_move_n)
+		import_open_drive(ui, g_move_roots[choice], g_move_labels[choice]);
+}
+
+static void move_ask(struct ui *ui)
+{
+	const char *buttons[6];
+	int n = 0;
+
+	read_status();
+	g_move_roots[n] = ui->cfg.transfer && ui->cfg.transfer->data_root ? ui->cfg.transfer->data_root : "/data";
+	g_move_labels[n++] = booted_from_emmc() ? _("Internal storage") : _("SD card");
+	for (int i = 0; i < 3 && n < 4; i++) {
+		if (!S.st.lib[i][0])
+			continue;
+		g_move_roots[n] = S.st.lib[i];
+		g_move_labels[n++] = i == 0 ? _("Internal storage") : i == 1 ? _("SD card") : _("M.2 drive");
+	}
+	g_move_n = n;
+	for (int i = 0; i < n; i++)
+		buttons[i] = g_move_labels[i];
+	/* TRANSLATORS: dialog button, uppercase, short */
+	buttons[n] = _("CANCEL");
+	buttons[n + 1] = NULL;
+	/* TRANSLATORS: Settings > Storage > Move games between drives: the source */
+	dialog_select(dialog_open(ui, _("Copy or move games from which drive?"), buttons, move_from_choice, NULL), n);
+}
+
 bool storage_menu_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
 {
 	(void)m;
@@ -1041,6 +1083,10 @@ bool storage_menu_item(struct ui *ui, struct menu *m, struct menu_item *it, int 
 							"freshly flashed card brings the SD system back."),
 						  buttons, confirm_task, (void *)(intptr_t)TASK_SDSTARTER), 0);
 		}
+		return true;
+	case ID_ST_MOVE:
+		if (!dir)
+			move_ask(ui);
 		return true;
 	case ID_ST_SDFULL:
 		if (!dir) {

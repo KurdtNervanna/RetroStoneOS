@@ -138,7 +138,7 @@ enum {
 	ID_B_BIOS, ID_B_SETTINGS, ID_B_GAME, ID_B_START,
 	ID_TREE0 = 30, ID_TREE_ALL = 60,
 	ID_DRIVE0 = 70,
-	ID_I_DEST = 90, ID_I_DESTNOTE,
+	ID_I_DEST = 90, ID_I_DESTNOTE, ID_I_MOVE,
 };
 /* ui->scan_orphan: scans whose screen was closed, freed when they end */
 enum { ORPHAN_PLAN = 1, ORPHAN_TREES = 2, ORPHAN_BACKUP = 4 };
@@ -267,6 +267,13 @@ static void summary_open(struct ui *ui, const char *mp, const char *msg)
 {
 	/* TRANSLATORS: dialog button, uppercase, short */
 	const char *const buttons[] = { _("EJECT"), _("OK"), NULL };
+	struct transfer_usb_drive d;
+
+	/* one of the console's own drives (Move games between drives): no Eject */
+	if (!find_drive(ui, mp, &d)) {
+		message_open(ui, msg);
+		return;
+	}
 
 	strlcpy_(g_eject_mp, mp, sizeof(g_eject_mp));
 	dialog_open(ui, msg, buttons, eject_choice, NULL);
@@ -302,11 +309,35 @@ struct import_ctx {
 	struct transfer_plan *plan;
 	int err;
 	struct transfer_import_opts o;
-	/* Copy games to (the Pro's other disks, storage.c): 0 = /data; else
-	 * dest_root, a game disk, and only the games are copied there */
+	/* Copy games to (the Pro's other disks, storage.c): an index in
+	 * dest_list(); dest_root "" = /data, else a game disk, and only the
+	 * games are copied there */
 	int dest;
 	char dest_root[TRANSFER_PATH_MAX];
+	/* the source is one of the console's own drives (Settings > Storage >
+	 * Move games between drives): no Eject, never itself as destination,
+	 * and "Delete from <drive> after copying" (o.move_games) */
+	bool local;
 };
+
+/* The destinations offered (storage_import_targets), without the source
+ * itself; roots[i] NULL = /data. */
+static int dest_list(struct ui *ui, const struct import_ctx *c, const char **roots, const char **labels, int max)
+{
+	const char *r[4], *l[4];
+	int n = storage_import_targets(ui, r, l, 4), k = 0;
+
+	for (int i = 0; i < n && k < max; i++) {
+		const char *root = r[i] ? r[i] : data_root(ui);
+
+		if (c->local && !strcmp(root, c->mp))
+			continue;
+		roots[k] = r[i];
+		labels[k] = l[i];
+		k++;
+	}
+	return k;
+}
 
 static void import_items(struct ui *ui, struct menu *m);
 
@@ -455,9 +486,15 @@ static void import_item(struct ui *ui, struct menu *m, struct menu_item *it, int
 	case ID_I_SHOTS:
 		c->o.screenshots = it->on;
 		break;
+	case ID_I_MOVE:
+		c->o.move_games = it->on;
+		import_items(ui, m);
+		ui->dirty = true;
+		break;
 	case ID_I_DEST: {
 		const char *roots[4], *labels[4];
-		int n = storage_import_targets(ui, roots, labels, 4);
+		int n = dest_list(ui, c, roots, labels, 4);
+		bool move = c->o.move_games;
 
 		if (it->val < 0 || it->val >= n || it->val == c->dest)
 			break;
@@ -466,7 +503,8 @@ static void import_item(struct ui *ui, struct menu *m, struct menu_item *it, int
 		/* another disk: only the games (BIOS files, saves and themes are
 		 * read from /data) */
 		TR(ui)->import_defaults(&c->o);
-		if (c->dest)
+		c->o.move_games = move;
+		if (c->dest_root[0])
 			c->o.bios = c->o.saves = c->o.themes = c->o.screenshots = false;
 		LOGI("usb: import: games to %s", c->dest_root[0] ? c->dest_root : data_root(ui));
 		if (c->plan)
@@ -541,7 +579,8 @@ static void picker_items(struct menu *m, struct import_ctx *c)
 	/* TRANSLATORS: a number of games and their size ("120 games, 1.5 GB") */
 	tfmt(it->value, sizeof(it->value), _n("%d game, %s", "%d games, %s", games), games, a);
 	/* TRANSLATORS: menu row: unmount the USB stick so it can be unplugged */
-	add(m, MI_ACTION, ID_I_EJECT, _("Eject"));
+	if (!c->local)
+		add(m, MI_ACTION, ID_I_EJECT, _("Eject"));
 }
 
 static void import_items(struct ui *ui, struct menu *m)
@@ -569,7 +608,8 @@ static void import_items(struct ui *ui, struct menu *m)
 	}
 	if (c->err || !p) {
 		add(m, MI_INFO, 0, _("This drive could not be read."))->disabled = true;
-		add(m, MI_ACTION, ID_I_EJECT, _("Eject"));
+		if (!c->local)
+			add(m, MI_ACTION, ID_I_EJECT, _("Eject"));
 		return;
 	}
 	any = p->bytes_to_copy > 0 || p->save_conflicts > 0;
@@ -619,9 +659,9 @@ static void import_items(struct ui *ui, struct menu *m)
 	{
 		/* Copy games to: the Pro's other disks (storage.c) */
 		const char *roots[4], *labels[4];
-		int nd = storage_import_targets(ui, roots, labels, 4);
+		int nd = dest_list(ui, c, roots, labels, 4);
 
-		if (nd > 0) {
+		if (nd > 0 && (nd > 1 || c->local)) {
 			/* TRANSLATORS: import option: the disk that receives the games
 			 * (SD card, Internal storage, M.2 drive) */
 			it = add(m, MI_CHOICE, ID_I_DEST, _("Copy games to"));
@@ -636,12 +676,13 @@ static void import_items(struct ui *ui, struct menu *m)
 	}
 	if (!any) {
 		add(m, MI_INFO, 0, _("Nothing new on this drive"))->disabled = true;
-		add(m, MI_ACTION, ID_I_EJECT, _("Eject"));
+		if (!c->local)
+			add(m, MI_ACTION, ID_I_EJECT, _("Eject"));
 		return;
 	}
 	/* TRANSLATORS: menu section header: what to copy (toggles follow) */
 	add(m, MI_HEADER, 0, C_("import section", "Copy"));
-	if (c->dest) {
+	if (c->dest_root[0]) {
 		/* TRANSLATORS: import, with "Copy games to" another disk */
 		add(m, MI_INFO, ID_I_DESTNOTE, _("Only the games go to this drive"))->disabled = true;
 	}
@@ -651,21 +692,21 @@ static void import_items(struct ui *ui, struct menu *m)
 		it->on = c->o.roms;
 		it->disabled = !p->rom_copy && !p->replace;
 	}
-	if (p->bios_files && !c->dest) {
+	if (p->bios_files && !c->dest_root[0]) {
 		it = add(m, MI_TOGGLE, ID_I_BIOS, _("BIOS files"));
 		it->on = c->o.bios;
 		it->disabled = !p->bios_copy;
 	}
-	if (p->save_files && !c->dest) {
+	if (p->save_files && !c->dest_root[0]) {
 		it = add(m, MI_TOGGLE, ID_I_SAVES, _("Saves & save states"));
 		it->on = c->o.saves;
 	}
-	if (p->theme_files && !c->dest) {
+	if (p->theme_files && !c->dest_root[0]) {
 		it = add(m, MI_TOGGLE, ID_I_THEMES, _("Themes"));
 		it->on = c->o.themes;
 		it->disabled = !p->theme_copy;
 	}
-	if (p->shot_files && !c->dest) {
+	if (p->shot_files && !c->dest_root[0]) {
 		it = add(m, MI_TOGGLE, ID_I_SHOTS, _("Screenshots"));
 		it->on = c->o.screenshots;
 		it->disabled = !p->shot_copy;
@@ -695,9 +736,21 @@ static void import_items(struct ui *ui, struct menu *m)
 	/* TRANSLATORS: "up to 1.5 GB, 12 GB free" (on the console's SD card) */
 	tfmt(it->value, sizeof(it->value), _("up to %s, %s free"), a, b);
 	/* TRANSLATORS: menu row: start the copy */
-	it = add(m, MI_ACTION, ID_I_COPY, _("Copy"));
+	if (c->local) {
+		char l[128];
+
+		/* TRANSLATORS: Move games between drives: a toggle, "%s" the source
+		 * (Internal storage, SD card, M.2 drive); off = a copy */
+		tfmt(l, sizeof(l), _("Delete from %s after copying"), c->label);
+		it = add(m, MI_TOGGLE, ID_I_MOVE, l);
+		it->on = c->o.move_games;
+	}
+	it = add(m, MI_ACTION, ID_I_COPY, c->local && c->o.move_games ?
+		 /* TRANSLATORS: menu row: start moving the games */
+		 C_("import", "Move") : _("Copy"));
 	it->disabled = !p->fits;
-	add(m, MI_ACTION, ID_I_EJECT, _("Eject"));
+	if (!c->local)
+		add(m, MI_ACTION, ID_I_EJECT, _("Eject"));
 }
 
 static void import_menu_open(struct ui *ui, struct import_ctx *c)
@@ -718,7 +771,19 @@ static void import_menu_open(struct ui *ui, struct import_ctx *c)
 	menu_open(ui, m);
 }
 
+static void import_open_ctx(struct ui *ui, const char *mp, const char *label, bool local);
+
 void import_open(struct ui *ui, const char *mp, const char *label)
+{
+	import_open_ctx(ui, mp, label, false);
+}
+
+void import_open_drive(struct ui *ui, const char *root, const char *label)
+{
+	import_open_ctx(ui, root, label, true);
+}
+
+static void import_open_ctx(struct ui *ui, const char *mp, const char *label, bool local)
 {
 	struct import_ctx *c;
 	int r;
@@ -729,6 +794,22 @@ void import_open(struct ui *ui, const char *mp, const char *label)
 	strlcpy_(c->mp, mp, sizeof(c->mp));
 	tcpy(c->label, label && *label ? label : _("USB drive"), sizeof(c->label));
 	TR(ui)->import_defaults(&c->o);
+	c->local = local;
+	if (local) {
+		/* the first destination that is not the source itself */
+		const char *roots[4], *labels[4];
+
+		if (dest_list(ui, c, roots, labels, 4) < 1) {
+			free(c);
+			/* TRANSLATORS: Move games between drives, with a single drive */
+			message_open(ui, _("There is no other drive to copy the games to."));
+			return;
+		}
+		c->dest = 0;
+		strlcpy_(c->dest_root, roots[0] ? roots[0] : "", sizeof(c->dest_root));
+		if (c->dest_root[0])
+			c->o.bios = c->o.saves = c->o.themes = c->o.screenshots = false;
+	}
 	r = TR(ui)->trees_start(mp);
 	if (r < 0) {
 		free(c);
@@ -740,7 +821,11 @@ void import_open(struct ui *ui, const char *mp, const char *label)
 		struct menu *m;
 		char title[64];
 
-		tfmt(title, sizeof(title), _("Import from %s"), c->label);
+		if (local)
+			/* TRANSLATORS: menu title, Move games between drives: the source drive follows */
+			tfmt(title, sizeof(title), _("Copy games from %s"), c->label);
+		else
+			tfmt(title, sizeof(title), _("Import from %s"), c->label);
 		m = menu_new(ui, title, K_IMPORT);
 		m->ctx = c;
 		m->on_item = import_item;

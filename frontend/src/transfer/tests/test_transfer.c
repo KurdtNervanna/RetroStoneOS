@@ -649,6 +649,58 @@ static void test_import_stick_safety(void)
 	CHECK(system(cmd) == 0);
 }
 
+/* Move between the console's own drives (move_games, Settings > Storage >
+ * Move games between drives): the game files that are on the destination at
+ * the end leave the source (copied, or there already identical, media too);
+ * a differing file kept by the answer stays on both; BIOS files never move;
+ * nothing is deleted when the source is the destination. */
+static void test_import_move(void)
+{
+	char src[512], dst[512], cmd[1200];
+	struct transfer_plan *p = NULL;
+	struct transfer_import_opts o;
+	struct transfer_progress res;
+	int r;
+
+	pathf(src, sizeof(src), "%s/move-src", g_tmp);
+	pathf(dst, sizeof(dst), "%s/move-dst", g_tmp);
+	put_file(src, "roms/snes/Zelda.sfc", 3000, 31, 1600000000);          /* new: moved */
+	put_file(src, "roms/snes/Same.sfc", 1200, 32, 1600000000);           /* identical: moved */
+	put_file(dst, "roms/snes/Same.sfc", 1200, 32, 1600000000);
+	put_file(src, "roms/snes/Differs.sfc", 1000, 33, 1600000000);        /* kept: stays */
+	put_file(dst, "roms/snes/Differs.sfc", 1000, 34, 1600000000);
+	put_file(src, "roms/snes/media/covers/Zelda.jpg", 300, 35, 1600000000); /* media: moved */
+	put_file(src, "bios/scph5501.bin", 2048, 36, 1600000000);            /* BIOS: never */
+	r = transfer_plan_build(src, dst, &p);
+	CHECK(r == 0 && p);
+	if (!p)
+		return;
+	transfer_import_defaults(&o);
+	o.move_games = true;
+	o.dup_files = TRANSFER_DUP_SKIP;
+	r = transfer_import_run(p, &o, NULL, NULL, NULL, &res);
+	CHECK(r == 0 && res.state == TRANSFER_DONE);
+	CHECK(exists(dst, "roms/snes/Zelda.sfc") && !exists(src, "roms/snes/Zelda.sfc"));
+	CHECK(exists(dst, "roms/snes/Same.sfc") && !exists(src, "roms/snes/Same.sfc"));
+	CHECK(exists(dst, "roms/snes/media/covers/Zelda.jpg") && !exists(src, "roms/snes/media/covers/Zelda.jpg"));
+	CHECK(exists(src, "roms/snes/Differs.sfc") && exists(dst, "roms/snes/Differs.sfc"));
+	CHECK(exists(src, "bios/scph5501.bin"));
+	CHECK(res.moved == 3);
+	transfer_plan_free(p);
+	p = NULL;
+
+	/* the source as its own destination: nothing deleted */
+	r = transfer_plan_build(src, src, &p);
+	CHECK(r == 0 && p);
+	if (p) {
+		r = transfer_import_run(p, &o, NULL, NULL, NULL, &res);
+		CHECK(res.moved == 0 && exists(src, "roms/snes/Differs.sfc"));
+		transfer_plan_free(p);
+	}
+	pathf(cmd, sizeof(cmd), "rm -rf '%s' '%s'", src, dst);
+	CHECK(system(cmd) == 0);
+}
+
 static void test_import(void)
 {
 	char stick[512], data[512], a[1024], b[1024];
@@ -2344,6 +2396,7 @@ int main(void)
 	test_probe();
 	test_import();
 	test_import_stick_safety();
+	test_import_move();
 	test_trees();
 	test_duplicates();
 	test_backup();
