@@ -946,12 +946,14 @@ static int cmp_strp(const void *a, const void *b)
 }
 
 /* Covers downloaded by rsos-covers (Settings > Game lists > Download game
- * covers): <rom_dir>/media/covers/<ROM file name without extension>.jpg (or
- * .png), for the games the gamelist.xml gave no image. One readdir; the
+ * covers, Choose cover): <rom_dir>/media/covers/<ROM file name without
+ * extension>.jpg, or a .png of the player's own, for the games the
+ * gamelist.xml gave no image. One readdir; the
  * folder joins the change detection (and the scan cache's validation). */
 static void apply_covers(struct scan *sc, const char *rom_dir)
 {
-	static const char *const exts[] = { "jpg", "png" };
+	/* .png first: a picture of the player's own wins over a download */
+	static const char *const exts[] = { "png", "jpg" };
 	char dir[1024], **names = NULL;
 	int n = 0, cap = 0;
 	struct stat st;

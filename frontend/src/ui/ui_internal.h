@@ -565,7 +565,8 @@ void webshare_open(struct ui *ui);
 /* The Windows file share (ui->cfg.smb_helper), next to the network
  * transfer: available (the helper is installed), start (with the transfer's
  * PIN), stop; the helper's end comes back as a job (UI_JOB_SMB*). */
-enum { UI_JOB_SMB = 40, UI_JOB_SMB_STOP = 41, UI_JOB_STORAGE = 42, UI_JOB_STORAGE_TASK = 43 };
+enum { UI_JOB_SMB = 40, UI_JOB_SMB_STOP = 41, UI_JOB_STORAGE = 42, UI_JOB_STORAGE_TASK = 43,
+       UI_JOB_COVERPICK = 44 };
 
 /* storage.c - the RetroStone2 Pro's storage (ui->cfg.storage_helper):
  * Settings > Storage items, the eMMC install and the other disk tasks, the
@@ -590,8 +591,17 @@ void covers_start(struct ui *ui);
  * are there and nothing else runs. */
 bool covers_can_start(void);
 void covers_start_one(struct ui *ui, const char *system, const char *root, const char *path);
+/* Settings > Game lists > Picture style changed: offers to download the
+ * downloaded pictures again in the new style. */
+void covers_restyle(struct ui *ui);
+/* A game's options > Choose cover: the closest names on the server, Search by
+ * name, Use my own picture, Remove the picture. */
+void cover_choose(struct ui *ui, const char *system, const char *root, const char *path, const char *name);
+void cover_choose_game(struct ui *ui, const struct game *g);
+/* Settings > Game lists > Choose missing covers */
+void covers_missing_open(struct ui *ui);
 /* Settings > Game lists > Group multi-disc games: an .m3u for every set of
- * "(Disc N)" files that has none, so each game is one entry (the discs are
+ * "(Disc N)" or "Disc N" files that has none, so each game is one entry (the discs are
  * swapped in the in-game menu). */
 void discs_group(struct ui *ui);
 /* Settings > Power > Memory speed (the RetroStone2's DRAM clock, U-Boot SPL

@@ -42,6 +42,7 @@ enum {
 	ID_ST_MODEL = 523, ID_ST_REDETECT,
 };
 
+enum { K_COVERS = 140 };   /* menu kind: Choose cover, Games without a picture */
 enum { TASK_INSTALL = 1, TASK_INSTALL_KEEP, TASK_SDGAMES, TASK_FORMAT_SD, TASK_FORMAT_M2, TASK_SDSTARTER, TASK_COVERS, TASK_SDFULL };
 enum { TS_RUNNING = 0, TS_DONE, TS_FAILED };
 
@@ -81,6 +82,8 @@ static struct {
 	char dsys[32];
 	char p_status[256], p_progress[256], p_libs[256], p_request[256];
 	char p_covers[256], p_missing[1100];
+	char p_cache[1100], p_suggest[256];
+	bool covers_replace;         /* the next cover task replaces the downloaded pictures */
 } S;
 
 static const char *const g_lib_names[3] = { "emmc", "sd", "m2" };
@@ -157,6 +160,13 @@ static bool has_overlay(const char *name)
 	return false;
 }
 
+/* Settings > Game lists > Picture style: "titles" (title screens, 4:3, like
+ * the RetroStone games' pictures) or "boxarts" */
+static const char *covers_kind(struct ui *ui)
+{
+	return strcmp(settings_get(ui->settings, "covers_kind", "titles"), "boxarts") ? "titles" : "boxarts";
+}
+
 static bool booted_from_emmc(void)
 {
 	return !strcmp(S.st.boot, "emmc");
@@ -215,6 +225,8 @@ void storage_init(struct ui *ui)
 	snprintf(S.p_covers, sizeof(S.p_covers), "%s",
 		 getenv("RSOS_COVERS_HELPER") ? getenv("RSOS_COVERS_HELPER") : "/usr/bin/rsos-covers");
 	snprintf(S.p_missing, sizeof(S.p_missing), "%s/logs/covers-missing.txt", ui->cfg.data_dir);
+	snprintf(S.p_cache, sizeof(S.p_cache), "%s/cache/covers", ui->cfg.data_dir);
+	snprintf(S.p_suggest, sizeof(S.p_suggest), "%s/cover-suggest.txt", run);
 	S.helper = h;
 	S.on = h && *h && access(h, X_OK) == 0 && ui->cfg.storage_overlays &&
 	       (strstr(ui->cfg.storage_overlays, "emmc") || strstr(ui->cfg.storage_overlays, "sata"));
@@ -435,10 +447,10 @@ static void task_text(char *out, size_t n)
 			l = strlen(out);
 			snprintf(out + l, n - l, "\n\n");
 			l = strlen(out);
-			/* TRANSLATORS: game covers done: those not found, and where their list is */
+			/* TRANSLATORS: game covers done: those not found, and how to pick them by hand */
 			snprintf(out + l, n - l, _("%d not found (their file names do not match the libretro names; "
-						   "arcade games need Skraper). The list is in "
-						   "rsos/logs/covers-missing.txt."), S.d2);
+						   "arcade games need Skraper). Settings > Game lists > Choose "
+						   "missing covers lets you pick them one by one."), S.d2);
 		}
 		if (S.d3 > 0) {
 			l = strlen(out);
@@ -516,6 +528,7 @@ static int done_buttons(const char **b0, const char **b1)
 }
 
 static void task_start(struct ui *ui, int kind);
+static void cp_job_done(struct ui *ui, const struct hw_job_result *r);
 
 static void task_render(struct ui *ui, struct screen *scr, struct gfx_surface *s)
 {
@@ -734,9 +747,13 @@ static void task_start(struct ui *ui, int kind)
 	}
 	unlink(ST_PROGRESS);
 	if (kind == TASK_COVERS) {
-		const char *argv[] = { COVERS_HELPER, "--progress", ST_PROGRESS, "--missing",
-				       COVERS_MISSING, S.p_request, NULL };
+		const char *argv[] = { COVERS_HELPER, "--kind", covers_kind(ui), "--cache", S.p_cache,
+				       "--progress", ST_PROGRESS, "--missing", COVERS_MISSING,
+				       S.covers_replace ? "--replace" : S.p_request, S.p_request, NULL };
 
+		if (!S.covers_replace)
+			argv[10] = NULL;
+		S.covers_replace = false;
 		id = hw_job_start(argv, UI_JOB_STORAGE_TASK);
 		LOGI("storage: %s (covers)", COVERS_HELPER);
 	} else {
@@ -759,6 +776,10 @@ static void task_start(struct ui *ui, int kind)
 
 void storage_job_done(struct ui *ui, const struct hw_job_result *r)
 {
+	if (r->tag == UI_JOB_COVERPICK) {
+		cp_job_done(ui, r);
+		return;
+	}
 	if (r->tag == UI_JOB_STORAGE) {
 		if (r->id == S.refresh_job)
 			S.refresh_job = 0;
@@ -1241,11 +1262,82 @@ static void covers_confirm(struct ui *ui, int choice, void *user)
 		task_start(ui, TASK_COVERS);
 }
 
+/* The request of the cover task: the games without a picture, and with
+ * replace also those whose picture is a download (a .jpg in media/covers;
+ * a .png there is the player's own). The game count, -1 if it cannot be
+ * written. */
+static int covers_request(struct ui *ui, bool replace, int *nsys_out)
+{
+	int n = 0, nsys = 0;
+	FILE *f = fopen(S.p_request, "w");
+
+	if (!f)
+		return -1;
+	for (int i = 0; i < ui->nsys; i++) {
+		const struct sysent *se = &ui->sys[i];
+		int before = n;
+
+		if (se->is_collection || !se->games)
+			continue;
+		for (int j = 0; j < se->games->n; j++) {
+			const struct game *g = &se->games->games[j];
+			size_t lp, lr, li;
+
+			/* the read-only built-in games */
+			if (!g->path || !g->rel || !strncmp(g->path, "/usr/", 5))
+				continue;
+			if (g->image) {
+				li = strlen(g->image);
+				if (!replace || !strstr(g->image, "/media/covers/") || li < 4 ||
+				    strcasecmp(g->image + li - 4, ".jpg"))
+					continue;
+			}
+			lp = strlen(g->path);
+			lr = strlen(g->rel);
+			if (lr + 1 >= lp || strcmp(g->path + lp - lr, g->rel) || g->path[lp - lr - 1] != '/')
+				continue;
+			fprintf(f, "%s\t%.*s\t%s\n", se->name, (int)(lp - lr - 1), g->path, g->path);
+			n++;
+		}
+		nsys += n > before;
+	}
+	if (fclose(f) != 0)
+		return -1;
+	*nsys_out = nsys;
+	return n;
+}
+
+static void restyle_confirm(struct ui *ui, int choice, void *user)
+{
+	(void)user;
+	if (choice == 1) {
+		S.covers_replace = true;
+		task_start(ui, TASK_COVERS);
+	}
+}
+
+void covers_restyle(struct ui *ui)
+{
+	/* TRANSLATORS: dialog buttons, uppercase, short (LATER is selected) */
+	const char *const buttons[] = { _("LATER"), _("DOWNLOAD"), NULL };
+	char ip[64];
+	int n, nsys = 0;
+
+	if (access(COVERS_HELPER, X_OK) != 0 || S.job || !hw_has_ipv4(ip, sizeof(ip)))
+		return;
+	loader_complete_all(ui);
+	n = covers_request(ui, true, &nsys);
+	if (n <= 0)
+		return;
+	/* TRANSLATORS: Settings > Game lists > Picture style was changed */
+	dialog_select(dialog_open(ui, _("Download the pictures of your games again in this style? Pictures you "
+					"added yourself stay."), buttons, restyle_confirm, NULL), 0);
+}
+
 void covers_start(struct ui *ui)
 {
 	char ip[64], t[512];
 	int n = 0, nsys = 0;
-	FILE *f;
 
 	if (S.job && S.kind == TASK_COVERS) {
 		task_page_open(ui);      /* running in the background: show it */
@@ -1263,34 +1355,11 @@ void covers_start(struct ui *ui)
 		return;
 	}
 	loader_complete_all(ui);
-	f = fopen(S.p_request, "w");
-	if (!f) {
+	n = covers_request(ui, false, &nsys);
+	if (n < 0) {
 		message_open(ui, _("This could not start."));
 		return;
 	}
-	for (int i = 0; i < ui->nsys; i++) {
-		const struct sysent *se = &ui->sys[i];
-		int before = n;
-
-		if (se->is_collection || !se->games)
-			continue;
-		for (int j = 0; j < se->games->n; j++) {
-			const struct game *g = &se->games->games[j];
-			size_t lp, lr;
-
-			/* games with a picture, and the read-only built-in games */
-			if (g->image || !g->path || !g->rel || !strncmp(g->path, "/usr/", 5))
-				continue;
-			lp = strlen(g->path);
-			lr = strlen(g->rel);
-			if (lr + 1 >= lp || strcmp(g->path + lp - lr, g->rel) || g->path[lp - lr - 1] != '/')
-				continue;
-			fprintf(f, "%s\t%.*s\t%s\n", se->name, (int)(lp - lr - 1), g->path, g->path);
-			n++;
-		}
-		nsys += n > before;
-	}
-	fclose(f);
 	if (!n) {
 		/* TRANSLATORS: Settings > Game lists > Download game covers */
 		message_open(ui, _("All your games already have a picture."));
@@ -1300,10 +1369,12 @@ void covers_start(struct ui *ui)
 		/* TRANSLATORS: dialog buttons, uppercase, short (CANCEL is selected) */
 		const char *const buttons[] = { _("CANCEL"), _("DOWNLOAD"), NULL };
 
-		/* TRANSLATORS: Settings > Game lists > Download game covers: %d games, %d systems */
-		snprintf(t, sizeof(t), _("Download box covers for %d games (%d systems) from the libretro thumbnail "
-					 "server, as RetroArch does? Games that already have a picture keep it. "
-					 "This can take a few minutes."), n, nsys);
+		/* TRANSLATORS: Settings > Game lists > Download game covers: %d games, %d systems; the
+		 * picture style is Settings > Game lists > Picture style */
+		snprintf(t, sizeof(t), _("Download pictures for %d games (%d systems) from the libretro thumbnail "
+					 "server, as RetroArch does (style: %s)? Games that already have a "
+					 "picture keep it. This can take a few minutes."), n, nsys,
+			 strcmp(covers_kind(ui), "titles") ? _("box art") : _("title screen"));
 		dialog_select(dialog_open(ui, t, buttons, covers_confirm, NULL), 0);
 	}
 }
@@ -1324,36 +1395,66 @@ static int cmp_disc(const void *a, const void *b)
 	return c ? c : x->num - y->num;
 }
 
-/* "Name (USA) (Disc 2).cue" -> base "Name (USA)", disc 2; false when the
- * name has no "(Disc N)" / "(Disk N)" tag */
+/* The disc number of a file name and the name without it: "Name (USA) (Disc
+ * 2).cue" -> "Name (USA)", also "[Disc 2]", "(Disk 2 of 3)", and as plain
+ * words: "Name Disc 2.cue", "Name - CD2.chd", "Name_Disc_2 (USA).cue" ->
+ * "Name", "Name (USA)". False when there is none (a word "Disc", "Disk" or
+ * "CD" with a number, not at the start of the name). */
 static bool disc_tag(const char *file, char *base, size_t n, int *num)
 {
-	const char *p = file, *tag = NULL, *ext = strrchr(file, '.');
+	const char *ext = strrchr(file, '.'), *tag = NULL, *after = NULL;
 	size_t l;
 
-	while ((p = strchr(p, '('))) {
-		if (!strncasecmp(p, "(Disc ", 6) || !strncasecmp(p, "(Disk ", 6)) {
-			tag = p;
-			break;
-		}
-		p++;
-	}
-	if (!tag || !ext || ext < tag || !isdigit((unsigned char)tag[6]))
+	if (!ext)
 		return false;
-	*num = atoi(tag + 6);
-	/* the base: before the tag, then whatever follows the tag's ")" up to the
-	 * extension ("Game (Disc 1) (USA).cue" -> "Game (USA)") */
+	for (const char *p = file + 1; p < ext && !tag; p++) {
+		bool br = *p == '(' || *p == '[';
+		const char *q = br ? p + 1 : p;
+		size_t kw;
+		int d;
+
+		/* plain words start after a space, a dash or an underscore */
+		if (!br && p[-1] != ' ' && p[-1] != '-' && p[-1] != '_')
+			continue;
+		kw = !strncasecmp(q, "disc", 4) || !strncasecmp(q, "disk", 4) ? 4 : !strncasecmp(q, "cd", 2) ? 2 : 0;
+		if (!kw)
+			continue;
+		q += kw;
+		if (*q == ' ' || *q == '_')
+			q++;
+		if (!isdigit((unsigned char)*q))
+			continue;
+		d = atoi(q);
+		while (isdigit((unsigned char)*q))
+			q++;
+		if ((!strncasecmp(q, " of ", 4) || !strncasecmp(q, "_of_", 4)) && isdigit((unsigned char)q[4]))
+			for (q += 4; isdigit((unsigned char)*q); q++)
+				;
+		if (br) {
+			if (*q != ')' && *q != ']')
+				continue;
+			q++;
+		} else if (q < ext && isalnum((unsigned char)*q)) {
+			continue;                     /* "CD2X": not a disc */
+		}
+		*num = d;
+		tag = p;
+		after = q;
+	}
+	if (!tag)
+		return false;
+	/* the base: before the tag (without its " ", "-", "_"), then whatever
+	 * follows it up to the extension */
 	l = (size_t)(tag - file);
-	while (l && file[l - 1] == ' ')
+	while (l && (file[l - 1] == ' ' || file[l - 1] == '-' || file[l - 1] == '_'))
 		l--;
 	snprintf(base, n, "%.*s", (int)l, file);
-	p = strchr(tag, ')');
-	if (p && p + 1 < ext) {
+	if (after < ext) {
 		size_t bl = strlen(base);
 
-		snprintf(base + bl, n - bl, "%.*s", (int)(ext - p - 1), p + 1);
+		snprintf(base + bl, n - bl, "%.*s", (int)(ext - after), after);
 	}
-	return true;
+	return l > 0;
 }
 
 void discs_group(struct ui *ui)
@@ -1494,6 +1595,466 @@ bool covers_can_start(void)
 	char ip[64];
 
 	return access(COVERS_HELPER, X_OK) == 0 && !S.job && hw_has_ipv4(ip, sizeof(ip));
+}
+
+/* --------------------------------------------------------- Choose cover
+ * A game's options > Choose cover: rsos-covers --suggest lists the names
+ * closest to the game's file name (or to words typed in Search by name),
+ * choosing one runs --get into <ROM folder>/media/covers/<stem>.jpg. Use my
+ * own picture says where a picture of the player's own goes (a .png wins
+ * over a download: games.c). Runs beside the cover task (its own job). */
+#define CP_MAX 20
+enum { ID_CP_SEARCH = 600, ID_CP_NONET, ID_CP_NONE, ID_CP_OWN, ID_CP_REMOVE, ID_CP0 = 620 };
+
+static struct {
+	struct menu *m;
+	int job;
+	bool getting, failed, typed;
+	int get_row;
+	char system[32], root[1024], path[1024], stem[256], name[96], query[96];
+	int n;
+	char kind[CP_MAX][8], names[CP_MAX][160];
+} CP;
+
+static void cp_file(const char *ext, char *out, size_t n)
+{
+	snprintf(out, n, "%s/media/covers/%s.%s", CP.root, CP.stem, ext);
+}
+
+static bool cp_has_picture(void)
+{
+	char f[1400];
+
+	cp_file("png", f, sizeof(f));
+	if (access(f, F_OK) == 0)
+		return true;
+	cp_file("jpg", f, sizeof(f));
+	return access(f, F_OK) == 0;
+}
+
+/* The game's picture is new or gone: the loaded lists (the system's and the
+ * collections') get it at once, the open game lists show it (relayout drops
+ * their pictures); the scan cache is invalidated for the next load. Not
+ * ui_reload_games(): it goes back to the carousel. */
+static void cp_apply(struct ui *ui)
+{
+	char png[1400], jpg[1400];
+	const char *image = NULL;
+
+	cp_file("png", png, sizeof(png));
+	cp_file("jpg", jpg, sizeof(jpg));
+	if (access(png, F_OK) == 0)
+		image = png;
+	else if (access(jpg, F_OK) == 0)
+		image = jpg;
+	for (int i = 0; i < ui->nsys; i++) {
+		struct gamelist *gl = ui->sys[i].games;
+
+		for (int j = 0; gl && j < gl->n; j++)
+			if (gl->games[j].path && !strcmp(gl->games[j].path, CP.path)) {
+				gl->games[j].image = image ? arena_strdup(&gl->arena, image) : NULL;
+				/* a list that had no picture: the detailed view the next
+				 * time it opens (an open one keeps its view) */
+				gl->has_media |= image != NULL;
+			}
+	}
+	for (int k = 0; k < ui->nstack; k++)
+		if (ui->stack[k]->kind == SCR_GLVIEW && ui->stack[k]->ops->relayout)
+			ui->stack[k]->ops->relayout(ui, ui->stack[k]);
+	ui_invalidate_system(ui, CP.system);
+	ui->dirty = true;
+}
+
+static void cp_start(struct ui *ui, const char *mode, const char *kind, const char *arg)
+{
+	char out[1400];
+	const char *argv[] = { COVERS_HELPER, "--kind", kind, "--cache", S.p_cache, mode, CP.system, arg,
+			       out, NULL };
+
+	(void)ui;
+	if (CP.job)
+		return;
+	if (!strcmp(mode, "--get"))
+		cp_file("jpg", out, sizeof(out));
+	else
+		strlcpy_(out, S.p_suggest, sizeof(out));
+	CP.job = hw_job_start(argv, UI_JOB_COVERPICK);
+	if (CP.job < 0) {
+		CP.job = 0;
+		CP.failed = true;
+		return;
+	}
+	CP.getting = !strcmp(mode, "--get");
+	if (!CP.getting)
+		CP.failed = false;
+}
+
+static void cp_build(struct ui *ui, struct menu *m)
+{
+	struct menu_item *it;
+	int cursor = m->cursor;
+	char ip[64], t[160];
+	bool net = hw_has_ipv4(ip, sizeof(ip));
+
+	(void)ui;
+	m->n = 0;
+	/* TRANSLATORS: a game's Choose cover: type words to look for */
+	it = menu_add(m, MI_ACTION, ID_CP_SEARCH, _("Search by name..."));
+	if (CP.job && !CP.getting)
+		/* TRANSLATORS: Choose cover: the search runs */
+		strlcpy_(it->value, _("searching..."), sizeof(it->value));
+	else if (CP.failed)
+		strlcpy_(it->value, _("failed"), sizeof(it->value));
+	if (!net) {
+		/* TRANSLATORS: Choose cover without a network */
+		it = menu_add(m, MI_INFO, ID_CP_NONET, _("Connect to WiFi to search"));
+		it->disabled = true;
+	} else if (CP.n) {
+		if (CP.typed) {
+			/* TRANSLATORS: Choose cover: section header; %s: the words typed */
+			snprintf(t, sizeof(t), _("Found for \"%s\""), CP.query);
+			menu_add(m, MI_HEADER, 0, t);
+		} else {
+			/* TRANSLATORS: Choose cover: section header: the names that look like the game's */
+			menu_add(m, MI_HEADER, 0, _("Closest names"));
+		}
+		for (int i = 0; i < CP.n; i++) {
+			it = menu_add(m, MI_ACTION, ID_CP0 + i, CP.names[i]);
+			if (CP.getting && CP.get_row == i)
+				/* TRANSLATORS: Choose cover: this picture is being downloaded */
+				strlcpy_(it->value, _("downloading..."), sizeof(it->value));
+			else if (strcmp(CP.kind[i], "titles"))
+				/* TRANSLATORS: Choose cover: this one is a box picture, not a title screen */
+				strlcpy_(it->value, _("box art"), sizeof(it->value));
+		}
+	} else if (!CP.job) {
+		/* TRANSLATORS: Choose cover: the search found nothing close */
+		it = menu_add(m, MI_INFO, ID_CP_NONE, _("Nothing similar found"));
+		it->disabled = true;
+	}
+	/* TRANSLATORS: Choose cover: section header */
+	menu_add(m, MI_HEADER, 0, _("Other"));
+	/* TRANSLATORS: Choose cover: how to use a picture of your own */
+	menu_add(m, MI_ACTION, ID_CP_OWN, _("Use my own picture..."));
+	if (cp_has_picture())
+		/* TRANSLATORS: Choose cover: delete this game's picture */
+		menu_add(m, MI_ACTION, ID_CP_REMOVE, _("Remove the picture"));
+	m->cursor = cursor < m->n ? cursor : m->n - 1;
+	if (m->cursor < 0)
+		m->cursor = 0;
+	while (m->cursor < m->n - 1 && (m->items[m->cursor].type == MI_HEADER || m->items[m->cursor].disabled))
+		m->cursor++;
+}
+
+static void cp_read(void)
+{
+	FILE *f = fopen(S.p_suggest, "r");
+	char line[256];
+
+	CP.n = 0;
+	if (!f)
+		return;
+	while (CP.n < CP_MAX && fgets(line, sizeof(line), f)) {
+		char *tab = strchr(line, '\t');
+
+		line[strcspn(line, "\r\n")] = 0;
+		if (!tab || !tab[1])
+			continue;
+		*tab = 0;
+		strlcpy_(CP.kind[CP.n], line, sizeof(CP.kind[CP.n]));
+		strlcpy_(CP.names[CP.n], tab + 1, sizeof(CP.names[CP.n]));
+		CP.n++;
+	}
+	fclose(f);
+}
+
+static void cp_search_done(struct ui *ui, const char *text, bool ok, void *user)
+{
+	(void)user;
+	if (!ok || !text[0] || CP.job)
+		return;
+	strlcpy_(CP.query, text, sizeof(CP.query));
+	CP.typed = true;
+	CP.n = 0;
+	cp_start(ui, "--suggest", covers_kind(ui), text);
+	if (CP.m)
+		cp_build(ui, CP.m);
+}
+
+static void cp_remove_answer(struct ui *ui, int choice, void *user)
+{
+	char f[1400];
+
+	(void)user;
+	if (choice != 1)
+		return;
+	cp_file("jpg", f, sizeof(f));
+	unlink(f);
+	cp_file("png", f, sizeof(f));
+	unlink(f);
+	cp_apply(ui);
+	/* TRANSLATORS: toast after Choose cover > Remove the picture */
+	ui_toastf(ui, "%s", _("Picture removed"));
+	if (CP.m)
+		cp_build(ui, CP.m);
+}
+
+/* where the player's own picture goes, as the player sees the drives */
+static void cp_own_path(char *out, size_t n)
+{
+	static const struct {
+		const char *prefix, *label;
+	} where[] = {
+		{ "/data/", "RETROSTONE/" },
+		/* TRANSLATORS: Choose cover > Use my own picture: the drives */
+		{ "/run/rsos/media/emmc/", N_("internal storage: ") },
+		{ "/run/rsos/media/sd/", N_("SD card: ") },
+		{ "/run/rsos/media/m2/", N_("M.2 drive: ") },
+	};
+
+	for (size_t i = 0; i < ARRAY_SIZE(where); i++) {
+		size_t l = strlen(where[i].prefix);
+
+		if (!strncmp(CP.root, where[i].prefix, l)) {
+			snprintf(out, n, "%s%s/media/covers/", i ? _(where[i].label) : where[i].label, CP.root + l);
+			return;
+		}
+	}
+	snprintf(out, n, "%s/media/covers/", CP.root);
+}
+
+static void cp_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
+{
+	(void)m;
+	if (dir)
+		return;
+	if (it->id == ID_CP_SEARCH) {
+		/* TRANSLATORS: Choose cover > Search by name: keyboard title */
+		osk_open(ui, _("Search covers"), CP.typed ? CP.query : CP.name, false, cp_search_done, NULL);
+	} else if (it->id == ID_CP_OWN) {
+		char where[1200], t[1600];
+
+		cp_own_path(where, sizeof(where));
+		/* TRANSLATORS: Choose cover > Use my own picture; %s: the file name, then the folder */
+		snprintf(t, sizeof(t), _("Copy a picture (PNG, or JPG) named\n%s.png\ninto\n%s\nfrom a computer. "
+					 "It is shown instead of a downloaded one; 640 x 480 looks like the "
+					 "RetroStone games."), CP.stem, where);
+		message_open(ui, t);
+	} else if (it->id == ID_CP_REMOVE) {
+		/* TRANSLATORS: dialog buttons, uppercase, short (CANCEL is selected) */
+		const char *const buttons[] = { _("CANCEL"), _("REMOVE"), NULL };
+
+		/* TRANSLATORS: Choose cover > Remove the picture */
+		dialog_select(dialog_open(ui, _("Remove this game's picture?"), buttons, cp_remove_answer, NULL), 0);
+	} else if (it->id >= ID_CP0 && it->id < ID_CP0 + CP.n && !CP.job) {
+		int i = it->id - ID_CP0;
+
+		CP.get_row = i;
+		cp_start(ui, "--get", CP.kind[i], CP.names[i]);
+		cp_build(ui, m);
+	}
+}
+
+static void cp_destroy(struct ui *ui, struct menu *m)
+{
+	(void)ui;
+	if (CP.m == m)
+		CP.m = NULL;
+}
+
+static void cp_job_done(struct ui *ui, const struct hw_job_result *r)
+{
+	bool getting = CP.getting;
+
+	CP.job = 0;
+	CP.getting = false;
+	if (getting) {
+		if (r->status == 0) {
+			cp_apply(ui);
+			/* TRANSLATORS: toast after choosing a picture in Choose cover */
+			ui_toastf(ui, "%s", _("Picture saved"));
+		} else {
+			/* TRANSLATORS: Choose cover: the download failed */
+			ui_toastf(ui, "%s", _("The picture could not be downloaded."));
+		}
+	} else {
+		CP.failed = r->status != 0;
+		if (CP.failed)
+			LOGW("covers: suggest: %s", r->out);
+		cp_read();
+	}
+	if (CP.m)
+		cp_build(ui, CP.m);
+}
+
+void cover_choose(struct ui *ui, const char *system, const char *root, const char *path, const char *name)
+{
+	const char *base = strrchr(path, '/');
+	char *dot;
+	struct menu *m;
+	char ip[64];
+
+	if (CP.job) {
+		message_open(ui, _("Please wait: another task is still running."));
+		return;
+	}
+	memset(&CP, 0, sizeof(CP));
+	strlcpy_(CP.system, system, sizeof(CP.system));
+	strlcpy_(CP.root, root, sizeof(CP.root));
+	strlcpy_(CP.path, path, sizeof(CP.path));
+	strlcpy_(CP.name, name ? name : "", sizeof(CP.name));
+	strlcpy_(CP.stem, base ? base + 1 : path, sizeof(CP.stem));
+	dot = strrchr(CP.stem, '.');
+	if (dot && dot != CP.stem)
+		*dot = 0;
+	/* TRANSLATORS: menu title: the pictures for one game */
+	m = menu_new(ui, _("Choose cover"), K_COVERS);
+	if (!m)
+		return;
+	CP.m = m;
+	if (access(COVERS_HELPER, X_OK) == 0 && hw_has_ipv4(ip, sizeof(ip)))
+		cp_start(ui, "--suggest", covers_kind(ui), CP.stem);
+	cp_build(ui, m);
+	m->on_item = cp_item;
+	m->on_destroy = cp_destroy;
+	menu_open(ui, m);
+}
+
+void cover_choose_game(struct ui *ui, const struct game *g)
+{
+	char root[1024];
+	size_t lp, lr;
+
+	if (!g->path || !g->rel)
+		return;
+	lp = strlen(g->path);
+	lr = strlen(g->rel);
+	if (lr + 1 >= lp || g->path[lp - lr - 1] != '/')
+		return;
+	snprintf(root, sizeof(root), "%.*s", (int)(lp - lr - 1), g->path);
+	cover_choose(ui, g->system, root, g->path, g->name);
+}
+
+/* ------------------------------------------- Games without a picture
+ * Settings > Game lists > Choose missing covers: the games without a
+ * picture (copied: the lists may be reloaded meanwhile), each opening Choose
+ * cover; a game that got one is ticked. */
+#define ML_MAX 90
+
+struct ml_game {
+	char system[32], root[512], path[1024], name[96];
+};
+
+static struct {
+	struct ml_game *g;
+	int n;
+} ML;
+
+static void ml_refresh(struct ui *ui, struct menu *m)
+{
+	(void)ui;
+	for (int i = 0; i < ML.n; i++) {
+		struct menu_item *it = menu_find(m, 700 + i);
+		const char *base = strrchr(ML.g[i].path, '/');
+		char stem[256], f[1400], *dot;
+		bool has;
+
+		if (!it)
+			continue;
+		strlcpy_(stem, base ? base + 1 : ML.g[i].path, sizeof(stem));
+		dot = strrchr(stem, '.');
+		if (dot && dot != stem)
+			*dot = 0;
+		snprintf(f, sizeof(f), "%s/media/covers/%s.png", ML.g[i].root, stem);
+		has = access(f, F_OK) == 0;
+		snprintf(f, sizeof(f), "%s/media/covers/%s.jpg", ML.g[i].root, stem);
+		has = has || access(f, F_OK) == 0;
+		snprintf(it->value, sizeof(it->value), "%s%s", has ? "\xe2\x9c\x93 " : "", ML.g[i].system);
+	}
+}
+
+static void ml_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
+{
+	(void)m;
+	if (!dir && it->id >= 700 && it->id < 700 + ML.n) {
+		const struct ml_game *g = &ML.g[it->id - 700];
+
+		cover_choose(ui, g->system, g->root, g->path, g->name);
+	}
+}
+
+static void ml_destroy(struct ui *ui, struct menu *m)
+{
+	(void)ui;
+	(void)m;
+	free(ML.g);
+	ML.g = NULL;
+	ML.n = 0;
+}
+
+void covers_missing_open(struct ui *ui)
+{
+	struct menu *m;
+	int more = 0;
+
+	loader_complete_all(ui);
+	free(ML.g);
+	ML.g = xcalloc(ML_MAX, sizeof(*ML.g));
+	ML.n = 0;
+	for (int i = 0; i < ui->nsys; i++) {
+		const struct sysent *se = &ui->sys[i];
+
+		if (se->is_collection || !se->games)
+			continue;
+		for (int j = 0; j < se->games->n; j++) {
+			const struct game *g = &se->games->games[j];
+			size_t lp, lr;
+
+			if (g->image || !g->path || !g->rel || !strncmp(g->path, "/usr/", 5))
+				continue;
+			lp = strlen(g->path);
+			lr = strlen(g->rel);
+			if (lr + 1 >= lp || g->path[lp - lr - 1] != '/')
+				continue;
+			if (ML.n == ML_MAX) {
+				more++;
+				continue;
+			}
+			strlcpy_(ML.g[ML.n].system, se->name, sizeof(ML.g[ML.n].system));
+			snprintf(ML.g[ML.n].root, sizeof(ML.g[ML.n].root), "%.*s", (int)(lp - lr - 1), g->path);
+			strlcpy_(ML.g[ML.n].path, g->path, sizeof(ML.g[ML.n].path));
+			strlcpy_(ML.g[ML.n].name, g->name ? g->name : g->rel, sizeof(ML.g[ML.n].name));
+			ML.n++;
+		}
+	}
+	if (!ML.n) {
+		ml_destroy(ui, NULL);
+		message_open(ui, _("All your games already have a picture."));
+		return;
+	}
+	/* TRANSLATORS: menu title: Settings > Game lists > Choose missing covers */
+	m = menu_new(ui, _("Games without a picture"), K_COVERS);
+	if (!m) {
+		ml_destroy(ui, NULL);
+		return;
+	}
+	for (int i = 0; i < ML.n; i++)
+		menu_add(m, MI_ACTION, 700 + i, ML.g[i].name);
+	if (more) {
+		struct menu_item *it;
+		char t[96];
+
+		/* TRANSLATORS: Choose missing covers: the list shows 90 games; %d more are not shown */
+		snprintf(t, sizeof(t), _("%d more (give these a picture first)"), more);
+		it = menu_add(m, MI_INFO, 0, t);
+		it->disabled = true;
+	}
+	ml_refresh(ui, m);
+	m->on_item = ml_item;
+	m->on_refresh = ml_refresh;
+	m->on_destroy = ml_destroy;
+	m->refresh_every = 1000;
+	menu_open(ui, m);
 }
 
 void covers_start_one(struct ui *ui, const char *system, const char *root, const char *path)

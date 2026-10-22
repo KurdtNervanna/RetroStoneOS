@@ -94,22 +94,37 @@ the A20 and added SPI flash to their boards. So:
 
 ## Game covers
 
-`rsos-covers` (frontend/src/update, the updater's HTTPS client) gets box art from
-`thumbnails.libretro.com/<libretro system>/Named_Boxarts/`, the server RetroArch uses. The menu writes the
-games without a picture to a request file; per system the helper reads the server's listing once and matches
-each ROM file name: exactly (No-Intro names), else the title without its (tags), the ROM's region first, then
-USA, World, Europe, Japan, and finally a title that starts with the file's name ("Donkey Kong Country 2" ->
-"... - Diddy's Kong Quest"). Covers are scaled to 400 px and saved as JPEG (~40 KB) in
-`roms/<system>/media/covers/<file name>.jpg`; the game lists show them when `gamelist.xml` gives no image
-(`apply_covers` in ui/games.c). Nothing else is written: Skraper's `gamelist.xml` and existing art win. Arcade
-systems are skipped (zip names, not titles). The games not found are listed in `rsos/logs/covers-missing.txt`.
-Needs WiFi and a correct clock (HTTPS).
+`rsos-covers` (frontend/src/update, the updater's HTTPS client) gets pictures from
+`thumbnails.libretro.com/<libretro system>/`, the server RetroArch uses. **Settings > Game lists > Picture style**
+picks the kind: **Title screen** (`Named_Titles`, 4:3, like the pictures of the built-in RetroStone games; the
+default) or **Box art** (`Named_Boxarts`); a game the server has no picture of that kind for gets the other one.
+Changing the style offers to download the existing pictures again (`--replace`: the downloaded `.jpg` files
+only).
+
+The menu writes the games without a picture to a request file; per system the helper reads the server's listing
+once (cached 7 days in `rsos/cache/covers/<system>-<kind>.txt`) and matches each ROM file name: exactly
+(No-Intro names), else the same title, else a title that starts with the file's name ("Donkey Kong Country 2" ->
+"... - Diddy's Kong Quest"). "The same title" ignores (tags), "the", accents, apostrophes and a disc number
+written as words ("Final Fantasy VII Disc 1", "CD2"), reads "&" as "and" and II-IX as 2-9; among equal titles the
+ROM's region comes first, then USA, World, Europe, Japan, and the same disc. Pictures are scaled to 400 px and
+saved as JPEG in `roms/<system>/media/covers/<file name>.jpg`; the game lists show them when `gamelist.xml`
+gives no image (`apply_covers` in ui/games.c). Nothing else is written: Skraper's `gamelist.xml` and existing art
+win. Arcade systems are skipped (zip names, not titles). Needs WiFi and a correct clock (HTTPS).
+
+**Choose cover** (a game's options; also **Settings > Game lists > Choose missing covers**, the games without a
+picture, ticked once they have one): the 20 names on the server closest to the file name (`rsos-covers
+--suggest`: shared words, 4+ letter word starts count half), **Search by name...** for other words, and choosing
+one downloads it (`--get`). **Use my own picture...** shows where a picture of your own goes:
+`roms/<system>/media/covers/<file name>.png` (a `.png` wins over a downloaded `.jpg`; 640 x 480 looks like the
+RetroStone games). **Remove the picture** deletes it.
 
 ## Multi-disc games
 
 `.m3u` playlists already make one entry of a multi-disc game (the discs it lists are hidden; Select+X > Disc
 changes discs). **Group multi-disc games** writes the missing playlists: for every set of `... (Disc N) ...`
-files in a folder without one, `<name>.m3u` listing the discs in order. Files are never moved or renamed.
+files in a folder without one, `<name>.m3u` listing the discs in order. The disc number may also be plain
+words (`Name Disc 1.cue`, `Name - CD2.chd`, `Name_Disc_2 (USA).cue`, `[Disc 1 of 2]`). Files are never moved or
+renamed.
 
 ## Memory speed (Settings > Power > Memory speed)
 
@@ -136,5 +151,6 @@ The shutdown timestamps (`axpstamp save/show`) moved to REG04-0C to leave REG0D-
 2. **Install to internal storage**, then **Use as starter card**, then **Restart now** (keep the card in).
 3. Settings > Storage shows "Started from: internal + SD starter card"; the card's games are in the lists.
 4. M.2: **Erase it and use it for games**, import to it with **Copy games to**, play a game from it.
-5. Game lists: **Group multi-disc games**, **Download game covers** (WiFi on).
+5. Game lists: **Group multi-disc games** (also "Name Disc 1" files), **Download game covers** (WiFi on; title
+   screens by default), **Choose missing covers** / a game's **Choose cover**.
 6. Recovery: a freshly flashed RetroStoneOS card starts the console from the card.

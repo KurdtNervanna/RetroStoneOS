@@ -50,6 +50,7 @@ enum {
 	ID_SEARCHALL = 400, ID_RESUMEBOOT, ID_FFSPEED, ID_SHOWHIDDEN, ID_SORT, ID_RUMBLE,
 	ID_GSCALE = 410, ID_GCPU, ID_GSEARCH, ID_GHIDE, ID_GDELETE, ID_GPLAYTIME, ID_GRENAME,
 	ID_WSCAN = 420, ID_WOTHER, ID_WNONE, ID_WNET0 = 430,
+	ID_GCOVER = 470, ID_COVERKIND, ID_COVERPICK,
 };
 
 enum { JOB_WIFI = 1, JOB_ETH, JOB_BT, JOB_WSCAN = 10 };
@@ -1259,7 +1260,7 @@ void screens_job_done(struct ui *ui, const struct hw_job_result *r)
 		smb_job_done(ui, r);
 		return;
 	}
-	if (r->tag == UI_JOB_STORAGE || r->tag == UI_JOB_STORAGE_TASK) {
+	if (r->tag == UI_JOB_STORAGE || r->tag == UI_JOB_STORAGE_TASK || r->tag == UI_JOB_COVERPICK) {
 		storage_job_done(ui, r);
 		return;
 	}
@@ -1334,6 +1335,11 @@ static const char *const g_sort_modes[] = { "name", "playtime", "lastplayed" };
  * played first (play time), the most recently played first */
 static const char *const g_sort_labels[] = { N_("Name"), N_("Most played"), N_("Recently played") };
 
+static const char *const g_coverkind_keys[] = { "titles", "boxarts" };
+/* TRANSLATORS: Settings > Game lists > Picture style: the game's title screen
+ * (like the RetroStone games), or the picture of its box */
+static const char *const g_coverkind_labels[] = { N_("Title screen"), N_("Box art") };
+
 static void lists_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
 {
 	(void)m;
@@ -1364,6 +1370,14 @@ static void lists_item(struct ui *ui, struct menu *m, struct menu_item *it, int 
 		if (dir == 0)
 			covers_start(ui);
 		break;
+	case ID_COVERKIND:
+		save_setting(ui, "covers_kind", g_coverkind_keys[it->val], false);
+		covers_restyle(ui);
+		break;
+	case ID_COVERPICK:
+		if (dir == 0)
+			covers_missing_open(ui);
+		break;
 	case ID_DISCS:
 		if (dir == 0)
 			discs_group(ui);
@@ -1388,8 +1402,14 @@ static void open_lists(struct ui *ui)
 	it = menu_add(m, MI_TOGGLE, ID_SHOWHIDDEN, _("Show hidden games"));
 	it->on = settings_get_bool(ui->settings, "show_hidden", false);
 	menu_add(m, MI_ACTION, ID_REFRESH, _("Refresh game lists"));
-	/* TRANSLATORS: Settings > Game lists: box pictures from the libretro thumbnail server */
+	/* TRANSLATORS: Settings > Game lists: pictures from the libretro thumbnail server */
 	menu_add(m, MI_ACTION, ID_COVERS, _("Download game covers"));
+	/* TRANSLATORS: Settings > Game lists: which pictures Download game covers gets */
+	it = menu_add(m, MI_CHOICE, ID_COVERKIND, _("Picture style"));
+	set_choices(it, g_coverkind_labels, 2,
+		    index_of(g_coverkind_keys, 2, settings_get(ui->settings, "covers_kind", "titles")));
+	/* TRANSLATORS: Settings > Game lists: pick a picture for each game that has none */
+	menu_add(m, MI_ACTION, ID_COVERPICK, _("Choose missing covers"));
 	/* TRANSLATORS: Settings > Game lists: one entry per multi-disc game (.m3u playlists) */
 	menu_add(m, MI_ACTION, ID_DISCS, _("Group multi-disc games"));
 	m->on_item = lists_item;
@@ -2893,6 +2913,23 @@ static void game_item(struct ui *ui, struct menu *m, struct menu_item *it, int d
 		if (!dir)
 			game_rename_ask(ui, g);
 		break;
+	case ID_GCOVER:
+		if (!dir) {
+			char sys[32], root[1024], path[1024], name[96];
+			size_t lp = strlen(g->path), lr = strlen(g->rel);
+
+			if (lr + 1 >= lp)
+				break;
+			/* copies: the options menu (and g) goes first, the lists may
+			 * be reloaded once a picture is chosen */
+			strlcpy_(sys, g->system, sizeof(sys));
+			snprintf(root, sizeof(root), "%.*s", (int)(lp - lr - 1), g->path);
+			strlcpy_(path, g->path, sizeof(path));
+			strlcpy_(name, g->name ? g->name : g->rel, sizeof(name));
+			ui_pop(ui);
+			cover_choose(ui, sys, root, path, name);
+		}
+		return;
 	case ID_GDELETE:
 		if (dir == 0)
 			game_delete_ask(ui, g);
@@ -3021,6 +3058,10 @@ void game_options_open(struct ui *ui, struct sysent *se, struct game *g)
 	if (!game_is_builtin(ui, g))
 		/* TRANSLATORS: game options: change the game's file name (covers are found by it) */
 		menu_add(m, MI_ACTION, ID_GRENAME, _("Rename this game"));
+	/* a picture of the game's own (gamelist.xml) is not replaced */
+	if (!game_is_builtin(ui, g) && (!g->image || strstr(g->image, "/media/covers/")))
+		/* TRANSLATORS: game options: pick this game's picture from the cover server, or your own */
+		menu_add(m, MI_ACTION, ID_GCOVER, _("Choose cover"));
 	/* TRANSLATORS: game options: the time spent playing this game */
 	it = menu_add(m, MI_INFO, ID_GPLAYTIME, _("Play time"));
 	ui_format_playtime(g->playtime, it->value, sizeof(it->value));
