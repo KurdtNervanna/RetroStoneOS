@@ -48,6 +48,18 @@ Other ways to add games
   * Network: turn WiFi or Ethernet on, open "Transfer over network" and
     type the address shown on screen into a browser on your phone or PC.
 
+Controls
+--------
+
+  In a game, hold Select and press:
+      Start   leave the game            X       in-game menu
+      R / L   save / load a state       B       reset the game
+  Keyboard, for the menus: arrows move, Enter = A (open), Esc or
+  Backspace = B (back), Tab = Select, Space = Start, Page Up / Page Down
+  = L / R. A keyboard does not play games (use a gamepad), but in a game
+  Esc opens the in-game menu (Resume, Exit...) and Tab + Space leaves
+  the game.
+
 Please note
 -----------
 

@@ -1437,6 +1437,18 @@ static void handle_key(struct input *in, struct dev *d, int code, int value)
 
 	if (value == 2)
 		return; /* kernel autorepeat: we do our own */
+	/*
+	 * A keyboard is no player in a game (it has no port), so its Esc opens
+	 * the in-game menu (Resume, ..., Exit) instead of being B (issue #6: a
+	 * keyboard alone could not leave a game). In the menus (UI mode) Esc
+	 * stays B. A release of an Esc pressed in a menu (counted down) goes
+	 * the normal way, so B never stays held.
+	 */
+	if (d->keyboard && code == KEY_ESC && in->mode == INPUT_MODE_GAME && !TEST_BIT(code, d->down)) {
+		if (value == 1)
+			push_hk(in, IN_HK_MENU);
+		return;
+	}
 	switch (t) {
 	case T_NONE:
 	case T_GUIDE:
@@ -2043,6 +2055,11 @@ int input_poll(struct input *in)
 
 		hotkeys(in, p, before[in->port_dev[0]], pad_buttons(p));
 	}
+	/* and any keyboard: Tab (Select) + Space (Start) exits, Tab + X opens
+	 * the menu... (a keyboard has no port, so it never disturbs a player) */
+	for (int i = 0; i < INPUT_MAX_DEVICES; i++)
+		if (in->devs[i] && in->devs[i]->keyboard)
+			hotkeys(in, &in->devs[i]->own, before[i], pad_buttons(&in->devs[i]->own));
 	update_nav(in, now);
 	return handled;
 }

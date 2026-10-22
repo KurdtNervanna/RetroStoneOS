@@ -249,6 +249,61 @@ static void stick_detect(void)
 	rig_close(&r);
 }
 
+/* ------------------------------------------- issue #6 (keyboard in a game) */
+static bool next_hk(struct input *in, enum input_hotkey want)
+{
+	enum input_hotkey hk;
+	bool seen = false;
+
+	while (input_next_hotkey(in, &hk))
+		if (hk == want)
+			seen = true;
+	return seen;
+}
+
+static void keyboard_in_game(void)
+{
+	struct rig r;
+	enum input_hotkey hk;
+	bool seen;
+
+	puts("input: a keyboard can open the in-game menu and use the hotkeys");
+	rig_open(&r);
+	kernel_held = false;
+	/* the second device is a USB keyboard: no player port */
+	map_reset(&r.ext);
+	r.ext.keyboard = true;
+	map_keyboard(&r.ext);
+	r.in.port_dev[1] = -2;
+	r.in.mode = INPUT_MODE_GAME;
+	while (input_next_hotkey(&r.in, &hk))
+		;
+	key(&r, true, KEY_ESC, 1);
+	seen = next_hk(&r.in, IN_HK_MENU);   /* (CHECK evaluates its condition twice) */
+	CHECK(seen, "Esc in a game opens the in-game menu");
+	key(&r, true, KEY_ESC, 0);
+	CHECK(!(pad_buttons(&r.ext.own) & BTN_MASK(IN_B)), "and is not a held B");
+	/* Esc pressed in the menu (B: back to the game), released in the game */
+	r.in.mode = INPUT_MODE_UI;
+	key(&r, true, KEY_ESC, 1);
+	CHECK(pad_buttons(&r.ext.own) & BTN_MASK(IN_B), "Esc is B in a menu");
+	input_set_mode(&r.in, INPUT_MODE_GAME);
+	key(&r, true, KEY_ESC, 0);
+	CHECK(!(pad_buttons(&r.ext.own) & BTN_MASK(IN_B)), "its release in the game is not lost");
+	seen = next_hk(&r.in, IN_HK_MENU);
+	CHECK(!seen, "and does not reopen the menu");
+	/* Tab (Select) + Space (Start) */
+	key(&r, true, KEY_TAB, 1);
+	key(&r, true, KEY_SPACE, 1);
+	seen = next_hk(&r.in, IN_HK_EXIT);
+	CHECK(seen, "Tab + Space exits the game");
+	key(&r, true, KEY_SPACE, 0);
+	key(&r, true, KEY_TAB, 0);
+	/* nothing of it reaches a player */
+	CHECK(!HELD(&r, 0, IN_START) && !HELD(&r, 0, IN_SELECT), "player 1 does not see the keyboard");
+	rig_close(&r);
+}
+
 int main(void)
 {
 	puts("input: overflow recovery with stale events in the read buffer");
@@ -257,5 +312,6 @@ int main(void)
 	held_check();
 	menu_to_game();
 	stick_detect();
+	keyboard_in_game();
 	return failures ? 1 : 0;
 }

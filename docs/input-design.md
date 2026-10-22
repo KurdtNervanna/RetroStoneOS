@@ -91,7 +91,12 @@ Additional handling:
 - **Sticks**: sticks go to the RetroPad analog axes. In menus the left stick also navigates.
 - **Hotplug**: inotify on `/dev/input` (devtmpfs creates the nodes, so no udev is needed). Pads can be plugged in or unplugged
   at any time, including mid-game. On unplug, the port gets a "disconnected" state, the game pauses if it was P1, and a toast is shown.
-- **Keyboards** are for the UI only (arrows, Enter, Esc) and for debugging.
+- **Keyboards** drive the menus and are not a player in games (they get no port). Their fixed mapping
+  (`map_keyboard()` in `src/input/input.c`): arrows = D-pad, Enter (and keypad Enter) = A, Esc and Backspace = B,
+  X = X, Y = Y, Page Up / Page Down = L / R, Home / End = L2 / R2, Tab = Select, Space = Start. In a game (issue #6)
+  a keyboard can still leave it: **Esc opens the in-game menu** (in the menus Esc stays B), and **Tab works as the
+  hotkey button** of section 4 (Tab+Space exits, Tab+X menu, Tab+Page Down / Page Up save / load a state...),
+  from any keyboard whatever the player order. Test: `make check-input` (`keyboard_in_game`).
 - **Rumble** (done, batch 2): the libretro rumble interface (`retro_set_rumble_state`) is forwarded to an evdev
   FF_RUMBLE effect on pads that support it (`input_rumble()` in `src/input/input.c`). The pad's node is opened
   read-write (read-only fallback: no rumble); `EV_FF` + `FF_RUMBLE` in its capabilities marks it. One effect per pad,
