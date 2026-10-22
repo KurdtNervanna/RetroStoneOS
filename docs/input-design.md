@@ -101,6 +101,19 @@ Additional handling:
   Setting: Settings > Controls > "Controller vibration" (key `rumble`, default on; the game reads it at launch).
   The built-in pad (gpio-keys) has no motor. Test: `make check-rumble` (`tests/test_rumble.c`: a uinput pad with
   FF_RUMBLE, its upload/play/stop requests checked; SKIP without /dev/uinput).
+- **Held buttons** (issue #10, buttons acting as if held):
+  - While a key is down, its device's kernel key state (`EVIOCGKEY`) is re-read once a second. A release that
+    never arrived is applied and logged (`... released without an event: state corrected`). A key the kernel
+    itself reports down for 30 s is logged once (`... held for 30 s (the kernel reports it down)`), which points
+    to the button or its wiring rather than to software. The lines are in `frontend.log` (menu) and `game.log`.
+  - Buttons still held when the in-game menu or the game switcher hands the pad back to the game (the A on
+    "Resume", the B or Start that closed it) reach the core only after a release, like a hotkey's buttons.
+  - The built-in stick counts as fitted only once both axes read near the centre (the middle half of the range),
+    logged as `input: analog stick detected (x .., y ..)`. Floating inputs on a unit without the stick that
+    wander into the range near an edge no longer hold a direction.
+  - The button GPIOs also get the SoC's internal pull-ups in the device trees (RetroStone1 and 2), as the
+    production RetrOrangePi script did.
+  - Test: `make check-input` (`tests/test_input.c`).
 
 ## 3. Player assignment
 - **Default (`p1 = auto`): the controller that launched the game is player 1.** The UI remembers which device made the

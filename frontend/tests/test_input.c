@@ -90,10 +90,172 @@ static void overflow(bool held)
 	close(fds[0]); close(fds[1]); close(in.epfd);
 }
 
+/* ------------------------------------------------- issue #10 (held buttons) */
+struct rig {
+	struct input in;
+	struct dev pad, ext;      /* the built-in buttons, a USB pad */
+	int fds[2], efds[2];
+};
+
+static void rig_open(struct rig *r)
+{
+	struct epoll_event w0 = { .events = EPOLLIN, .data.u32 = 0 };
+	struct epoll_event w1 = { .events = EPOLLIN, .data.u32 = 1 };
+
+	memset(r, 0, sizeof(*r));
+	if (pipe2(r->fds, O_NONBLOCK | O_CLOEXEC) < 0 || pipe2(r->efds, O_NONBLOCK | O_CLOEXEC) < 0 ||
+	    (r->in.epfd = epoll_create1(EPOLL_CLOEXEC)) < 0)
+		exit(2);
+	input_config_defaults(&r->in.cfg);
+	r->in.cap_slot = -1;
+	r->in.last_src = -3;
+	r->in.builtin_present = true;
+	for (int p = 0; p < INPUT_MAX_PORTS; p++) r->in.port_dev[p] = -2;
+	r->in.port_dev[0] = -1;   /* P1: the built-in pad */
+	r->in.port_dev[1] = 1;    /* P2: the USB pad */
+	for (int b = 0; b < IN_NUM_BUTTONS; b++) r->in.remap[b] = (uint8_t)b;
+	map_reset(&r->pad);
+	r->pad.fd = r->fds[0];
+	r->pad.pad = &r->in.builtin;
+	r->pad.builtin = true;
+	r->pad.key_map[BTN_EAST] = IN_A;
+	r->pad.key_map[BTN_SOUTH] = IN_B;
+	r->in.devs[0] = &r->pad;
+	map_reset(&r->ext);
+	r->ext.fd = r->efds[0];
+	r->ext.slot = 1;
+	r->ext.pad = &r->ext.own;
+	r->ext.key_map[BTN_SOUTH] = IN_B;
+	r->in.devs[1] = &r->ext;
+	epoll_ctl(r->in.epfd, EPOLL_CTL_ADD, r->fds[0], &w0);
+	epoll_ctl(r->in.epfd, EPOLL_CTL_ADD, r->efds[0], &w1);
+}
+
+static void rig_close(struct rig *r)
+{
+	close(r->fds[0]); close(r->fds[1]); close(r->efds[0]); close(r->efds[1]); close(r->in.epfd);
+}
+
+/* One key event + SYN_REPORT on a device's pipe, then a poll. */
+static void key(struct rig *r, bool ext, int code, int value)
+{
+	struct input_event ev[2] = {
+		{ .type = EV_KEY, .code = (uint16_t)code, .value = value },
+		{ .type = EV_SYN, .code = SYN_REPORT },
+	};
+
+	if (write(ext ? r->efds[1] : r->fds[1], ev, sizeof(ev)) != sizeof(ev)) exit(2);
+	input_poll(&r->in);
+}
+
+#define HELD(r, port, b) (!!(input_port_buttons(&(r)->in, port) & BTN_MASK(b)))
+
+static void held_check(void)
+{
+	struct rig r;
+	int t;
+
+	puts("input: the kernel's key state is checked while a key is held");
+	rig_open(&r);
+	queries = 0;
+	key(&r, false, BTN_EAST, 1);
+	CHECK(HELD(&r, 0, IN_A) && queries == 0, "a press is not checked at once");
+	t = input_timeout_ms(&r.in);
+	CHECK(t >= 0 && t <= HELD_CHECK_MS, "the menu wakes up for the check while a key is held");
+	/* the release never arrived: the next check applies it */
+	kernel_held = false;
+	r.pad.held_check_at = 0;
+	input_poll(&r.in);
+	CHECK(queries == 1 && !HELD(&r, 0, IN_A), "a lost release is corrected by the check");
+	CHECK(!(r.in.nav_state & BTN_MASK(IN_A)), "the menu sees the release too");
+	CHECK(input_timeout_ms(&r.in) < 0, "no wake-up once nothing is held");
+	/* a real hold stays held, and a long one is logged once */
+	key(&r, false, BTN_EAST, 1);
+	kernel_held = true;
+	r.pad.held_check_at = 0;
+	input_poll(&r.in);
+	CHECK(HELD(&r, 0, IN_A), "a hold the kernel confirms is kept");
+	CHECK(!(r.pad.long_logged & BTN_MASK(IN_A)), "a short hold is not logged");
+	r.pad.press_at[IN_A] -= HELD_LOG_MS;
+	r.pad.held_check_at = 0;
+	input_poll(&r.in);
+	CHECK(HELD(&r, 0, IN_A) && (r.pad.long_logged & BTN_MASK(IN_A)), "a 30 s hold is logged");
+	key(&r, false, BTN_EAST, 0);
+	CHECK(!HELD(&r, 0, IN_A), "the release still works");
+	rig_close(&r);
+}
+
+static void menu_to_game(void)
+{
+	struct rig r;
+
+	puts("input: buttons held when a menu gives the pad back to the game");
+	rig_open(&r);
+	kernel_held = true;   /* (no check runs here: held_check_at is in the future) */
+	r.in.mode = INPUT_MODE_UI;            /* the in-game menu is open */
+	key(&r, false, BTN_EAST, 1);          /* A on "Resume" */
+	key(&r, true, BTN_SOUTH, 1);          /* B on player 2's USB pad */
+	input_set_mode(&r.in, INPUT_MODE_GAME);
+	CHECK(!HELD(&r, 0, IN_A), "the A that closed the menu does not reach the core");
+	CHECK(!HELD(&r, 1, IN_B), "nor a button held on another pad");
+	key(&r, false, BTN_SOUTH, 1);
+	CHECK(HELD(&r, 0, IN_B), "a button pressed in the game counts at once");
+	key(&r, false, BTN_EAST, 0);
+	key(&r, true, BTN_SOUTH, 0);
+	key(&r, false, BTN_EAST, 1);
+	key(&r, true, BTN_SOUTH, 1);
+	CHECK(HELD(&r, 0, IN_A), "A counts again once released and pressed");
+	CHECK(HELD(&r, 1, IN_B), "player 2's B too (not a hotkey pad)");
+	input_set_mode(&r.in, INPUT_MODE_GAME);
+	CHECK(HELD(&r, 0, IN_A), "game to game: nothing is suppressed");
+	rig_close(&r);
+}
+
+static void stick_detect(void)
+{
+	struct rig r;
+	struct dev s;
+
+	puts("input: the built-in stick is fitted only when it reads centred");
+	rig_open(&r);
+	memset(&s, 0, sizeof(s));
+	map_reset(&s);
+	s.builtin = s.builtin_stick = true;
+	s.pad = &r.in.builtin;
+	s.ax[ABS_X] = (struct axmap){ AX_STICK, 0, 0, false, false };
+	s.ax[ABS_Y] = (struct axmap){ AX_STICK, 0, 1, false, false };
+	for (int a = ABS_X; a <= ABS_Y; a++)
+		s.absinfo[a] = (struct input_absinfo){ .minimum = 0, .maximum = 3000, .flat = 400 };
+	/* floating inputs near an edge of the range: not a stick */
+	r.in.stick_raw[0] = 2950;
+	r.in.stick_raw[1] = 60;
+	handle_abs(&r.in, &s, ABS_X, 2950);
+	handle_abs(&r.in, &s, ABS_Y, 60);
+	CHECK(!r.in.stick_fitted, "in range but far from the centre: not fitted");
+	CHECK(!r.in.builtin.stick_nav[0] && !r.in.builtin.stick_nav[3] && !r.in.builtin.analog[0][0],
+	      "no direction from an unfitted stick");
+	handle_abs(&r.in, &s, ABS_X, 4000);
+	CHECK(!r.in.stick_fitted, "out of range: not fitted");
+	/* a real stick at rest (the RetroStone2's is centred near 1350..1650) */
+	handle_abs(&r.in, &s, ABS_X, 1650);
+	handle_abs(&r.in, &s, ABS_Y, 1350);
+	CHECK(r.in.stick_fitted, "centred readings: fitted");
+	CHECK(!r.in.builtin.stick_nav[0] && !r.in.builtin.stick_nav[1] && !r.in.builtin.stick_nav[2] &&
+	      !r.in.builtin.stick_nav[3], "at rest: no direction");
+	handle_abs(&r.in, &s, ABS_X, 3000);
+	CHECK(r.in.builtin.stick_nav[3], "once fitted, a full push steers");
+	handle_abs(&r.in, &s, ABS_X, 4095);
+	CHECK(!r.in.stick_fitted && !r.in.builtin.stick_nav[3], "unplugged: not fitted, no direction");
+	rig_close(&r);
+}
+
 int main(void)
 {
 	puts("input: overflow recovery with stale events in the read buffer");
 	overflow(false);
 	overflow(true);
+	held_check();
+	menu_to_game();
+	stick_detect();
 	return failures ? 1 : 0;
 }

@@ -87,6 +87,11 @@ struct dev {
 	 * share of a merged pad (review F-M14) */
 	unsigned long down[NBITS(KEY_CNT)];
 	bool dropping;                /* after SYN_DROPPED, until SYN_REPORT */
+	/* held-key check (check_held): while a key is down, the kernel's key
+	 * state is compared once a second (issue #10) */
+	int64_t held_check_at;
+	int64_t press_at[IN_NUM_BUTTONS];
+	uint16_t long_logged;         /* targets already logged as held long */
 	/* rumble: one FF_RUMBLE effect (input_rumble) */
 	bool ff_rumble;               /* EV_FF with FF_RUMBLE, and the fd is writable */
 	int ff_id;                    /* uploaded effect id, -1 = none yet */
@@ -97,6 +102,11 @@ struct dev {
 #define NAV_QUEUE 64
 #define HK_QUEUE 32
 #define CAP_QUEUE 16
+
+/* While a key is down, its device's kernel key state is re-read this often;
+ * a hold this long is logged once (issue #10: buttons reported as held) */
+#define HELD_CHECK_MS 1000
+#define HELD_LOG_MS 30000
 
 struct input {
 	struct input_config cfg;
@@ -851,12 +861,6 @@ void input_set_p1_policy(struct input *in, enum input_p1_policy p)
 	assign_ports(in);
 }
 
-void input_set_mode(struct input *in, enum input_mode mode)
-{
-	in->mode = mode;
-	in->nav_head = in->nav_tail = 0;
-}
-
 static uint16_t pad_buttons(const struct pad *p)
 {
 	uint16_t b = p->axis_btns;
@@ -865,6 +869,24 @@ static uint16_t pad_buttons(const struct pad *p)
 		if (p->cnt[i])
 			b |= BTN_MASK(i);
 	return b;
+}
+
+void input_set_mode(struct input *in, enum input_mode mode)
+{
+	/*
+	 * Back to the game from a menu (the in-game menu, the game switcher):
+	 * the buttons still held there belong to the menu. The A that chose
+	 * "Resume", the B or Start that closed it, reach the core only once
+	 * released and pressed again, as a hotkey's buttons do (issue #10).
+	 */
+	if (in->mode == INPUT_MODE_UI && mode == INPUT_MODE_GAME) {
+		in->builtin.suppress |= pad_buttons(&in->builtin);
+		for (int i = 0; i < INPUT_MAX_DEVICES; i++)
+			if (in->devs[i])
+				in->devs[i]->own.suppress |= pad_buttons(&in->devs[i]->own);
+	}
+	in->mode = mode;
+	in->nav_head = in->nav_tail = 0;
 }
 
 uint16_t input_port_buttons(const struct input *in, int port)
@@ -1274,11 +1296,17 @@ static void handle_abs(struct input *in, struct dev *d, int code, int v)
 			return;
 		}
 		if (!in->stick_fitted) {
+			/* Fitted only once both axes read near the centre: a stick
+			 * at rest is centred, while the floating inputs of a unit
+			 * without one can wander into the range near an edge,
+			 * which would hold a direction (issue #10). */
 			int ox = in->stick_raw[0], oy = in->stick_raw[1];
+			int mid = lo + (hi - lo) / 2, near = (hi - lo) / 4;
 
-			if (ox >= lo && ox <= hi && oy >= lo && oy <= hi) {
+			if (abs(ox - mid) <= near && abs(oy - mid) <= near) {
 				in->stick_fitted = true;
 				p->has_analog = true;
+				LOGI("input: analog stick detected (x %d, y %d)", ox, oy);
 			}
 		}
 		if (!in->stick_fitted)
@@ -1394,6 +1422,14 @@ static void capture_event(struct input *in, struct dev *d, const struct input_ev
 	}
 }
 
+static bool any_down(const struct dev *d)
+{
+	for (size_t i = 0; i < ARRAY_SIZE(d->down); i++)
+		if (d->down[i])
+			return true;
+	return false;
+}
+
 static void handle_key(struct input *in, struct dev *d, int code, int value)
 {
 	int t = code < KEY_CNT ? d->key_map[code] : T_NONE;
@@ -1430,9 +1466,16 @@ static void handle_key(struct input *in, struct dev *d, int code, int value)
 	/* per key of this device: a press it already counted (the event the
 	 * kernel keeps after an overflow, also in EVIOCGKEY) counts once */
 	if (value) {
+		int64_t now;
+
 		if (TEST_BIT(code, d->down))
 			return;
+		now = ui_now_ms();
+		if (!any_down(d))
+			d->held_check_at = now + HELD_CHECK_MS;
 		d->down[code / BITS_PER_LONG_] |= 1ul << (code % BITS_PER_LONG_);
+		d->press_at[t] = now;
+		d->long_logged &= (uint16_t)~BTN_MASK(t);
 		if (p->cnt[t] < 255)
 			p->cnt[t]++;
 	} else {
@@ -1444,27 +1487,77 @@ static void handle_key(struct input *in, struct dev *d, int code, int value)
 	}
 }
 
-/*
- * After SYN_DROPPED (evdev buffer overflow) and the SYN_REPORT that ends
- * it: the device's real key and axis state (review F-M14). Only this
- * device's keys move, so the merged built-in pad is resynced too, and a
- * press already counted is not counted twice (the kernel keeps the newest
- * event after an overflow, and EVIOCGKEY includes it).
- */
-static void dev_resync(struct input *in, struct dev *d)
+/* The device's mapped keys from the kernel's key state. Returns the number
+ * of keys that changed, -1 if the state cannot be read. Only this device's
+ * keys move, so the merged built-in pad stays right, and a press already
+ * counted is not counted twice. */
+static int dev_sync_keys(struct input *in, struct dev *d, bool log_changes)
 {
 	unsigned long keys[NBITS(KEY_CNT)];
+	int changed = 0;
 
 	memset(keys, 0, sizeof(keys));
 	if (ioctl(d->fd, EVIOCGKEY(sizeof(keys)), keys) < 0)
-		return;
+		return -1;
 	for (int c = 0; c < KEY_CNT; c++) {
 		int t = d->key_map[c];
 		bool now = TEST_BIT(c, keys) != 0, was = TEST_BIT(c, d->down) != 0;
 
-		if (t >= 0 && t < IN_NUM_BUTTONS && now != was)
+		if (t >= 0 && t < IN_NUM_BUTTONS && now != was) {
+			if (log_changes)
+				LOGW("input: %s: %s (key %d) %s without an event: state corrected", d->name,
+				     g_btn_names[t], c, now ? "pressed" : "released");
 			handle_key(in, d, c, now);
+			changed++;
+		}
 	}
+	return changed;
+}
+
+/*
+ * Issue #10 (buttons acting as held): while this layer has a key of the
+ * device down, the kernel's key state is compared once a second. A release
+ * that never arrived is applied, and a key the kernel itself reports down
+ * for HELD_LOG_MS is logged once (a stuck or shorted button shows in
+ * frontend.log / game.log). Called after the read loop has drained every
+ * device: EVIOCGKEY drops the key events still queued, and the state it
+ * returns already includes them.
+ */
+static void check_held(struct input *in, int64_t now)
+{
+	for (int i = 0; i < INPUT_MAX_DEVICES; i++) {
+		struct dev *d = in->devs[i];
+
+		if (!d || !any_down(d) || now < d->held_check_at)
+			continue;
+		d->held_check_at = now + HELD_CHECK_MS;   /* also when skipped: no busy timeout */
+		if (in->cap_slot == i || d->dropping || dev_sync_keys(in, d, true) < 0)
+			continue;
+		for (int c = 0; c < KEY_CNT; c++) {
+			int t;
+
+			if (!TEST_BIT(c, d->down))
+				continue;
+			t = d->key_map[c];
+			if (t < 0 || t >= IN_NUM_BUTTONS || (d->long_logged & BTN_MASK(t)) ||
+			    now - d->press_at[t] < HELD_LOG_MS)
+				continue;
+			d->long_logged |= BTN_MASK(t);
+			LOGI("input: %s: %s (key %d) held for %lld s (the kernel reports it down)", d->name,
+			     g_btn_names[t], c, (long long)(now - d->press_at[t]) / 1000);
+		}
+	}
+}
+
+/*
+ * After SYN_DROPPED (evdev buffer overflow) and the SYN_REPORT that ends
+ * it: the device's real key and axis state (review F-M14). The kernel
+ * keeps the newest event after an overflow, and EVIOCGKEY includes it.
+ */
+static void dev_resync(struct input *in, struct dev *d)
+{
+	if (dev_sync_keys(in, d, false) < 0)
+		return;
 	for (int a = 0; a < ABS_CNT; a++) {
 		struct input_absinfo ai;
 
@@ -1893,6 +1986,7 @@ int input_poll(struct input *in)
 			break;
 	}
 	now = ui_now_ms();
+	check_held(in, now);
 	/* pending hotplugged nodes */
 	for (int k = 0; k < 8; k++) {
 		if (in->pending[k][0] && now >= in->pending_at[k]) {
@@ -1935,6 +2029,12 @@ int input_poll(struct input *in)
 					 in->devs[src]->guid);
 		}
 	}
+	/* a suppressed button (a hotkey's, or one held when a menu gave the
+	 * pad back to the game) counts again once released, on every pad */
+	in->builtin.suppress &= pad_buttons(&in->builtin);
+	for (int i = 0; i < INPUT_MAX_DEVICES; i++)
+		if (in->devs[i])
+			in->devs[i]->own.suppress &= pad_buttons(&in->devs[i]->own);
 	/* hotkeys: the built-in pad and player 1 */
 	if (in->builtin_present)
 		hotkeys(in, &in->builtin, before[INPUT_MAX_DEVICES], pad_buttons(&in->builtin));
@@ -1964,6 +2064,12 @@ int input_timeout_ms(const struct input *in)
 	for (int k = 0; k < 8; k++)
 		if (in->pending[k][0] && (next < 0 || in->pending_at[k] < next))
 			next = in->pending_at[k];
+	for (int i = 0; i < INPUT_MAX_DEVICES; i++) {
+		const struct dev *d = in->devs[i];
+
+		if (d && any_down(d) && (next < 0 || d->held_check_at < next))
+			next = d->held_check_at;   /* check_held() */
+	}
 	if (next < 0)
 		return -1;
 	return next <= now ? 0 : (int)(next - now);
