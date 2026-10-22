@@ -797,7 +797,18 @@ static void net_refresh(struct ui *ui, struct menu *m)
 			continue;
 		if (!ui->net_busy[i])
 			it->on = settings_get_bool(ui->settings, g_net_names[i], false);
-		strlcpy_(it->value, ui->net_busy[i] ? _("please wait...") : "", sizeof(it->value));
+		if (ui->net_busy[i])
+			strlcpy_(it->value, _("please wait..."), sizeof(it->value));
+		else if (i < 2 && it->on) {
+			/* WiFi, Ethernet: the address once connected (DHCP done) */
+			char ip[64];
+
+			if (!hw_iface_ipv4(i == 0, ip, sizeof(ip)))
+				/* TRANSLATORS: Settings > Network: WiFi or Ethernet is on, but has no address (yet) */
+				strlcpy_(ip, _("not connected"), sizeof(ip));
+			strlcpy_(it->value, ip, sizeof(it->value));
+		} else
+			it->value[0] = 0;
 		it->disabled = ui->net_busy[i];
 	}
 	hw_read_wpa_ssid(ui->cfg.wpa_conf, ssid, sizeof(ssid));

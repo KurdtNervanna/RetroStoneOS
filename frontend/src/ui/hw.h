@@ -53,5 +53,9 @@ int hw_jobs_running(void);
 
 /* True if a non-loopback interface has an IPv4 address (copied to addr). */
 bool hw_has_ipv4(char *addr, size_t n);
+/* The IPv4 address of a WiFi interface (wireless: one with
+ * /sys/class/net/<name>/wireless) or of a wired one (any other, but not
+ * loopback): false when none is up with an address. */
+bool hw_iface_ipv4(bool wireless, char *addr, size_t n);
 
 #endif

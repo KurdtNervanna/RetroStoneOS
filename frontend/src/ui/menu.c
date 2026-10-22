@@ -152,6 +152,14 @@ static void m_render(struct ui *ui, struct screen *scr, struct gfx_surface *s)
 
 			draw_toggle(s, rx - th * 2, y + (g.row_h - th) / 2, th, it->on, ms, sel);
 			vw = th * 2 + g.pad;
+			/* a state next to the switch (Network: the address, "please wait...") */
+			if (it->value[0]) {
+				int w2 = font_text_width(g.fs, it->value, -1);
+
+				font_draw(s, g.fs, rx - vw - w2, font_baseline_in_box(g.fs, y, g.row_h),
+					  it->value, -1, vc);
+				vw += w2 + g.pad;
+			}
 			break;
 		}
 		case MI_NUMBER:

@@ -448,3 +448,29 @@ bool hw_has_ipv4(char *addr, size_t n)
 	freeifaddrs(ifa);
 	return found;
 }
+
+bool hw_iface_ipv4(bool wireless, char *addr, size_t n)
+{
+	struct ifaddrs *ifa, *i;
+	bool found = false;
+
+	if (addr && n)
+		addr[0] = 0;
+	if (getifaddrs(&ifa) < 0)
+		return false;
+	for (i = ifa; i && !found; i = i->ifa_next) {
+		char p[96];
+
+		if (!i->ifa_addr || i->ifa_addr->sa_family != AF_INET || (i->ifa_flags & IFF_LOOPBACK) ||
+		    !(i->ifa_flags & IFF_UP))
+			continue;
+		snprintf(p, sizeof(p), "/sys/class/net/%s/wireless", i->ifa_name);
+		if ((access(p, F_OK) == 0) != wireless)
+			continue;
+		found = true;
+		if (addr && n)
+			inet_ntop(AF_INET, &((struct sockaddr_in *)i->ifa_addr)->sin_addr, addr, (socklen_t)n);
+	}
+	freeifaddrs(ifa);
+	return found;
+}
