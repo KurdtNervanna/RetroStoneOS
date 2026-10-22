@@ -97,15 +97,16 @@ BIOS files go in `RETROSTONE/bios/` (see [docs/cores.md](docs/cores.md)). No com
 |---|---|---|
 | **RetroStone2** (8BCraft, Allwinner A20) | `retrostone2` | Primary target, tested |
 | RetroStone1 (8BCraft, Allwinner H3) | `retrostone1` | Untested, built by CI; built-in screen (composite) compile-tested only |
-| Raspberry Pi 2 (and Pi 3 / Zero 2 W in 32-bit mode) | `rpi2` | Untested, built by CI |
+| Raspberry Pi 2 (and Pi 3 / Zero 2 W in 32-bit mode) | `rpi2` | Built by CI; reported working on a Pi 3 after a `config.txt` change, fixed in 0.1.4 (issue #6) |
 | Raspberry Pi 3 / Zero 2 W (64-bit) | `rpi3_64` | Untested, built by CI |
+| Adafruit PiGRRL 2 (Pi 2 or 3, 2.8" PiTFT) | `rpi2`, `rpi3_64` + a `config.txt` block | Untested ([docs/boards/pigrrl2.md](docs/boards/pigrrl2.md)) |
 | Raspberry Pi 4 / 400 / CM4 | `rpi4_64` | Untested, built by CI |
 | Raspberry Pi 5 / 500 | `rpi5_64` | Untested, built by CI |
 | Orange Pi PC / PC Plus (H3) | `orangepi_h3_pc` | Untested, built by CI |
 | Orange Pi One / Lite (H3) | `orangepi_h3_one` | Untested, built by CI |
 | Orange Pi 5 (RK3588S) | `orangepi5` | Untested, built by CI |
 
-The single-board computer images are built automatically by CI, but nobody has booted them on the board yet: they
+The single-board computer images are built automatically by CI, and are mostly untested on the boards: they
 are HDMI boxes for USB/Bluetooth pads. Please open an issue with your results! Details in [docs/boards.md](docs/boards.md);
 adding a board takes one folder and a `board.ini` profile ([docs/porting.md](docs/porting.md)).
 

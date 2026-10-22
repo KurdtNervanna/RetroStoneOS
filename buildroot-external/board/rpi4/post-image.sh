@@ -16,6 +16,14 @@ sh "$BOARD_DIR/../common/mk-data-seed.sh" "$BINARIES_DIR"
 # start*.elf, fixup*.dat for the model, none on a Pi 5; config.txt,
 # cmdline.txt, overlays/), the device trees and the kernel named in
 # config.txt (Image, or zImage on the 32-bit Pi 2 port).
+# Our own overlays (BR2_LINUX_KERNEL_CUSTOM_DTS_PATH *.dtso, built with the
+# kernel: pigrrl2-buttons on the Pi 2/3 images) go next to the firmware's in
+# overlays/, where config.txt "dtoverlay=<name>" finds them.
+for f in "$BINARIES_DIR"/*.dtbo; do
+	[ -e "$f" ] || continue
+	mkdir -p "$BINARIES_DIR/rpi-firmware/overlays"
+	cp -f "$f" "$BINARIES_DIR/rpi-firmware/overlays/"
+done
 KERNEL=$(sed -n 's/^kernel=//p' "$BINARIES_DIR/rpi-firmware/config.txt")
 {
 	for f in "$BINARIES_DIR"/*.dtb "$BINARIES_DIR"/rpi-firmware/*; do

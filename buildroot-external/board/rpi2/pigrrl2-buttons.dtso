@@ -1,0 +1,122 @@
+// SPDX-License-Identifier: MIT
+/*
+ * pigrrl2-buttons: the 12 buttons of an Adafruit PiGRRL 2 as ONE gamepad
+ * ("PiGRRL 2 buttons", gpio-keys), for the Raspberry Pi 2/3 images of
+ * RetroStoneOS (docs/boards/pigrrl2.md). config.txt:
+ *
+ *   dtoverlay=pigrrl2-buttons
+ *   dtoverlay=pigrrl2-buttons,up=26,down=16     (other GPIOs, see below)
+ *
+ * The buttons report the Linux gamepad codes (BTN_DPAD_*, BTN_EAST = A,
+ * BTN_SOUTH = B, BTN_NORTH = X, BTN_WEST = Y, BTN_TL/TR, BTN_SELECT/START)
+ * and the board profile names this device as the built-in pad
+ * (board.ini builtin_pad_prefix = PiGRRL), so the frontend maps it
+ * positionally, never through gamecontrollerdb (whose gpio-keys GUID
+ * 19000000010000000100000000010000 is another handheld's).
+ *
+ * The default GPIO numbers (BCM numbering) are those of Adafruit's
+ * retrogame configuration for the PiGRRL 2 AS REMEMBERED, NOT VERIFIED on a
+ * PiGRRL 2: each button has a parameter (up, down, left, right, a, b, x, y,
+ * l, r, select, start) to move it to another GPIO. A button closes its GPIO
+ * to ground (active low, internal pull-up).
+ *
+ * The pins are configured by the gpio-keys driver itself when it requests
+ * them (no pinctrl node here, so an override only has to change one
+ * number); GPIO_PULL_UP asks the BCM2835 pin controller for the pull-up.
+ */
+/dts-v1/;
+/plugin/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/linux-event-codes.h>
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			pigrrl2_buttons: pigrrl2-buttons {
+				compatible = "gpio-keys";
+				label = "PiGRRL 2 buttons";
+				status = "okay";
+
+				key_up: up {
+					label = "D-pad up";
+					linux,code = <BTN_DPAD_UP>;
+					gpios = <&gpio 26 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_down: down {
+					label = "D-pad down";
+					linux,code = <BTN_DPAD_DOWN>;
+					gpios = <&gpio 16 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_left: left {
+					label = "D-pad left";
+					linux,code = <BTN_DPAD_LEFT>;
+					gpios = <&gpio 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_right: right {
+					label = "D-pad right";
+					linux,code = <BTN_DPAD_RIGHT>;
+					gpios = <&gpio 19 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_a: a {
+					label = "A";
+					linux,code = <BTN_EAST>;
+					gpios = <&gpio 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_b: b {
+					label = "B";
+					linux,code = <BTN_SOUTH>;
+					gpios = <&gpio 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_x: x {
+					label = "X";
+					linux,code = <BTN_NORTH>;
+					gpios = <&gpio 20 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_y: y {
+					label = "Y";
+					linux,code = <BTN_WEST>;
+					gpios = <&gpio 18 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_l: l {
+					label = "L";
+					linux,code = <BTN_TL>;
+					gpios = <&gpio 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_r: r {
+					label = "R";
+					linux,code = <BTN_TR>;
+					gpios = <&gpio 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_select: select {
+					label = "Select";
+					linux,code = <BTN_SELECT>;
+					gpios = <&gpio 12 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+				key_start: start {
+					label = "Start";
+					linux,code = <BTN_START>;
+					gpios = <&gpio 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+				};
+			};
+		};
+	};
+
+	__overrides__ {
+		up =     <&key_up>, "gpios:4";
+		down =   <&key_down>, "gpios:4";
+		left =   <&key_left>, "gpios:4";
+		right =  <&key_right>, "gpios:4";
+		a =      <&key_a>, "gpios:4";
+		b =      <&key_b>, "gpios:4";
+		x =      <&key_x>, "gpios:4";
+		y =      <&key_y>, "gpios:4";
+		l =      <&key_l>, "gpios:4";
+		r =      <&key_r>, "gpios:4";
+		select = <&key_select>, "gpios:4";
+		start =  <&key_start>, "gpios:4";
+	};
+};

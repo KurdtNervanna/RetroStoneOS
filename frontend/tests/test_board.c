@@ -51,6 +51,7 @@ static bool streq(const char *a, const char *b)
 #define T_DPI 17
 #define T_LVDS 7
 #define T_COMPOSITE 5
+#define T_SPI 19
 
 /* ------------------------------------------------------------ 1. values */
 static void test_retrostone2_values(const struct board_profile *b)
@@ -468,6 +469,17 @@ static void test_other(const char *path)
 		CHECK(!b.builtin_pad_prefix[0] && !b.refresh_native && !b.storage_overlays[0],
 		      "Pi 4: no built-in pad, refresh choice, overlays");
 		CHECK(streq(board_name_or_auto(b.battery_supply), ""), "Pi 4: no battery");
+	}
+	if (strstr(path, "/rpi2/") || strstr(path, "/rpi3/")) {
+		struct display_config dc;
+
+		/* the optional PiGRRL 2 (docs/boards/pigrrl2.md) */
+		CHECK(b.internal_display == BOARD_INTERNAL_LIST && board_connector_is_internal(&b, T_SPI) &&
+		      !board_connector_is_internal(&b, T_HDMIA), "Pi 2/3: an SPI screen (PiGRRL 2) is built in, HDMI is not");
+		CHECK(streq(b.builtin_pad_prefix, "PiGRRL"), "Pi 2/3: the PiGRRL 2 buttons are the built-in pad");
+		display_config_defaults(&dc);
+		board_apply_display(&b, &dc);
+		CHECK(!dc.panel_keep_scanning, "Pi 2/3: no keep-scanning for an SPI screen");
 	}
 	if (strstr(path, "retrostone1")) {
 		struct display_config dc;

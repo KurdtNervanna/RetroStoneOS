@@ -11,6 +11,12 @@ arm_64bit=1
 # The frontend drives the display with DRM/KMS: the vc4 driver does both the
 # HDMI output and the 3D (Mesa vc4, GLES 2.0 for the N64 cores) on the
 # Pi 0-3. Its buffers come from CMA (the overlay's default size).
+# If a TV or monitor stays black with it, "dtoverlay=vc4-fkms-v3d" instead
+# lets the firmware drive HDMI (it honours hdmi_group, hdmi_mode and
+# hdmi_force_hotplug then), but there is no HDMI sound with it. Images up to
+# 0.1.3 needed that on every Pi 3 (issue #6, docs/boards.md).
+# PiGRRL 2 / PiTFT 2.8": "dtoverlay=vc4-kms-v3d,nohdmi" here, and the
+# PiGRRL 2 lines at the end of this file.
 dtoverlay=vc4-kms-v3d
 max_framebuffers=2
 disable_overscan=1
@@ -27,3 +33,15 @@ dtoverlay=miniuart-bt
 # Sound goes to the TV (vc4 HDMI audio); the 3.5 mm jack is not used (the
 # frontend's audio follows the display, which is always HDMI here).
 dtparam=audio=off
+
+# --- Adafruit PiGRRL 2 (docs/boards/pigrrl2.md): its 2.8" PiTFT (ILI9341
+# on SPI, 320x240) instead of HDMI, its buttons as the built-in gamepad, the
+# sound on the Pi's analog audio. Write "dtoverlay=vc4-kms-v3d,nohdmi"
+# above and remove the "#" in front of the three lines below. Not tested on
+# a PiGRRL 2 yet: if the picture is upside down use rotate=270; if it shows
+# garbage lower the speed to 32000000. The button GPIOs can be changed
+# (dtoverlay=pigrrl2-buttons,up=26,down=16,...: see the docs; by default
+# A/B are on GPIO 14/15, the serial console's pins).
+#dtoverlay=pitft28-resistive,drm,rotate=90,speed=62500000
+#dtoverlay=pigrrl2-buttons
+#dtparam=audio=on
