@@ -112,7 +112,7 @@ ScummVM. The last group is the largest perceived loss versus RetroPie's system l
 | Feature | RetroPie | RetroStoneOS today | St. |
 |---|---|---|---|
 | Configuration menu | RetroPie menu in ES + RetroPie-Setup | One Settings menu: Display, Controls, Network, Theme, Game lists, Games, Storage, System information, Date & time, Power | ✅ |
-| WiFi setup | RP:Wifi (dialog in RetroPie-Setup) | Toggle, SSID and password through the on-screen keyboard; **no scan list**; `wpa_supplicant.conf` on the card still works | 🟡 |
+| WiFi setup | RP:Wifi (dialog in RetroPie-Setup) | Toggle, a list of the networks around (scan), the password through the on-screen keyboard, the address once connected; `wpa_supplicant.conf` on the card still works | ✅ |
 | Bluetooth pairing UI | RP:Bluetooth-Controller (RetroPie-Setup dialog) | Toggle only; pairings persist (`bluetooth.img`); no scan/pair/trust/forget screen | ❌ |
 | Time zone, clock | raspi-config | 61 zones, manual date/time; **no NTP** after WiFi comes up | 🟡 |
 | Language / locale | raspi-config, ES forks | English only | ❌ |

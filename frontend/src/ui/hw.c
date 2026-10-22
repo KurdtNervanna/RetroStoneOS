@@ -247,13 +247,23 @@ int hw_write_wpa(const char *path, const char *ssid, const char *psk)
 {
 	char buf[1024], dir[1024];
 	int n;
+	bool hex = false;
 
+	/* a name with a quote, a backslash or a control character: in hex
+	 * (wpa_supplicant's ssid=<hex digits>) */
+	for (const unsigned char *p = (const unsigned char *)ssid; *p; p++)
+		if (*p < 0x20 || *p == 0x7f || *p == '"' || *p == '\\')
+			hex = true;
 	n = snprintf(buf, sizeof(buf),
 		     "# written by the RetroStoneOS settings menu\n"
 		     "ctrl_interface=/var/run/wpa_supplicant\n"
 		     "update_config=1\n"
 		     "network={\n"
-		     "\tssid=\"%s\"\n", ssid);
+		     "\tssid=%s", hex ? "" : "\"");
+	for (const unsigned char *p = (const unsigned char *)ssid; *p && n < (int)sizeof(buf) - 8; p++)
+		n += hex ? snprintf(buf + n, sizeof(buf) - (size_t)n, "%02x", *p) :
+			   snprintf(buf + n, sizeof(buf) - (size_t)n, "%c", *p);
+	n += snprintf(buf + n, sizeof(buf) - (size_t)n, "%s\n", hex ? "" : "\"");
 	if (psk && *psk)
 		n += snprintf(buf + n, sizeof(buf) - (size_t)n, "\tpsk=\"%s\"\n", psk);
 	else

@@ -325,10 +325,11 @@ check-ui: $(UIPREVIEW)
 	@echo "check-ui: the on-screen keyboard lives through timer ticks (review F-C1: it ran the dialog's"
 	@echo "          countdown code on its own, smaller struct; check-asan catches the overflow)"
 	$(UIPREVIEW) --root $(UI_CHECK_DIR) --quiet \
-		--keys "start down down a expect:menu:Network|WiFi down a wait:1500 expect:osk:WiFi_network_name| \
+		--keys "start down down a expect:menu:Network|WiFi down a wait:1500 expect:menu:WiFi_networks| \
+			down down expect:menu:WiFi_networks|Other_network a wait:1500 expect:osk:WiFi_network_name| \
 			a wait:1500 expect:osk:WiFi_network_name|q x wait:300 expect:osk:WiFi_network_name|q_ \
-			select wait:300 expect:menu:Network|WiFi_network down a wait:1500 expect:osk:WiFi_password| \
-			select wait:300 expect:menu:Network|WiFi_password"
+			select wait:300 expect:menu:WiFi_networks|Other_network b wait:300 expect:menu:Network|WiFi_network \
+			down a wait:1500 expect:osk:WiFi_password| select wait:300 expect:menu:Network|WiFi_password"
 	@echo "check-ui: game options act on their game after Favorite re-sorts the list (review F-H4)"
 	rm -rf $(UI_CHECK_DIR)-games && mkdir -p $(UI_CHECK_DIR)-games/data/roms/nes \
 		$(UI_CHECK_DIR)-games/data/rsos $(UI_CHECK_DIR)-games/usr/share/rsos/cores

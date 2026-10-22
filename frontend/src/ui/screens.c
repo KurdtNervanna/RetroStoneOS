@@ -3,6 +3,7 @@
  * theme, game lists, storage, system info, power), the per-game options,
  * the button test screen and the controller configuration wizard.
  */
+#include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -20,7 +21,7 @@
 
 enum {
 	K_MAIN = 1, K_DISPLAY, K_CONTROLS, K_PADCFG, K_NET, K_THEME, K_LISTS, K_STORAGE,
-	K_INFO, K_POWER, K_GAME, K_TIME, K_TZ, K_GAMES, K_LANG,
+	K_INFO, K_POWER, K_GAME, K_TIME, K_TZ, K_GAMES, K_LANG, K_WIFI,
 };
 
 enum {
@@ -48,9 +49,10 @@ enum {
 enum {
 	ID_SEARCHALL = 400, ID_RESUMEBOOT, ID_FFSPEED, ID_SHOWHIDDEN, ID_SORT, ID_RUMBLE,
 	ID_GSCALE = 410, ID_GCPU, ID_GSEARCH, ID_GHIDE, ID_GDELETE, ID_GPLAYTIME, ID_GRENAME,
+	ID_WSCAN = 420, ID_WOTHER, ID_WNONE, ID_WNET0 = 430,
 };
 
-enum { JOB_WIFI = 1, JOB_ETH, JOB_BT };
+enum { JOB_WIFI = 1, JOB_ETH, JOB_BT, JOB_WSCAN = 10 };
 
 static void search_all_open(struct ui *ui);
 
@@ -783,6 +785,7 @@ static const char *const g_idle_vals[] = { "10", "30", "60", "0" };
 /* TRANSLATORS: "stop when idle for": durations, and never */
 static const char *const g_idle_labels[] = { N_("10 min"), N_("30 min"), N_("1 hour"), N_("Never") };
 static void hostname_done(struct ui *ui, const char *text, bool ok, void *user);
+static void net_job(struct ui *ui, int which, bool on);
 
 static void net_refresh(struct ui *ui, struct menu *m)
 {
@@ -844,37 +847,6 @@ static void net_job(struct ui *ui, int which, bool on)
 	ui_toastf(ui, "%s", _(msg[on ? 1 : 0][which]));
 }
 
-static void ssid_done(struct ui *ui, const char *text, bool ok, void *user)
-{
-	char psk[128] = "";
-
-	(void)user;
-	if (!ok)
-		return;
-	/* keep the password when only the network name changes */
-	{
-		char *buf = file_read(ui->cfg.wpa_conf, NULL);
-
-		if (buf) {
-			char *p = strstr(buf, "psk=\"");
-
-			if (p) {
-				char *q = strrchr(p + 5, '"');
-
-				if (q) {
-					*q = 0;
-					strlcpy_(psk, p + 5, sizeof(psk));
-				}
-			}
-			free(buf);
-		}
-	}
-	if (hw_write_wpa(ui->cfg.wpa_conf, text, psk) < 0)
-		ui_toastf(ui, "%s", _("Could not save the WiFi settings"));
-	else if (settings_get_bool(ui->settings, "wifi", false))
-		net_job(ui, 0, true);
-}
-
 static void psk_done(struct ui *ui, const char *text, bool ok, void *user)
 {
 	char ssid[64];
@@ -909,10 +881,272 @@ static void psk_done(struct ui *ui, const char *text, bool ok, void *user)
 	ui_toastf(ui, "%s", _("WiFi password saved"));
 }
 
+/* ------------------------------------------------------ WiFi network list
+ * Settings > Network > WiFi network: the networks around (rsos-net wifi
+ * scan, which switches WiFi on if needed), strongest first; choosing one asks
+ * for its password when it has one, writes wpa_supplicant.conf and has
+ * rsos-net connect ("wifi on" makes a running wpa_supplicant read it again).
+ * "Other network..." is the name typed by hand (a hidden network). */
+#define WIFI_MAX 40
+
+static struct {
+	struct menu *m;               /* the open list (NULL: closed) */
+	int job;                      /* the scan that runs (0: none) */
+	bool failed;
+	int n;
+	char ssid[WIFI_MAX][64];
+	int signal[WIFI_MAX];         /* 0-100 */
+	bool secured[WIFI_MAX];
+	char pick[64];                /* the network being joined */
+} W;
+
+static const char *wifi_scan_path(void)
+{
+	const char *p = getenv("RSOS_WIFI_SCAN");
+
+	return p && *p ? p : "/run/rsos-net/scan.txt";
+}
+
+/* wpa_cli prints names with \\, \", \e, \n, \r, \t and \xNN escapes */
+static void wifi_unescape(const char *s, char *out, size_t n)
+{
+	size_t k = 0;
+
+	while (*s && k + 1 < n) {
+		char c = *s++;
+
+		if (c == '\\' && *s) {
+			c = *s++;
+			if (c == 'n')
+				c = '\n';
+			else if (c == 'r')
+				c = '\r';
+			else if (c == 't')
+				c = '\t';
+			else if (c == 'e')
+				c = 033;
+			else if (c == 'x' && isxdigit((unsigned char)s[0]) && isxdigit((unsigned char)s[1])) {
+				char h[3] = { s[0], s[1], 0 };
+
+				c = (char)strtol(h, NULL, 16);
+				s += 2;
+			}
+		}
+		if (c)
+			out[k++] = c;
+	}
+	out[k] = 0;
+}
+
+static void wifi_read(void)
+{
+	FILE *f = fopen(wifi_scan_path(), "r");
+	char line[256];
+
+	W.n = 0;
+	if (!f)
+		return;
+	while (W.n < WIFI_MAX && fgets(line, sizeof(line), f)) {
+		char *sec, *name;
+
+		line[strcspn(line, "\r\n")] = 0;
+		if (!(sec = strchr(line, '\t')) || !(name = strchr(sec + 1, '\t')))
+			continue;
+		*sec++ = 0;
+		*name++ = 0;
+		wifi_unescape(name, W.ssid[W.n], sizeof(W.ssid[W.n]));
+		if (!W.ssid[W.n][0])
+			continue;
+		W.signal[W.n] = atoi(line);
+		W.secured[W.n] = atoi(sec) != 0;
+		W.n++;
+	}
+	fclose(f);
+}
+
+static void wifi_scan_start(struct ui *ui)
+{
+	const char *argv[] = { ui->cfg.net_helper, "wifi", "scan", wifi_scan_path(), NULL };
+	int r;
+
+	if (W.job)
+		return;
+	r = hw_job_start(argv, JOB_WSCAN);
+	if (r < 0) {
+		ui_toastf(ui, _("Cannot run %s"), ui->cfg.net_helper);
+		W.failed = true;
+		return;
+	}
+	W.job = r;
+	W.failed = false;
+}
+
+static void wifi_refresh(struct ui *ui, struct menu *m)
+{
+	char cur[64], ip[64];
+	struct menu_item *it;
+	bool on, has_ip;
+
+	settings_reload(ui->settings);
+	on = settings_get_bool(ui->settings, "wifi", false);
+	has_ip = on && hw_iface_ipv4(true, ip, sizeof(ip));
+	hw_read_wpa_ssid(ui->cfg.wpa_conf, cur, sizeof(cur));
+	if ((it = menu_find(m, ID_WSCAN)))
+		strlcpy_(it->value, W.job ?
+			 /* TRANSLATORS: Settings > Network > WiFi network: the search runs */
+			 _("searching...") : W.failed ? _("failed") : "", sizeof(it->value));
+	for (int i = 0; i < W.n; i++) {
+		if (!(it = menu_find(m, ID_WNET0 + i)))
+			continue;
+		if (cur[0] && !strcmp(cur, W.ssid[i]) && on)
+			strlcpy_(it->value, has_ip ?
+				 /* TRANSLATORS: Settings > Network > WiFi network: this network is in use */
+				 _("connected") :
+				 /* TRANSLATORS: Settings > Network > WiFi network: joining this network */
+				 _("connecting..."), sizeof(it->value));
+		else
+			/* TRANSLATORS: a WiFi network in the list: "secured · 78%" (needs a password) or
+			 * "open · 40%" (none); the number is the signal strength */
+			snprintf(it->value, sizeof(it->value), "%s \xc2\xb7 %d%%",
+				 W.secured[i] ? _("secured") : _("open"), W.signal[i]);
+	}
+}
+
+static void wifi_build(struct ui *ui, struct menu *m)
+{
+	int cursor = m->cursor;
+	struct menu_item *it;
+
+	m->n = 0;
+	/* TRANSLATORS: Settings > Network > WiFi network: search for networks again */
+	menu_add(m, MI_ACTION, ID_WSCAN, _("Search again"));
+	if (W.n) {
+		/* TRANSLATORS: Settings > Network > WiFi network: section header */
+		menu_add(m, MI_HEADER, 0, _("Networks around"));
+		for (int i = 0; i < W.n; i++)
+			menu_add(m, MI_ACTION, ID_WNET0 + i, W.ssid[i]);
+	} else if (!W.job) {
+		/* TRANSLATORS: Settings > Network > WiFi network: the search found nothing */
+		it = menu_add(m, MI_INFO, ID_WNONE, _("No network found"));
+		it->disabled = true;
+	}
+	/* TRANSLATORS: Settings > Network > WiFi network: type the name of a network (a hidden one) */
+	menu_add(m, MI_ACTION, ID_WOTHER, _("Other network..."));
+	m->cursor = cursor < m->n ? cursor : m->n - 1;
+	if (m->cursor < 0)
+		m->cursor = 0;
+	while (m->cursor < m->n - 1 && m->items[m->cursor].type == MI_HEADER)
+		m->cursor++;
+	wifi_refresh(ui, m);
+}
+
+static void wifi_connect(struct ui *ui, const char *ssid, const char *psk)
+{
+	if (psk[0] && strlen(psk) < 8) {
+		message_open(ui, _("A WiFi password has at least 8 characters."));
+		return;
+	}
+	if (hw_write_wpa(ui->cfg.wpa_conf, ssid, psk) < 0) {
+		ui_toastf(ui, "%s", _("Could not save the WiFi settings"));
+		return;
+	}
+	net_job(ui, 0, true);
+	/* TRANSLATORS: %s: the WiFi network's name */
+	ui_toastf(ui, _("Connecting to %s..."), ssid);
+	if (W.m)
+		wifi_refresh(ui, W.m);
+}
+
+static void wifi_psk_done(struct ui *ui, const char *text, bool ok, void *user)
+{
+	(void)user;
+	if (ok)
+		wifi_connect(ui, W.pick, text);
+}
+
+static void wifi_ask_psk(struct ui *ui, bool may_be_open)
+{
+	char t[128];
+
+	if (may_be_open)
+		/* TRANSLATORS: keyboard title for a network typed by hand */
+		snprintf(t, sizeof(t), _("Password for %s (none: leave empty)"), W.pick);
+	else
+		/* TRANSLATORS: keyboard title; %s: the WiFi network's name */
+		snprintf(t, sizeof(t), _("Password for %s"), W.pick);
+	osk_open(ui, t, "", true, wifi_psk_done, NULL);
+}
+
+static void wifi_other_done(struct ui *ui, const char *text, bool ok, void *user)
+{
+	(void)user;
+	if (!ok || !text[0])
+		return;
+	strlcpy_(W.pick, text, sizeof(W.pick));
+	wifi_ask_psk(ui, true);
+}
+
+static void wifi_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
+{
+	(void)m;
+	if (dir)
+		return;
+	if (it->id == ID_WSCAN) {
+		wifi_scan_start(ui);
+		wifi_build(ui, m);
+	} else if (it->id == ID_WOTHER) {
+		osk_open(ui, _("WiFi network name"), "", false, wifi_other_done, NULL);
+	} else if (it->id >= ID_WNET0 && it->id < ID_WNET0 + W.n) {
+		int i = it->id - ID_WNET0;
+
+		strlcpy_(W.pick, W.ssid[i], sizeof(W.pick));
+		if (W.secured[i])
+			wifi_ask_psk(ui, false);
+		else
+			wifi_connect(ui, W.pick, "");
+	}
+}
+
+static void wifi_destroy(struct ui *ui, struct menu *m)
+{
+	(void)ui;
+	if (W.m == m)
+		W.m = NULL;
+}
+
+static void wifi_list_open(struct ui *ui)
+{
+	/* TRANSLATORS: Settings > Network > WiFi network: the list of networks */
+	struct menu *m = menu_new(ui, _("WiFi networks"), K_WIFI);
+
+	if (!m)
+		return;
+	W.m = m;
+	wifi_scan_start(ui);
+	wifi_build(ui, m);
+	m->on_item = wifi_item;
+	m->on_refresh = wifi_refresh;
+	m->on_destroy = wifi_destroy;
+	m->refresh_every = 1000;
+	menu_open(ui, m);
+}
+
+static void wifi_scan_done(struct ui *ui, const struct hw_job_result *r)
+{
+	W.job = 0;
+	if (r->status == 0) {
+		wifi_read();
+	} else {
+		W.failed = true;
+		/* r->out: the helper's own message (English) */
+		ui_toastf(ui, "WiFi: %s", r->out[0] ? r->out : _("failed"));
+	}
+	if (W.m)
+		wifi_build(ui, W.m);
+}
+
 static void net_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
 {
-	char ssid[64];
-
 	switch (it->id) {
 	case ID_WIFI:
 	case ID_ETH:
@@ -920,10 +1154,8 @@ static void net_item(struct ui *ui, struct menu *m, struct menu_item *it, int di
 		net_job(ui, it->id == ID_WIFI ? 0 : it->id == ID_ETH ? 1 : 2, it->on);
 		break;
 	case ID_SSID:
-		if (dir == 0) {
-			hw_read_wpa_ssid(ui->cfg.wpa_conf, ssid, sizeof(ssid));
-			osk_open(ui, _("WiFi network name"), ssid, false, ssid_done, NULL);
-		}
+		if (dir == 0)
+			wifi_list_open(ui);
 		break;
 	case ID_PSK:
 		if (dir == 0)
@@ -1029,6 +1261,10 @@ void screens_job_done(struct ui *ui, const struct hw_job_result *r)
 	}
 	if (r->tag == UI_JOB_STORAGE || r->tag == UI_JOB_STORAGE_TASK) {
 		storage_job_done(ui, r);
+		return;
+	}
+	if (r->tag == JOB_WSCAN) {
+		wifi_scan_done(ui, r);
 		return;
 	}
 	if (r->tag >= JOB_WIFI && r->tag <= JOB_BT) {

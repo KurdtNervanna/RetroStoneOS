@@ -757,7 +757,7 @@ BusyBox `ntpd` (docs/power.md §11).
 
 | | on | off |
 |---|---|---|
-| WiFi (AP6210, brcmfmac on SDIO mmc3) | bind the mmc3 host (pwrseq raises WL_REG_ON), `modprobe brcmfmac`, `wlan0` up; if `/data/rsos/wpa_supplicant.conf` exists: `wpa_supplicant` + `udhcpc` | stop them, `modprobe -r brcmfmac`, **unbind** mmc3 from `sunxi-mmc` (pwrseq drops WL_REG_ON: chip unpowered) |
+| WiFi (AP6210, brcmfmac on SDIO mmc3) | bind the mmc3 host (pwrseq raises WL_REG_ON), `modprobe brcmfmac`, `wlan0` up; `wpa_supplicant` + `udhcpc` (a `/data/rsos/wpa_supplicant.conf` without a network is created when there is none, so the menu can scan; `rsos-net wifi scan <file>` lists the networks) | stop them, `modprobe -r brcmfmac`, **unbind** mmc3 from `sunxi-mmc` (pwrseq drops WL_REG_ON: chip unpowered) |
 | Ethernet (GMAC `dwmac-sunxi` + LAN8710A) | `modprobe dwmac-sunxi` (and `sun4i-emac`), `eth0` up, `udhcpc` | stop udhcpc, `eth0` down, unload the MAC drivers |
 | Bluetooth (BCM20710 on UART2, `hci_uart`) | `modprobe hci_uart`, mount the pairing store, start `dbus-daemon` and `bluetoothd` | stop `bluetoothd`, unmount the store, `modprobe -r hci_uart btbcm` (closing the serdev powers the chip down) |
 

@@ -1086,6 +1086,8 @@ int main(int argc, char **argv)
 			cfg.smb_helper = v;       /* Settings > Network > Windows file share */
 		else if (OPT("--storage-helper"))
 			cfg.storage_helper = v;   /* Settings > Storage, the Pro's disks */
+		else if (OPT("--net-helper"))
+			cfg.net_helper = v;       /* Settings > Network (WiFi scan: RSOS_WIFI_SCAN) */
 		else {
 			usage();
 			return 2;

@@ -5,6 +5,12 @@
 #       on/off change the hardware state and save it as wifi=0|1, eth=0|1 or
 #       bt=0|1 in /data/rsos/settings.ini (-n: do not save). status prints
 #       "on" or "off" (the current hardware state, not the saved setting).
+#       "wifi on" while WiFi runs makes wpa_supplicant read its file again
+#       (a network chosen in the menu).
+#   rsos-net wifi scan <file>
+#       The WiFi networks around (WiFi is switched on first if it is off),
+#       strongest first, one per line: <signal 0-100> TAB <secured 0|1> TAB
+#       <name>. Hidden networks (no name) are left out.
 #   rsos-net apply-early
 #       Early boot (rcS, in the background): if WiFi is off, unbind the mmc3
 #       SDIO host so the pwrseq drops WL_REG_ON and the chip is unpowered.
@@ -29,6 +35,7 @@
 
 SETTINGS=/data/rsos/settings.ini
 WPA_CONF=/data/rsos/wpa_supplicant.conf
+WPA_CTRL=/var/run/wpa_supplicant
 RUN_DIR=/run/rsos-net
 
 # The board's network hardware: /etc/rsos/board.ini (as RSOS_BOARD_* from
@@ -169,15 +176,54 @@ wifi_on() {
 	fi
 	wifi_mac
 	ip link set "$WIFI_IF" up
+	# No network chosen yet: a file without one, so that wpa_supplicant runs
+	# (the menu's network list scans through it) and the menu can add one
+	if [ ! -f "$WPA_CONF" ] && grep -q ' /data ' /proc/mounts; then
+		mkdir -p "${WPA_CONF%/*}"
+		printf '%s\n' "ctrl_interface=$WPA_CTRL" update_config=1 > "$WPA_CONF.tmp" &&
+			sync_file "$WPA_CONF.tmp" && mv -f "$WPA_CONF.tmp" "$WPA_CONF"
+	fi
 	if [ -f "$WPA_CONF" ]; then
 		if [ ! -f "$RUN_DIR/wpa_supplicant.pid" ]; then
-			wpa_supplicant -B -i "$WIFI_IF" -c "$WPA_CONF" \
+			# -O: the control socket even when the file has no ctrl_interface
+			wpa_supplicant -B -i "$WIFI_IF" -c "$WPA_CONF" -O "$WPA_CTRL" \
 				-P "$RUN_DIR/wpa_supplicant.pid" > /dev/null 9>&- || return 1
+		else
+			# already running: read the file again (another network)
+			wpa_cli -p "$WPA_CTRL" -i "$WIFI_IF" reconfigure > /dev/null 2>&1
 		fi
 		[ -f "$RUN_DIR/udhcpc.$WIFI_IF.pid" ] || udhcpc_start "$WIFI_IF"
 	else
 		msg "no $WPA_CONF, $WIFI_IF is up but not connected"
 	fi
+}
+
+# wifi_scan <file>: see the top. wpa_cli prints "bssid TAB frequency TAB
+# signal (dBm) TAB flags TAB ssid" after a header line; the signal becomes
+# 0-100 (-100 dBm -> 0, -50 dBm and more -> 100), each name keeps its best.
+wifi_scan() {
+	[ -n "$1" ] || usage
+	if [ "$(wifi_status)" != on ] || [ ! -f "$RUN_DIR/wpa_supplicant.pid" ]; then
+		wifi_on || return 1
+		setting_set wifi 1
+	fi
+	wpa_cli -p "$WPA_CTRL" -i "$WIFI_IF" scan > /dev/null 2>&1 || {
+		msg "WiFi scan failed"
+		return 1
+	}
+	# the results come in a few seconds (all channels)
+	sleep 4
+	_tab=$(printf '\t')
+	wpa_cli -p "$WPA_CTRL" -i "$WIFI_IF" scan_results 2> /dev/null | awk -F '\t' '
+		NR > 1 && NF >= 5 && $5 != "" && $5 !~ /^(\\x00)+$/ {
+			q = 2 * ($3 + 100)
+			if (q > 100) q = 100
+			if (q < 0) q = 0
+			s = ($4 ~ /WPA|RSN|WEP|SAE/) ? 1 : 0
+			if (!($5 in best) || q > best[$5]) { best[$5] = q; sec[$5] = s }
+		}
+		END { for (n in best) printf "%d\t%d\t%s\n", best[n], sec[n], n }' |
+		sort -t "$_tab" -k1,1nr > "$1.tmp" && mv -f "$1.tmp" "$1"
 }
 
 wifi_off() {
@@ -385,6 +431,7 @@ apply() {
 
 usage() {
 	echo "usage: rsos-net [-n] {wifi|eth|bt} {on|off|status}" >&2
+	echo "       rsos-net wifi scan <file>" >&2
 	echo "       rsos-net {apply-early|apply}" >&2
 	exit 2
 }
@@ -404,9 +451,13 @@ esac
 
 dev=$1
 case "$2" in
-on | off) net_lock ;;
+on | off | scan) net_lock ;;
 esac
 case "$2" in
+scan)
+	[ "$dev" = wifi ] || usage
+	wifi_scan "$3"
+	;;
 on)
 	if "${dev}_on"; then
 		setting_set "$dev" 1
