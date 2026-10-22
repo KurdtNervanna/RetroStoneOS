@@ -573,6 +573,8 @@ enum { UI_JOB_SMB = 40, UI_JOB_SMB_STOP = 41, UI_JOB_STORAGE = 42, UI_JOB_STORAG
  * missing (storage_available() false). */
 void storage_init(struct ui *ui);
 bool storage_available(const struct ui *ui);
+/* "RetroStone2" or "RetroStone2 Pro" (boot.cmd's probe), NULL when unknown */
+const char *storage_model_name(void);
 void storage_poll(struct ui *ui);                 /* every ui_update() */
 int storage_timeout(const struct ui *ui, int64_t now_ms);
 void storage_job_done(struct ui *ui, const struct hw_job_result *r);

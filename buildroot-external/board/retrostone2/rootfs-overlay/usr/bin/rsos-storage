@@ -7,6 +7,9 @@
 #   rsos-storage overlay <emmc|sata> <on|off>
 #                                  rsos_overlays in the U-Boot environment
 #                                  (boot.cmd applies them; restart needed)
+#   rsos-storage redetect          clear rsos_model: the next start probes
+#                                  the model again (boot.cmd: RetroStone2 or
+#                                  RetroStone2 Pro, by its eMMC)
 #   rsos-storage install [--keep-data] [--games]
 #                                  copy RetroStoneOS to the eMMC so that the
 #                                  console starts without a microSD
@@ -196,6 +199,10 @@ overlays() {
 	fw_printenv -n rsos_overlays 2> /dev/null
 }
 
+model() { # pro, regular ("" before boot.cmd probed it)
+	fw_printenv -n rsos_model 2> /dev/null
+}
+
 wait_parts() { # <disk> <n>...
 	_d=$1
 	shift
@@ -301,6 +308,7 @@ refresh() {
 status() {
 	{
 		echo "boot=$(boot_name)"
+		echo "model=$(model)"
 		# started by a starter card: the system on the eMMC, U-Boot on the SD
 		[ "$ENV_DISK" != "$BOOT_DISK" ] && [ "$ENV_DISK" = "$SD" ] && echo "starter=1"
 		[ -e /sys/bus/platform/devices/1c11000.mmc ] && echo "emmc_ctrl=enabled"
@@ -343,6 +351,13 @@ status() {
 	# when no library is mounted)
 	mv -f "$STATUS.tmp" "$STATUS"
 	cat "$STATUS"
+}
+
+# ------------------------------------------------------------- redetect
+redetect() {
+	fw_setenv rsos_model || exit 1
+	msg "rsos_model cleared: the model is probed again at the next start"
+	status > /dev/null
 }
 
 # -------------------------------------------------------------- overlay
@@ -849,6 +864,9 @@ status)
 	;;
 overlay)
 	overlay "$@"
+	;;
+redetect)
+	redetect
 	;;
 install|sd-games|sd-starter|sd-full|format|refresh|boot|eject)
 	# one at a time: the quick ones wait their turn, a task waits a moment

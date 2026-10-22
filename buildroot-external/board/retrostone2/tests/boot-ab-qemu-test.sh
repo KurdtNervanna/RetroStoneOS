@@ -33,7 +33,11 @@ ulong timer_get_boot_us(void) { return timer_get_us(); }
 EOT
 	export CROSS_COMPILE=arm-linux-gnueabihf-
 	PATH=$H/bin:$PATH make -s Cubieboard_defconfig
+	dt=$(grep '^CONFIG_DEFAULT_DEVICE_TREE=' .config)
 	./scripts/kconfig/merge_config.sh -m .config "$BR/uboot.fragment" > /dev/null
+	# the fragment's A20 eMMC device tree and second MMC slot are not the
+	# Cubieboard's: keep its own (QEMU has one MMC: "mmc dev 1" fails)
+	sed -i "s|^CONFIG_DEFAULT_DEVICE_TREE=.*|$dt|; /^CONFIG_MMC_SUNXI_SLOT_EXTRA=/d" .config
 	PATH=$H/bin:$PATH make -s olddefconfig
 	grep -E 'WATCHDOG_AUTOSTART|CMD_POWEROFF|CMD_FS_GENERIC' .config
 	PATH=$H/bin:$PATH make -s -j16 > ../build.log 2>&1 || { tail -20 ../build.log; exit 1; }
@@ -69,11 +73,16 @@ sed 's|^\([[:space:]]*\)bootz \${kernel_addr_r} - \${fdt_addr_r}$|\1setexpr.b rs
 { echo "setenv silent"; cat boot.cmd.body; } > boot.cmd.test
 grep -q '=== KERNEL' boot.cmd.test || { echo "could not patch boot.cmd"; exit 1; }
 "$H/bin/mkimage" -A arm -O linux -T script -C none -n test -d boot.cmd.test boot.scr > /dev/null
+# a Pro for the model probe: QEMU's machine has no second MMC, so "mmc dev 1"
+# always fails there; this one finds an "eMMC"
+sed 's|^\([[:space:]]*\)elif mmc dev 1; then$|\1elif true; then|' boot.cmd.test > boot-pro.cmd
+grep -q 'elif true; then' boot-pro.cmd || { echo "could not patch the model probe"; exit 1; }
+"$H/bin/mkimage" -A arm -O linux -T script -C none -n test -d boot-pro.cmd boot-pro.scr > /dev/null
 
 # make_slot <dir> good|bad|none
 make_slot() {
 	rm -rf "$1"; mkdir -p "$1/boot"
-	cp boot.scr "$1/boot/"
+	cp "${SCR:-boot.scr}" "$1/boot/boot.scr"
 	cp "$HOME/rsos/output/images/sun7i-a20-retrostone2.dtb" "$1/boot/"
 	mkdir -p "$1/boot/overlays"
 	cp "$HOME/rsos/output/target/boot/overlays/emmc.dtbo" "$HOME/rsos/output/target/boot/overlays/cpu-lowvolt.dtbo" \
@@ -257,6 +266,29 @@ echo "== 13 (review): no boot.scr at all: the bootcmd ends with a power-off, not
 make_card noscr empty
 boot
 check "bootflow scan, then poweroff" "grep -q 'poweroff ...' out.txt && no_kernel"
+
+echo "== 14: the model probe (rsos_model), a regular unit"
+make_card good empty
+boot
+check "first start: rsos_model=regular saved, no overlay" 	"grep -q 'rsos: model regular' out.txt && [ \"\$(env_get rsos_model)\" = regular ] && [ -z \"\$(env_get rsos_overlays)\" ] && started a pending"
+confirm
+env_set rsos_model
+env_set rsos_overlays "emmc sata foo"
+boot
+check "probed again: emmc removed, sata and the others kept" 	"[ \"\$(env_get rsos_model)\" = regular ] && [ \"\$(env_get rsos_overlays)\" = 'sata foo' ] && ! grep -q 'overlay emmc applied' out.txt && started a pending"
+confirm
+boot
+check "probed once only" "! grep -q 'rsos: model' out.txt && [ \"\$(env_get rsos_overlays)\" = 'sata foo' ] && started a pending"
+
+echo "== 15: the model probe, a Pro (the eMMC answers)"
+SCR=boot-pro.scr make_card good empty
+boot
+check "first start: rsos_model=pro, overlays emmc and sata" 	"[ \"\$(env_get rsos_model)\" = pro ] && [ \"\$(env_get rsos_overlays)\" = 'emmc sata' ] && grep -q 'overlay emmc applied' out.txt && started a pending"
+confirm
+env_set rsos_model
+env_set rsos_overlays "foo emmc"
+boot
+check "probed again: the others kept, emmc and sata once each" 	"[ \"\$(env_get rsos_overlays)\" = 'foo emmc sata' ] && grep -q 'overlay emmc applied' out.txt && started a pending"
 
 echo "PASS=$pass FAIL=$fail"
 [ $fail -eq 0 ]

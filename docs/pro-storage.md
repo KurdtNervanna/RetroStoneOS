@@ -4,6 +4,22 @@ The Pro variant has a 16 GB eMMC (U23, mmc2, 4-bit) and an M.2 M-key slot (J1) f
 has no PCIe: NVMe drives do not work). This page describes how RetroStoneOS uses them, and two game list
 features that came with this work: box covers from the libretro thumbnail server, and grouping multi-disc games.
 
+## Regular or Pro
+
+The first start of a card finds out which RetroStone2 it runs on. `boot.cmd` sees no `rsos_model` in the U-Boot
+environment, so it probes U-Boot's `mmc 1` (the eMMC U23) once and saves `rsos_model=pro` or `regular`:
+
+- **Pro** (the eMMC answers): `rsos_overlays` gets `emmc` and `sata`, applied on that same start, so the
+  internal storage and the M.2 slot work without touching a setting (the toggles can still switch them off).
+- **Regular** (no eMMC): `emmc` is removed from `rsos_overlays` (`sata` and the others stay), and Settings >
+  Storage hides the Internal storage section; the M.2 section stays.
+
+Settings > Storage shows **This console > Model** (also in System information) and **Detect the model again**
+(`rsos-storage redetect` clears `rsos_model`; the next start probes again). A unit that runs from the eMMC or
+through a starter card, or whose eMMC answers in Linux, counts as a Pro whatever `rsos_model` says. The probe
+costs one failed MMC initialisation (milliseconds) on a regular unit, once. `boot-ab-qemu-test.sh` covers both
+cases (cases 14 and 15).
+
 ## What the player sees
 
 **Settings > Storage**, started from the microSD:
@@ -115,7 +131,8 @@ The shutdown timestamps (`axpstamp save/show`) moved to REG04-0C to leave REG0D-
 
 ## Hardware test checklist
 
-1. Flash the image, boot, Settings > Storage: turn on **Internal eMMC** (and **M.2 SATA drive**), restart.
+1. Flash the image, boot, Settings > Storage: **Model** says RetroStone2 Pro, and **Internal eMMC** and **M.2
+   SATA drive** are already on (on a regular unit: Model RetroStone2, no Internal storage section).
 2. **Install to internal storage**, then **Use as starter card**, then **Restart now** (keep the card in).
 3. Settings > Storage shows "Started from: internal + SD starter card"; the card's games are in the lists.
 4. M.2: **Erase it and use it for games**, import to it with **Copy games to**, play a game from it.

@@ -39,6 +39,7 @@
 enum {
 	ID_ST_EMMC = 500, ID_ST_INSTALL, ID_ST_BOOTINFO, ID_ST_SATA, ID_ST_M2, ID_ST_M2FORMAT,
 	ID_ST_SD, ID_ST_SDGAMES, ID_ST_SDFORMAT, ID_ST_SDWARN, ID_ST_SDSTARTER, ID_ST_SDFULL, ID_ST_MOVE, ID_ST_LIB0 = 520,
+	ID_ST_MODEL = 523, ID_ST_REDETECT,
 };
 
 enum { TASK_INSTALL = 1, TASK_INSTALL_KEEP, TASK_SDGAMES, TASK_FORMAT_SD, TASK_FORMAT_M2, TASK_SDSTARTER, TASK_COVERS, TASK_SDFULL };
@@ -46,6 +47,7 @@ enum { TS_RUNNING = 0, TS_DONE, TS_FAILED };
 
 struct st_state {
 	char boot[8];                /* sd, emmc, other */
+	char model[12];              /* pro, regular ("" = not probed yet; boot.cmd) */
 	bool emmc;
 	int emmc_mb;
 	char emmc_state[16];         /* rsos games bootable other empty ("" = the system disk) */
@@ -106,6 +108,8 @@ static void read_status(void)
 		v[strcspn(v, "\r\n")] = 0;
 		if (!strcmp(line, "boot"))
 			strlcpy_(st.boot, v, sizeof(st.boot));
+		else if (!strcmp(line, "model"))
+			strlcpy_(st.model, v, sizeof(st.model));
 		else if (!strcmp(line, "emmc"))
 			st.emmc = !strcmp(v, "present");
 		else if (!strcmp(line, "emmc_mb"))
@@ -156,6 +160,25 @@ static bool has_overlay(const char *name)
 static bool booted_from_emmc(void)
 {
 	return !strcmp(S.st.boot, "emmc");
+}
+
+/* A regular RetroStone2: boot.cmd's probe found no eMMC, and nothing here
+ * says otherwise (the system runs from it, or it answers). The internal
+ * storage is then hidden; the M.2 slot stays. */
+static bool model_regular(void)
+{
+	return !strcmp(S.st.model, "regular") && !booted_from_emmc() && !S.st.starter && !S.st.emmc;
+}
+
+const char *storage_model_name(void)
+{
+	if (!S.on)
+		return NULL;
+	if (model_regular())
+		return "RetroStone2";
+	if (!strcmp(S.st.model, "pro") || booted_from_emmc() || S.st.starter || S.st.emmc)
+		return "RetroStone2 Pro";
+	return NULL;
 }
 
 static int job(const char *a1, const char *a2, const char *a3, int tag)
@@ -816,12 +839,22 @@ void storage_menu_items(struct ui *ui, struct menu *m)
 	char a[32], b[96];
 	bool emmc_ov = strstr(ui->cfg.storage_overlays, "emmc") != NULL;
 	bool sata_ov = strstr(ui->cfg.storage_overlays, "sata") != NULL;
+	const char *model;
 
 	if (!S.on)
 		return;
 	read_status();
 	status_text(g_menu_status, sizeof(g_menu_status));
-	if (emmc_ov) {
+	/* TRANSLATORS: Settings > Storage section header: which RetroStone2 this is */
+	menu_add(m, MI_HEADER, 0, _("This console"));
+	/* TRANSLATORS: Settings > Storage: RetroStone2 or RetroStone2 Pro (found at the first start) */
+	it = menu_add(m, MI_INFO, ID_ST_MODEL, _("Model"));
+	model = storage_model_name();
+	/* TRANSLATORS: value of Model before the first start probed it */
+	strlcpy_(it->value, model ? model : _("found at the next start"), sizeof(it->value));
+	/* TRANSLATORS: Settings > Storage action: look for the eMMC again at the next start */
+	menu_add(m, MI_ACTION, ID_ST_REDETECT, _("Detect the model again"));
+	if (emmc_ov && !model_regular()) {
 		/* TRANSLATORS: Settings > Storage section header: the Pro's built-in 16 GB eMMC */
 		menu_add(m, MI_HEADER, 0, _("Internal storage"));
 		if (booted_from_emmc()) {
@@ -1049,9 +1082,24 @@ static void move_ask(struct ui *ui)
 bool storage_menu_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
 {
 	(void)m;
-	if (!S.on || it->id < ID_ST_EMMC || it->id > ID_ST_LIB0 + 2)
+	if (!S.on || it->id < ID_ST_EMMC || it->id > ID_ST_REDETECT)
 		return false;
 	switch (it->id) {
+	case ID_ST_REDETECT:
+		if (!dir) {
+			/* TRANSLATORS: dialog buttons, uppercase, short */
+			const char *const buttons[] = { _("RESTART NOW"), _("LATER"), NULL };
+
+			if (job("redetect", NULL, NULL, UI_JOB_STORAGE) < 0) {
+				message_open(ui, _("The setting could not be saved."));
+				return true;
+			}
+			S.overlay_job = true;
+			/* TRANSLATORS: Settings > Storage > Detect the model again */
+			dialog_open(ui, _("The console looks for its internal storage at the next start, and shows the "
+					  "options of the model it finds."), buttons, overlay_changed, NULL);
+		}
+		return true;
 	case ID_ST_EMMC:
 	case ID_ST_SATA: {
 		/* TRANSLATORS: dialog buttons, uppercase, short */

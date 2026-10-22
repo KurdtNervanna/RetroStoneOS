@@ -1483,6 +1483,11 @@ static void open_info(struct ui *ui)
 	hw_version(ui->cfg.version, ver, sizeof(ver));
 	it = menu_add(m, MI_INFO, ID_INFO0, _("Version"));
 	strlcpy_(it->value, ver, sizeof(it->value));
+	if (storage_model_name()) {
+		/* TRANSLATORS: System information: RetroStone2 or RetroStone2 Pro */
+		it = menu_add(m, MI_INFO, ID_INFO0 + 11, _("Model"));
+		strlcpy_(it->value, storage_model_name(), sizeof(it->value));
+	}
 	menu_add(m, MI_INFO, ID_INFO0 + 1, _("Battery"));
 	/* TRANSLATORS: where the power comes from (charger or battery) */
 	menu_add(m, MI_INFO, ID_INFO0 + 2, C_("power source", "Power"));
