@@ -1346,6 +1346,12 @@ void ui_reload_games(struct ui *ui, bool force)
 		L->state[s] = LS_TODO;
 		if (force && ui->cfg.cache_dir[0])
 			games_invalidate(ui->cfg.cache_dir, systems_get(s)->name);
+		/* Settings > Game lists > Refresh game lists rescans every
+		 * folder: the boot snapshot's "still an empty folder" shortcut
+		 * is a cache too (v0.1.0 kept folders filled from a PC empty
+		 * through a refresh because of it). */
+		if (force)
+			L->empty_mt[s] = 0;
 	}
 	free_coll(L);
 	L->ndone = L->nreplaced = 0;

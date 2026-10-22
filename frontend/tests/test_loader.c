@@ -18,6 +18,9 @@
  *    a collection completes every list first
  * 6. image cache files (.rpx): run-length coded when it pays (backdrops),
  *    raw otherwise; corrupt files are cache misses
+ * 7-10. image memory cache, per-game cores, legacy folders, games copied
+ *    from a PC
+ * 11. Refresh game lists rescans even what the caches call unchanged
  */
 #include <errno.h>
 #include <fcntl.h>
@@ -42,6 +45,9 @@ static const char *const g_systems[][2] = {
 	{ "atari2600", "a26" }, { "atari7800", "a78" }, { "atarilynx", "lnx" }, { "coleco", "col" },
 	{ "msx", "mx1" }, { "arcade", "zip" }, { "fbneo", "7z" }, { "neogeo", "neo" }, { "neocd", "cue" },
 };
+
+/* src/ui/ui_internal.h: Settings > Game lists > Refresh game lists (force) */
+void ui_reload_games(struct ui *ui, bool force);
 
 static char W[512];
 static const char *g_res, *g_themes;
@@ -594,6 +600,47 @@ int main(int argc, char **argv)
 		copied_from_pc("data/roms/gba", NULL);
 		boot(&f, NULL, NULL);
 		CHECK(strstr(f.final, "gba:2"), "a game deleted on a PC goes away too");
+	}
+
+	printf("11. Settings > Game lists > Refresh game lists trusts no cache\n");
+	{
+		struct boot e;
+		struct ui *ui;
+		int64_t now = 100000, t0 = us();
+		char p[700], line[1400], st2[2048];
+		struct stat st;
+		FILE *f;
+
+		/* ngp/ (no folder alias, so the empty-folder shortcut
+		 * applies) gets a game; then the snapshot is made to remember it
+		 * as empty with its current stamp, like a stale cache would */
+		put("data/roms/ngp/Pocket Tennis.ngp", "x");
+		boot(&e, NULL, NULL);
+		CHECK(strstr(e.final, "ngp:1"), "a Neo Geo Pocket game is listed");
+		snprintf(p, sizeof(p), "%s/data/roms/ngp", W);
+		f = fopen(snap, "a");
+		if (stat(p, &st) == 0 && f) {
+			snprintf(line, sizeof(line), "empty ngp %lld %s\n",
+				 (long long)games_dir_stamp(p, &st), p);
+			fputs(line, f);
+		}
+		if (f)
+			fclose(f);
+		boot(&e, NULL, &ui);
+		while (!ui_lists_complete(ui) && us() - t0 < 20000000) {
+			frame(ui, &now);
+			usleep(500);
+		}
+		frame(ui, &now);
+		ui_debug_state(ui, st2, sizeof(st2));
+		CHECK(!strstr(st2, "ngp:"), "the stale snapshot hides it (%s)",
+		      field(st2, "carousel", f1, sizeof(f1)));
+		ui_reload_games(ui, true);
+		frame(ui, &now);
+		ui_debug_state(ui, st2, sizeof(st2));
+		CHECK(strstr(st2, "ngp:1") && strstr(st2, "complete=1"),
+		      "Refresh game lists finds it again (%s)", field(st2, "carousel", f1, sizeof(f1)));
+		ui_destroy(ui);
 	}
 
 	printf(g_fail ? "test_loader: %d FAILED\n" : "test_loader: all passed\n", g_fail);
