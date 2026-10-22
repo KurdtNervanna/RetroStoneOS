@@ -6,6 +6,9 @@ import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
+# the one-player games (the others are 1-4 players)
+ONE_PLAYER = {'bombermole', 'goatgorge', 'lemurleap', 'pricklepatch', 'puffinplunge'}
+
 
 def check(target, config, expected_commit=''):
     selected = set(re.findall(r'^BR2_PACKAGE_RSOS_VC_GAMES_([A-Z]+)=y$', config.read_text(), re.M))
@@ -40,7 +43,7 @@ def check(target, config, expected_commit=''):
         assert (folder / entry.findtext('path')).stat().st_size > 0, f'{game}: missing menu entry'
         assert (folder / entry.findtext('image')).read_bytes()[:8] == b'\x89PNG\r\n\x1a\n', f'{game}: missing title PNG'
         assert (licenses / game / 'LICENSE').stat().st_size > 0, f'{game}: missing licence'
-        assert entry.findtext('players') == ('1' if game == 'bombermole' else '1-4'), f'{game}: players'
+        assert entry.findtext('players') == ('1' if game in ONE_PLAYER else '1-4'), f'{game}: players'
         print(f'{entry.findtext("name")}: core, metadata, menu, picture, licence OK ({commit})')
     print(f'RetroStone VC: {len(selected)} installed games verified')
 

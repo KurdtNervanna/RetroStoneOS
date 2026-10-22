@@ -287,6 +287,38 @@ config BR2_PACKAGE_RSOS_VC_GAMES_SNOWBALLSIEGE
 	  wind changing every turn and every splat carving the snow.
 	  1-4 players.
 
+config BR2_PACKAGE_RSOS_VC_GAMES_GOATGORGE
+	bool "Goat Gorge"
+	default y
+	help
+	  A goat kid climbs a gorge one screen at a time: jump, slide
+	  down the walls and dash once in the air, through five
+	  chapters. 1 player.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_LEMURLEAP
+	bool "Lemur Leap"
+	default y
+	help
+	  A ring-tailed lemur bounces up a giant beanstalk into space,
+	  steered left and right, stomping and shooting the pests.
+	  1 player.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_PRICKLEPATCH
+	bool "Prickle Patch"
+	default y
+	help
+	  A hedgehog gardener keeps the vegetable patch from endless
+	  pests: it only walks, its garden tools work by themselves.
+	  1 player.
+
+config BR2_PACKAGE_RSOS_VC_GAMES_PUFFINPLUNGE
+	bool "Puffin Plunge"
+	default y
+	help
+	  A puffin in bubble boots dives down an endless well, popping
+	  the critters below with bubbles fired straight down.
+	  1 player.
+
 endif
 
 comment "rsos-vc-games needs a toolchain w/ dynamic library"

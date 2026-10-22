@@ -374,4 +374,48 @@
 		<genre>Strategy</genre>
 		<players>1-4</players>
 	</game>
+	<game>
+		<path>./Goat Gorge.goatgorge</path>
+		<name>Goat Gorge</name>
+		<desc>A little goat kid climbs a gorge to the summit, one screen at a time: run, jump, slide down the walls and leap off them, and dash once in the air in any direction. A fall puts you back at the start of the room at once. Five chapters, a berry hidden in most rooms, and your best time and fewest falls are kept.</desc>
+		<image>./media/images/Goat Gorge.png</image>
+		<releasedate>20261019T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Platform</genre>
+		<players>1</players>
+	</game>
+	<game>
+		<path>./Lemur Leap.lemurleap</path>
+		<name>Lemur Leap</name>
+		<desc>A little ring-tailed lemur hops up a giant beanstalk, leaf after leaf, through the clouds and the sunset sky into outer space. It bounces by itself: steer it left and right, stomp or shoot the pests, grab the coins and the power-ups, and do not fall. Beat your record; coins buy hats and furs.</desc>
+		<image>./media/images/Lemur Leap.png</image>
+		<releasedate>20261020T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Platform</genre>
+		<players>1</players>
+	</game>
+	<game>
+		<path>./Prickle Patch.pricklepatch</path>
+		<name>Prickle Patch</name>
+		<desc>A little hedgehog keeps the vegetable patch while slugs, beetles, ants, wasps and crows come from every side, more and more of them. You only walk: your garden tools work by themselves, and every level brings a new tool or an upgrade. One endless run: how long can you last? At 15:00, the Crow King comes.</desc>
+		<image>./media/images/Prickle Patch.png</image>
+		<releasedate>20261020T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Shooter</genre>
+		<players>1</players>
+	</game>
+	<game>
+		<path>./Puffin Plunge.puffinplunge</path>
+		<name>Puffin Plunge</name>
+		<desc>A little puffin in bubble boots dives down a deep, deep well: in the air, its boots fire bubbles straight down that pop the critters below and slow the fall. Gems buy upgrades at the rest stops: hearts, bigger tanks, triple bubbles, a gem magnet. The well never ends and gets harder: how deep can you go?</desc>
+		<image>./media/images/Puffin Plunge.png</image>
+		<releasedate>20261020T000000</releasedate>
+		<developer>8BCraft</developer>
+		<publisher>8BCraft</publisher>
+		<genre>Action, Shooter</genre>
+		<players>1</players>
+	</game>
 </gameList>

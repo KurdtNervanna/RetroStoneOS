@@ -3,17 +3,20 @@
 RetroStoneOS {{VERSION}}: a fast-booting firmware for the **RetroStone2** handheld (8BCraft), plus community ports
 to other boards. One SD card image per board.
 
-34 built-in RetroStone games: Bomber Mole, Beaver Rush, Biscuit Bandit, Blueberry Tumble, Caterpillar Crawl,
-Cosmo Corgi, Crab Coconut, Duck Parade, Fishy Feast, Frog Reach, Gecko Golf, Gopher Dig, Hamster Havoc,
-Hedgehog Hills, Jelly Jam, Kitty Kibble, Ladybug Laps, Leady Squid, Llama Drama, Mole Marbles, Moth Around,
-Mouse Espresso, Nutty Branch, Otter Rapids, Pancake Tower, Penguin Slalom, Pogo Mamie, Raccoon Recycler,
-Radish Rascals, Seal Shove, Snail Switch, Snowball Siege, Spider Swing and Unicorn Hop. The 33 arcade games support
-up to four players.
+38 built-in RetroStone games: Bomber Mole, Beaver Rush, Biscuit Bandit, Blueberry Tumble, Caterpillar Crawl,
+Cosmo Corgi, Crab Coconut, Duck Parade, Fishy Feast, Frog Reach, Gecko Golf, Goat Gorge, Gopher Dig, Hamster Havoc,
+Hedgehog Hills, Jelly Jam, Kitty Kibble, Ladybug Laps, Leady Squid, Lemur Leap, Llama Drama, Mole Marbles,
+Moth Around, Mouse Espresso, Nutty Branch, Otter Rapids, Pancake Tower, Penguin Slalom, Pogo Mamie, Prickle Patch,
+Puffin Plunge, Raccoon Recycler, Radish Rascals, Seal Shove, Snail Switch, Snowball Siege, Spider Swing and
+Unicorn Hop. Bomber Mole, Goat Gorge, Lemur Leap, Prickle Patch and Puffin Plunge are one-player games; the 33 others
+support up to four players.
 
-**New in RetroStoneOS 0.1.2**: nine arcade games, Caterpillar Crawl, Gecko Golf, Gopher Dig, Jelly Jam, Kitty Kibble,
-Ladybug Laps, Llama Drama, Seal Shove and Snowball Siege.
+**New in RetroStoneOS 0.1.3**: four one-player arcade games, Goat Gorge (a precision platformer up a gorge),
+Lemur Leap (an endless jump up a beanstalk into space), Prickle Patch (a hedgehog keeps the vegetable patch from
+endless pests) and Puffin Plunge (an endless dive down a well). In Beaver Rush, the PAUSED text no longer garbles the
+timer bar in Japanese, Greek, Russian and the other languages beyond the Latin alphabet.
 
-Game source: [RetroStone VC 3fe76b277607](https://github.com/PaddleStroke/RetroStoneVC/tree/3fe76b277607df2da6756d5915f05e31587900d5).
+Game source: [RetroStone VC c900b9839c15](https://github.com/PaddleStroke/RetroStoneVC/tree/c900b9839c15bfc7c75c05fe91ffb6e86c57b89e).
 
 ## Downloads
 
@@ -76,7 +79,7 @@ SD card or a kit). Sharing them for free, unchanged, is fine.
 - The other emulator cores keep their own licences (GPL, zlib, BSD and others).
 - The pre-installed games: µCity (GPL-3.0+ code, BSD-2-Clause GBT Player, CC BY-SA 4.0 graphics and music) and
   Freedoom (BSD-3-Clause); their source is in the legal-info archives.
-- The RetroStone system (34 games, [RetroStone VC](https://github.com/PaddleStroke/RetroStoneVC)):
+- The RetroStone system (38 games, [RetroStone VC](https://github.com/PaddleStroke/RetroStoneVC)):
   code under MIT, art, music, sound and levels under CC BY-NC-SA 4.0. The names and logos are not licensed.
 - Per-package licences: `legal-info/manifest.csv` in the archives below.
 
