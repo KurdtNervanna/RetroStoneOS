@@ -265,6 +265,13 @@ check-power: $(POWER_TEST)
 
 check-transfer: $(TR_BUILD)/test_transfer
 	$(TR_BUILD)/test_transfer
+	@# USB import and network upload know every system of the carousel
+	@# (sysmap.c lacked the second batch of cores until 0.1.4)
+	@sed -n 's/^\t{ "\([a-z0-9]*\)", NC_("system".*/\1/p' src/ui/systems.c | grep -vx retrostone | sort > $(TR_BUILD)/sys-ui.txt
+	@sed -n 's/^\t{ "\([a-z0-9]*\)", "[^"]*", {.*/\1/p' src/transfer/sysmap.c | sort > $(TR_BUILD)/sys-tr.txt
+	@diff $(TR_BUILD)/sys-ui.txt $(TR_BUILD)/sys-tr.txt || \
+		{ echo "check-transfer: src/ui/systems.c (<) and src/transfer/sysmap.c (>) list different systems"; exit 1; }
+	@echo "check-transfer: sysmap.c has the $$(wc -l < $(TR_BUILD)/sys-tr.txt) systems of systems.c"
 
 # The UI has no unit-test binary: a scripted tour of the preview tool over an
 # empty library (every menu, both themes, both sizes) must run clean.

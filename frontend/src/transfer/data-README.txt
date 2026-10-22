@@ -9,14 +9,20 @@ Where things go
 ---------------
 
   roms\<system>\     your games, one folder per system:
-      nes  fds  snes  n64  gb  gbc  gba  sg1000  mastersystem  megadrive
-      segacd  sega32x  gamegear  pico  psx  pcengine  atari2600
-      arcade   (MAME 2003-Plus romsets, .zip)
+      nes  fds  snes  n64  gb  gbc  gba  pokemini
+      sg1000  mastersystem  megadrive  segacd  sega32x  pico  gamegear
+      psx  pcengine  pcenginecd  supergrafx  ngp  ngpc
+      wonderswan  wonderswancolor  atari2600  atari7800  atarilynx
+      coleco  msx  c64  zxspectrum  amstradcpc  dos  scummvm
+      pico8  doom  cavestory  neocd
+      arcade   (MAME 2003-Plus = MAME 0.78 romsets, .zip)
       fbneo    (FinalBurn Neo romsets, .zip)
       neogeo   (FinalBurn Neo romsets + neogeo.zip)
     Sub-folders are fine (for example one folder per multi-disc game).
     Zipped cartridge games (.zip) work. Disc games: .cue + .bin, .chd, .pbp,
     .m3u for multi-disc.
+    The console finds new games by itself when it starts. If a list ever
+    looks out of date: Settings > Game lists > Refresh game lists.
 
   bios\              BIOS files, for example:
       scph5501.bin (PlayStation, optional)    gba_bios.bin (optional)
@@ -30,8 +36,9 @@ Where things go
   rsos\              console settings (settings.ini, wpa_supplicant.conf)
 
 Folder names from RetroPie and other handhelds are recognised when you
-import from a USB stick (genesis -> megadrive, sfc -> snes, ...), but on
-this card please use the names above.
+import from a USB stick (genesis -> megadrive, sfc -> snes, mame -> arcade,
+wswan -> wonderswan, ...). On this card the common RetroPie names work too
+(genesis, sfc, mame...), but the names above are best.
 
 Other ways to add games
 -----------------------

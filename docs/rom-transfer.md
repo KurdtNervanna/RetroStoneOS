@@ -351,8 +351,11 @@ aliases compared on `[a-z0-9]` only, then a MinUI/Onion "(TAG)" suffix:
 `genesis`/`md` -> megadrive, `sfc`/`superfamicom` -> snes, `fc`/`famicom` ->
 nes, `sg-1000` -> sg1000, `sms`/`ms` -> mastersystem, `gg` -> gamegear,
 `32x`/`THIRTYTWOX` -> sega32x, `megacd` -> segacd, `ps`/`ps1` -> psx,
-`pce`/`tg16` -> pcengine, `mame`/`mame-libretro`/`mame2003`/`mame2003-plus` ->
-arcade, `fba`/`fbalpha` -> fbneo, `Game Boy (GB)` -> gb... Folders with no
+`pce`/`tg16` -> pcengine, `pce-cd`/`tg-cd` -> pcenginecd, `mame`/`mame-libretro`/`mame2003`/
+`mame2003-plus` -> arcade, `fba`/`fbalpha` -> fbneo, `wswan`/`wswanc` -> wonderswan/wonderswancolor,
+`lynx` -> atarilynx, `colecovision` -> coleco, `msx2` -> msx, `neogeocd` -> neocd, `Game Boy (GB)` -> gb...
+Every system of the carousel has an entry (`make check-transfer` compares `sysmap.c` with
+`src/ui/systems.c`). Folders with no
 match (e.g. `dreamcast`) are listed as "not supported" with their file count.
 The canonical list must match the UI's system table and
 `/usr/share/rsos/rom-folders` (it includes `pico`).
