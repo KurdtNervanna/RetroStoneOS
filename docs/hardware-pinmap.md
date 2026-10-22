@@ -25,8 +25,9 @@ timing, fitted or not) comes from old software. **Low** = no schematic evidence.
 
 ## Buttons and keys
 
-All buttons switch to GND and have an external 10k pull-up to 3.3 V (SCH), so they are active low and the
-DTS does not enable internal pull-ups. PH0-PH21 have an external interrupt (EINT0-21) on the A20, so they
+All buttons switch to GND and have an external 10k pull-up to 3.3 V (SCH), so they are active low. The DTS
+also enables the internal pull-ups (`GPIO_PULL_UP`), as the production RetrOrangePi script did: a missing or
+broken external resistor would otherwise leave a floating pin that reads as a held button (issue #10). PH0-PH21 have an external interrupt (EINT0-21) on the A20, so they
 are interrupt driven. PH22-PH27 and port C have no EINT, so they are polled (checked in 6.18
 `drivers/pinctrl/sunxi/pinctrl-sun4i-a10.c`).
 

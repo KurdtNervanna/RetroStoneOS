@@ -93,7 +93,9 @@
 	 * Face buttons, D-pad, START/SELECT, the two extra pads and the
 	 * shoulder buttons. Each one switches to GND, with an external 10k
 	 * pull-up to 3.3 V (active low). Port C, D and E pins have no external
-	 * interrupt on the H3, so the whole pad is polled.
+	 * interrupt on the H3, so the whole pad is polled. GPIO_PULL_UP adds the
+	 * H3's internal pull-up as well: a missing external resistor would
+	 * leave a floating input that reads as a held button (issue #10).
 	 *
 	 * Codes follow Documentation/input/gamepad.rst (positional). The pads
 	 * are on the bottom layer (mirrored), so seen from the front: K1 top,
@@ -109,25 +111,25 @@
 		button-a {
 			label = "A";
 			linux,code = <BTN_EAST>;
-			gpios = <&pio 3 14 GPIO_ACTIVE_LOW>;	/* PD14, K2 */
+			gpios = <&pio 3 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD14, K2 */
 		};
 
 		button-b {
 			label = "B";
 			linux,code = <BTN_SOUTH>;
-			gpios = <&pio 3 15 GPIO_ACTIVE_LOW>;	/* PD15, K4 */
+			gpios = <&pio 3 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD15, K4 */
 		};
 
 		button-x {
 			label = "X";
 			linux,code = <BTN_NORTH>;
-			gpios = <&pio 3 13 GPIO_ACTIVE_LOW>;	/* PD13, K1 */
+			gpios = <&pio 3 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD13, K1 */
 		};
 
 		button-y {
 			label = "Y";
 			linux,code = <BTN_WEST>;
-			gpios = <&pio 3 9 GPIO_ACTIVE_LOW>;	/* PD9, K3 */
+			gpios = <&pio 3 9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD9, K3 */
 		};
 
 		/*
@@ -138,74 +140,74 @@
 		button-c {
 			label = "C";
 			linux,code = <BTN_C>;
-			gpios = <&pio 4 3 GPIO_ACTIVE_LOW>;	/* PE3, SELECT3 */
+			gpios = <&pio 4 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PE3, SELECT3 */
 		};
 
 		button-z {
 			label = "Z";
 			linux,code = <BTN_Z>;
-			gpios = <&pio 2 9 GPIO_ACTIVE_LOW>;	/* PC9, SELECT4 */
+			gpios = <&pio 2 9 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PC9, SELECT4 */
 		};
 
 		button-start {
 			label = "Start";
 			linux,code = <BTN_START>;
-			gpios = <&pio 3 1 GPIO_ACTIVE_LOW>;	/* PD1 */
+			gpios = <&pio 3 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD1 */
 		};
 
 		button-select {
 			label = "Select";
 			linux,code = <BTN_SELECT>;
-			gpios = <&pio 3 4 GPIO_ACTIVE_LOW>;	/* PD4 */
+			gpios = <&pio 3 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD4 */
 		};
 
 		button-dpad-up {
 			label = "D-pad Up";
 			linux,code = <BTN_DPAD_UP>;
-			gpios = <&pio 3 12 GPIO_ACTIVE_LOW>;	/* PD12, AU */
+			gpios = <&pio 3 12 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD12, AU */
 		};
 
 		button-dpad-down {
 			label = "D-pad Down";
 			linux,code = <BTN_DPAD_DOWN>;
-			gpios = <&pio 3 5 GPIO_ACTIVE_LOW>;	/* PD5, AD */
+			gpios = <&pio 3 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD5, AD */
 		};
 
 		button-dpad-left {
 			label = "D-pad Left";
 			linux,code = <BTN_DPAD_LEFT>;
-			gpios = <&pio 3 0 GPIO_ACTIVE_LOW>;	/* PD0, AL */
+			gpios = <&pio 3 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD0, AL */
 		};
 
 		button-dpad-right {
 			label = "D-pad Right";
 			linux,code = <BTN_DPAD_RIGHT>;
-			gpios = <&pio 3 11 GPIO_ACTIVE_LOW>;	/* PD11, AR */
+			gpios = <&pio 3 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD11, AR */
 		};
 
 		/* Shoulder buttons: the 5-pin JST connector U$4 */
 		button-l1 {
 			label = "L1";
 			linux,code = <BTN_TL>;
-			gpios = <&pio 3 8 GPIO_ACTIVE_LOW>;	/* PD8, U$4 pin 1 */
+			gpios = <&pio 3 8 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD8, U$4 pin 1 */
 		};
 
 		button-r1 {
 			label = "R1";
 			linux,code = <BTN_TR>;
-			gpios = <&pio 3 3 GPIO_ACTIVE_LOW>;	/* PD3, U$4 pin 2 */
+			gpios = <&pio 3 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD3, U$4 pin 2 */
 		};
 
 		button-l2 {
 			label = "L2";
 			linux,code = <BTN_TL2>;
-			gpios = <&pio 3 6 GPIO_ACTIVE_LOW>;	/* PD6, U$4 pin 4 */
+			gpios = <&pio 3 6 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD6, U$4 pin 4 */
 		};
 
 		button-r2 {
 			label = "R2";
 			linux,code = <BTN_TR2>;
-			gpios = <&pio 3 7 GPIO_ACTIVE_LOW>;	/* PD7, U$4 pin 3 */
+			gpios = <&pio 3 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PD7, U$4 pin 3 */
 		};
 	};
 
