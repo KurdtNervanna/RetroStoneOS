@@ -76,7 +76,10 @@ partition). The frontend, the libretro host and the cores are the same packages 
 - devtmpfs mounted by the kernel, no initramfs, ext4, vfat, exFAT, NLS UTF-8/437/8859-1, loop devices;
 - **built in (=y)**: DRM, the board's display and GPU drivers, ALSA and the board's sound drivers, evdev, HID, USB
   HID, uhid and the gamepad drivers (xpad, Sony, PlayStation, Nintendo, Microsoft, Logitech, DragonRise, GreenAsia,
-  SmartJoyPlus, Steam, EMS). Nothing would load them as modules;
+  SmartJoyPlus, Steam, EMS). Nothing would load them as modules. That includes what the display driver waits for:
+  the bus its HDMI encoder reads the EDID on (the DDC I2C controller: `i2c-bcm2835` on the Pi 0-3, `i2c-brcmstb` on
+  the Pi 4/5), its HPD GPIO controller, its clocks and resets. A module there leaves the DRM driver deferred: no
+  `/dev/dri/card*`, a black screen (issue #6). `/sys/kernel/debug/devices_deferred` lists what still waits;
 - as modules, loaded on demand with BusyBox `modprobe`: WiFi, Bluetooth, Ethernet (unless built in), `usb-storage`,
   `uas`, `sd_mod` (rcS loads them once the menu is up), NTFS3, ksmbd;
 - **uncompressed modules** (BusyBox `modprobe` does not decompress);
