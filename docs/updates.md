@@ -144,6 +144,13 @@ cannot type one); protect the file instead. It was made on 2026-09-27 with
   package signed with *another* key is always refused.
 - A fork uses its own key: `rsos-mkupdate keygen`, its public key in `frontend/assets/update.pub` (or
   `RSOS_UPDATE_PUBKEY=<file>` for the frontend build), its secret in its own repository.
+- A fork that publishes its own updates also points the updater at its releases. In its defconfig:
+  `BR2_RETROSTONE_UPDATE_REPO="<owner>/RetroStoneOS"` (the GitHub repository; empty: PaddleStroke/RetroStoneOS)
+  and `BR2_RETROSTONE_UPDATE_PUBKEY="<its public key file>"` (empty: `frontend/assets/update.pub`); for the
+  frontend alone, `RSOS_UPDATE_REPO=<owner>/<name>` and `RSOS_UPDATE_PUBKEY=<file>`. Its images then find and
+  install only its own signed releases; an image of the original project never installs them (another key).
+  Versions follow the same order (§4.1): a fork can number its builds `0.1.3.12`, `0.1.3.13`, ... (newer than
+  0.1.3, older than the next 0.1.4).
 
 Signing by hand (a package built locally, or an unsigned CI package):
 

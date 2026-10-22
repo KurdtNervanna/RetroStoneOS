@@ -38,6 +38,22 @@ config BR2_RETROSTONE_VERSION
 	  release tag (v0.2.0 -> 0.2.0; scripts/ci/build-board.sh).
 	  Development builds get "-dev" appended.
 
+config BR2_RETROSTONE_UPDATE_REPO
+	string "Update repository (GitHub owner/name)"
+	help
+	  The GitHub repository whose releases Settings > System update
+	  looks in (docs/updates.md). Empty: PaddleStroke/RetroStoneOS.
+	  A fork that publishes its own update packages sets it, with
+	  its own signing key (BR2_RETROSTONE_UPDATE_PUBKEY).
+
+config BR2_RETROSTONE_UPDATE_PUBKEY
+	string "Update signing public key"
+	help
+	  The signify public key the system updater trusts, installed as
+	  /usr/share/rsos/update.pub. Empty: frontend/assets/update.pub
+	  (the RetroStoneOS release key). For a fork's own key, e.g.
+	  $(BR2_EXTERNAL_RETROSTONE_PATH)/../frontend/assets/update-fork.pub.
+
 choice
 	prompt "Shell on the debug UART"
 	default BR2_RETROSTONE_UART_SHELL_OPEN

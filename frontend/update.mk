@@ -49,7 +49,8 @@ UPD_WARN = -Wall -Wextra -Wshadow -Wformat=2 -Wformat-security -Werror=format-se
 	-Wmissing-prototypes -Wno-missing-field-initializers
 UPD_INCLUDES = -I$(UPD_DIR)/src -I$(UPD_DIR)/src/update -I$(UPD_DIR)/third_party/monocypher
 UPD_CFLAGS = $(CPPFLAGS) $(CFLAGS) -std=gnu11 $(UPD_WARN) -g -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 \
-	$(UPD_INCLUDES) $(UPD_ZSTD_CFLAGS) $(UPD_TLS_DEFS) -DRSOS_BUILD_EPOCH=$(UPD_BUILD_EPOCH)L
+	$(UPD_INCLUDES) $(UPD_ZSTD_CFLAGS) $(UPD_TLS_DEFS) -DRSOS_BUILD_EPOCH=$(UPD_BUILD_EPOCH)L \
+	$(if $(RSOS_UPDATE_REPO),-DUPD_REPO='"$(RSOS_UPDATE_REPO)"')
 # Monocypher as it is upstream: its own style, not our extra warnings
 UPD_MC_CFLAGS = $(CPPFLAGS) $(CFLAGS) -std=gnu11 -Wall -Wextra -g $(UPD_INCLUDES)
 
@@ -63,6 +64,10 @@ UPD_LIBS = $(UPD_ZSTD_LIBS) $(UPD_TLS_LIBS) -lpthread
 # installed as /usr/share/rsos/update.pub. RSOS_UPDATE_PUBKEY=<file> puts
 # another one in an image (a fork's own key).
 RSOS_UPDATE_PUBKEY ?= $(UPD_DIR)/assets/update.pub
+# The GitHub repository the updater looks in, <owner>/<name> (empty: the
+# default of src/update/update.h, PaddleStroke/RetroStoneOS). A fork that
+# publishes its own signed updates sets both.
+RSOS_UPDATE_REPO ?=
 
 .PHONY: update-all check-update update-install mkupdate
 

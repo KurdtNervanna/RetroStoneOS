@@ -24,7 +24,12 @@
 
 #include "rsu.h"
 
-#define UPD_REPO_API "https://api.github.com/repos/PaddleStroke/RetroStoneOS/releases?per_page=10"
+/* The GitHub repository whose releases hold the updates (a fork builds with
+ * RSOS_UPDATE_REPO=<owner>/<name>, and its own key: update.mk) */
+#ifndef UPD_REPO
+#define UPD_REPO "PaddleStroke/RetroStoneOS"
+#endif
+#define UPD_REPO_API "https://api.github.com/repos/" UPD_REPO "/releases?per_page=10"
 #define UPD_BATTERY_MIN 30
 
 struct upd_ctx;
