@@ -199,6 +199,9 @@ BR2_SSP_STRONG=y
 BR2_RELRO_FULL=y
 BR2_FORTIFY_SOURCE_2=y
 BR2_PIC_PIE=y
+# Fork (KurdtNervanna/RetroStoneOS): System update installs this fork's releases, signed with its key
+BR2_RETROSTONE_UPDATE_REPO="KurdtNervanna/RetroStoneOS"
+BR2_RETROSTONE_UPDATE_PUBKEY="$(BR2_EXTERNAL_RETROSTONE_PATH)/../frontend/assets/update-fork.pub"
 
 # ---------------------------------------------------------------------------
 # RELEASE BUILD (docs/build.md, "Release build"). This file is
