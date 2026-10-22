@@ -15,7 +15,10 @@ support up to four players.
 WonderSwan, Neo Geo Pocket, Atari 7800, Lynx, ColecoVision, MSX, PC Engine CD and Neo Geo CD folders were reported
 as "not supported", and imported PC Engine CD games went to the HuCard list where they never showed. The Batocera
 folder names `wswan` and `wswanc` work on the card too. **Settings > Game lists > Refresh game lists** now rescans
-every folder whatever the caches say.
+every folder whatever the caches say. **Raspberry Pi**: the HDMI I2C driver the display waits for is built in,
+so HDMI should work with the normal `config.txt` (a Pi 3 needed `vc4-fkms-v3d`; the Pi 2, 4 and 5 had the same
+bug), and the **Adafruit PiGRRL 2** is supported, untested, through a block at the end of `config.txt`. On a
+**keyboard**, Esc in a game opens the in-game menu and Tab+Space leaves the game.
 
 Game source: [RetroStone VC c900b9839c15](https://github.com/PaddleStroke/RetroStoneVC/tree/c900b9839c15bfc7c75c05fe91ffb6e86c57b89e).
 
