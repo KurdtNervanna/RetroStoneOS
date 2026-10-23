@@ -1235,25 +1235,115 @@ out:
 	return e;
 }
 
-/* move_games: the source files to delete once the copy is flushed */
-struct move_list {
-	char **v;
-	int n, cap;
+/* move_games: the source files to delete once the copy is flushed, each
+ * with its copy on the destination */
+struct move_ent {
+	char *src, *dst;
 };
 
-static void move_add(struct move_list *m, const char *src)
+struct move_list {
+	struct move_ent *v;
+	int n, cap;
+	/* the source folders of a game file that stays (its bytes differ from
+	 * the destination's): nothing in them is deleted, so a game made of
+	 * several files (.cue + .bin, .gdi + tracks, .m3u + discs) never
+	 * ends up split over two drives */
+	char **held;
+	int nheld, capheld;
+	bool broken;                        /* out of memory: nothing is deleted */
+};
+
+/* gamelist.xml (the scraped names and descriptions) stays on the source:
+ * the destination keeps its own */
+static bool move_never(const char *src)
 {
+	const char *b = strrchr(src, '/');
+
+	return !strcasecmp(b ? b + 1 : src, "gamelist.xml");
+}
+
+static void move_add(struct move_list *m, const char *src, const char *root, const char *rel)
+{
+	char dst[TRANSFER_PATH_MAX * 2];
+
+	if (move_never(src))
+		return;
 	if (m->n == m->cap) {
 		int cap = m->cap ? m->cap * 2 : 256;
-		char **v = realloc(m->v, sizeof(*v) * (size_t)cap);
+		struct move_ent *v = realloc(m->v, sizeof(*v) * (size_t)cap);
 
-		if (!v)
-			return;                 /* not deleted: a copy is fine too */
+		if (!v) {
+			m->broken = true;
+			return;
+		}
 		m->v = v;
 		m->cap = cap;
 	}
-	if ((m->v[m->n] = strdup(src)))
-		m->n++;
+	snprintf(dst, sizeof(dst), "%s/%s", root, rel);
+	m->v[m->n].src = strdup(src);
+	m->v[m->n].dst = strdup(dst);
+	if (!m->v[m->n].src || !m->v[m->n].dst) {
+		free(m->v[m->n].src);
+		free(m->v[m->n].dst);
+		m->broken = true;
+		return;
+	}
+	m->n++;
+}
+
+/* src stays: so does everything in its folder */
+static void move_hold(struct move_list *m, const char *src)
+{
+	const char *b = strrchr(src, '/');
+	char *d;
+
+	if (move_never(src))
+		return;
+	if (m->nheld == m->capheld) {
+		int cap = m->capheld ? m->capheld * 2 : 16;
+		char **v = realloc(m->held, sizeof(*v) * (size_t)cap);
+
+		if (!v) {
+			m->broken = true;
+			return;
+		}
+		m->held = v;
+		m->capheld = cap;
+	}
+	if (!(d = strndup(src, b ? (size_t)(b - src) : 0))) {
+		m->broken = true;
+		return;
+	}
+	m->held[m->nheld++] = d;
+}
+
+static bool move_is_held(const struct move_list *m, const char *src)
+{
+	const char *b = strrchr(src, '/');
+	size_t l = b ? (size_t)(b - src) : 0;
+
+	for (int i = 0; i < m->nheld; i++)
+		if (strlen(m->held[i]) == l && !strncmp(m->held[i], src, l))
+			return true;
+	return false;
+}
+
+/* Deletes one moved source: only a regular file (never a link, which
+ * could point anywhere), only when its copy is there and is not the very
+ * same file (two paths onto one file: a bind mount, a link in the tree). */
+static int move_unlink(const struct move_ent *e)
+{
+	struct stat ss, ds;
+
+	if (lstat(e->src, &ss) != 0)
+		return -errno;
+	if (!S_ISREG(ss.st_mode))
+		return -EINVAL;
+	if (lstat(e->dst, &ds) != 0)
+		return -ENOENT;
+	if (ss.st_dev == ds.st_dev && ss.st_ino == ds.st_ino)
+		return -EEXIST;
+	return unlink(e->src) == 0 ? 0 : -errno;
 }
 
 /* src and <root>/<rel> hold the same bytes (move_games, an item the plan
@@ -1289,9 +1379,14 @@ out:
 
 static void move_free(struct move_list *m)
 {
-	for (int i = 0; i < m->n; i++)
-		free(m->v[i]);
+	for (int i = 0; i < m->n; i++) {
+		free(m->v[i].src);
+		free(m->v[i].dst);
+	}
+	for (int i = 0; i < m->nheld; i++)
+		free(m->held[i]);
 	free(m->v);
+	free(m->held);
 	memset(m, 0, sizeof(*m));
 }
 
@@ -1370,15 +1465,23 @@ static int run_import(struct transfer_plan *p, const struct transfer_import_opts
 			pr->identical++;
 			/* "the same" was decided from the size and the date: before the
 			 * source may go, the bytes must be the same too */
-			if (o->move_games && it->kind == TRANSFER_ROM && same_bytes(it->src, p->dst_root, it->dst))
-				move_add(&mv, it->src);
+			if (o->move_games && it->kind == TRANSFER_ROM) {
+				if (same_bytes(it->src, p->dst_root, it->dst))
+					move_add(&mv, it->src, p->dst_root, it->dst);
+				else
+					move_hold(&mv, it->src);
+			}
 		} else if ((e = copy_item(rootfd, it, r, cancel)) >= 0) {
 			if (e == 1)
 				pr->copied++;
 			/* on the destination now: written, or identical (not kept
 			 * because it differed: the kept counter did not move) */
-			if (o->move_games && it->kind == TRANSFER_ROM && pr->kept == kept_before)
-				move_add(&mv, it->src);
+			if (o->move_games && it->kind == TRANSFER_ROM) {
+				if (pr->kept == kept_before)
+					move_add(&mv, it->src, p->dst_root, it->dst);
+				else
+					move_hold(&mv, it->src);
+			}
 		} else if (e == -ECANCELED) {
 			fatal = e;
 			break;
@@ -1405,22 +1508,37 @@ done:
 		close(rootfd);
 	}
 	/* move_games: the sources go only now, once every copy is on the disk
-	 * (a power cut before leaves a game on both drives, never on neither) */
+	 * (a power cut before leaves a game on both drives, never on neither),
+	 * and only after a run with nothing left behind: no file failed, none
+	 * was kept because it differs, not cancelled or stopped (a game whose
+	 * files did not all arrive stays where it was, whole) */
 	if (mv.n) {
 		struct stat ss, ds;
 
 		sync();
-		if (stat(p->src_root, &ss) == 0 && stat(p->dst_root, &ds) == 0 &&
-		    ss.st_dev == ds.st_dev && ss.st_ino == ds.st_ino) {
+		if (fatal || pr->failed || pr->kept || mv.broken || (cancel && *cancel)) {
+			pr->move_held = mv.n;
+			tr_log("import: move: nothing deleted from %s (%d failed, %d kept%s)", p->src_root,
+			       pr->failed, pr->kept, fatal ? ", stopped" : "");
+		} else if (stat(p->src_root, &ss) == 0 && stat(p->dst_root, &ds) == 0 &&
+			   ss.st_dev == ds.st_dev && ss.st_ino == ds.st_ino) {
+			pr->move_held = mv.n;
 			tr_log("import: move refused, the source is the destination (%s)", p->src_root);
 		} else {
-			for (int i = 0; i < mv.n; i++)
-				if (unlink(mv.v[i]) == 0)
+			for (int i = 0; i < mv.n; i++) {
+				int e = move_is_held(&mv, mv.v[i].src) ? -EBUSY : move_unlink(&mv.v[i]);
+
+				if (e == 0) {
 					pr->moved++;
-				else
-					tr_log("import: move: cannot delete %s: %s", mv.v[i], strerror(errno));
+				} else {
+					pr->move_held++;
+					tr_log("import: move: %s stays: %s", mv.v[i].src,
+					       e == -EBUSY ? "a file of its folder differs" : strerror(-e));
+				}
+			}
 			sync();
-			tr_log("import: moved %d game files (deleted from %s)", pr->moved, p->src_root);
+			tr_log("import: moved %d game files (deleted from %s), %d stay", pr->moved, p->src_root,
+			       pr->move_held);
 		}
 	}
 	move_free(&mv);

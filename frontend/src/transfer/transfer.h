@@ -345,7 +345,11 @@ struct transfer_import_opts {
 	 * > Move games between drives): the game files (roms/, never BIOS,
 	 * saves, themes) that are on the destination at the end (copied, or
 	 * already there identical) are deleted from the source, after
-	 * everything was flushed. A file kept because it differed is not.
+	 * everything was flushed, and only when no file failed or was kept
+	 * because it differed and the run was not cancelled (then nothing is
+	 * deleted). Never gamelist.xml, never a link, never a file that is
+	 * its own copy (same device and inode); a folder with a file whose
+	 * bytes differ keeps all its files (.cue + .bin stay together).
 	 * false (default): a copy. */
 	bool move_games;
 	/* Differing files. "All" answers are remembered separately for saves
@@ -382,6 +386,8 @@ struct transfer_progress {
 	int failed;
 	int conflicts_kept;            /* saves kept (subset of kept) */
 	int moved;                     /* move_games: source files deleted at the end */
+	int move_held;                 /* move_games: game files left on the source (a file
+					* failed or differs, cancelled, a link...) */
 	int err;                       /* negative errno when FAILED */
 	char errmsg[160];              /* human readable, for FAILED / last failure */
 	uint32_t rate_kbs;             /* recent throughput */

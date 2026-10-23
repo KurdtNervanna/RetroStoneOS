@@ -1309,6 +1309,13 @@ static void import_summary(struct progress *p, enum transfer_state st, char *msg
 	/* TRANSLATORS: import summary, last sentence */
 	tail = some_failed ? _("Some files failed.") : "";
 	tfmt(msg, n, "%s%s%s%s%s", head, head[0] ? " " : "", body, tail[0] ? " " : "", tail);
+	if (r->move_held) {
+		size_t o = strlen(msg);
+
+		/* TRANSLATORS: Move games between drives, summary: the games that were not deleted from
+		 * the source (a file failed or differs, or the copy stopped: nothing is lost) */
+		tfmt(msg + o, n - o, " %s", _("Games not moved stay on the source drive too."));
+	}
 }
 
 static void backup_summary(struct progress *p, enum transfer_state st, char *msg, size_t n)

@@ -657,15 +657,20 @@ static void test_import_stick_safety(void)
 
 /* Move between the console's own drives (move_games, Settings > Storage >
  * Move games between drives): the game files that are on the destination at
- * the end leave the source (copied, or there already identical, media too);
- * a differing file kept by the answer stays on both; BIOS files never move;
- * nothing is deleted when the source is the destination. */
+ * the end leave the source (copied, or there already identical, media too),
+ * but only after a run that left nothing behind: a differing file kept by
+ * the answer, a failed file or a cancel delete nothing. BIOS files and
+ * gamelist.xml never move; a folder with a file whose bytes differ keeps
+ * all its files (.cue + .bin together); a link or a file that is its own
+ * copy is never deleted; nothing is deleted when the source is the
+ * destination. */
 static void test_import_move(void)
 {
-	char src[512], dst[512], cmd[1200];
+	char src[512], dst[512], cmd[1200], a[1100], b[1100];
 	struct transfer_plan *p = NULL;
 	struct transfer_import_opts o;
 	struct transfer_progress res;
+	struct stat st;
 	int r;
 
 	pathf(src, sizeof(src), "%s/move-src", g_tmp);
@@ -674,7 +679,7 @@ static void test_import_move(void)
 	put_file(src, "roms/snes/Same.sfc", 1200, 32, 1600000000);           /* identical: moved */
 	put_file(dst, "roms/snes/Same.sfc", 1200, 32, 1600000000);
 	put_file(src, "roms/snes/Differs.sfc", 1000, 33, 1600000000);        /* kept: stays */
-	put_file(dst, "roms/snes/Differs.sfc", 1000, 34, 1600000000);
+	put_file(dst, "roms/snes/Differs.sfc", 1001, 34, 1600000000);     /* (another size) */
 	put_file(src, "roms/snes/media/covers/Zelda.jpg", 300, 35, 1600000000); /* media: moved */
 	put_file(src, "bios/scph5501.bin", 2048, 36, 1600000000);            /* BIOS: never */
 	r = transfer_plan_build(src, dst, &p);
@@ -684,23 +689,110 @@ static void test_import_move(void)
 	transfer_import_defaults(&o);
 	o.move_games = true;
 	o.dup_files = TRANSFER_DUP_SKIP;
+
+	/* 1. a differing file was kept: everything is copied, nothing deleted */
 	r = transfer_import_run(p, &o, NULL, NULL, NULL, &res);
-	CHECK(r == 0 && res.state == TRANSFER_DONE);
-	CHECK(exists(dst, "roms/snes/Zelda.sfc") && !exists(src, "roms/snes/Zelda.sfc"));
-	CHECK(exists(dst, "roms/snes/Same.sfc") && !exists(src, "roms/snes/Same.sfc"));
-	CHECK(exists(dst, "roms/snes/media/covers/Zelda.jpg") && !exists(src, "roms/snes/media/covers/Zelda.jpg"));
+	CHECK(r == 0 && res.state == TRANSFER_DONE && res.kept == 1);
+	CHECK(exists(dst, "roms/snes/Zelda.sfc") && exists(src, "roms/snes/Zelda.sfc"));
+	CHECK(exists(src, "roms/snes/Same.sfc") && exists(src, "roms/snes/media/covers/Zelda.jpg"));
 	CHECK(exists(src, "roms/snes/Differs.sfc") && exists(dst, "roms/snes/Differs.sfc"));
-	CHECK(exists(src, "bios/scph5501.bin"));
-	CHECK(res.moved == 3);
+	CHECK(res.moved == 0 && res.move_held > 0);
 	transfer_plan_free(p);
 	p = NULL;
 
-	/* the source as its own destination: nothing deleted */
+	/* 2. the conflict solved (the source's copy removed by hand): the move
+	 * goes through; gamelist.xml stays; a game folder with a file of the
+	 * same size and date but other bytes stays whole; a source replaced by
+	 * a link after the plan stays */
+	pathf(a, sizeof(a), "%s/roms/snes/Differs.sfc", src);
+	CHECK(unlink(a) == 0);
+	put_file(src, "roms/snes/gamelist.xml", 500, 37, 1600000000);
+	put_file(src, "roms/psx/Game/Game.cue", 100, 38, 1600000000);
+	put_file(src, "roms/psx/Game/Game.bin", 4000, 39, 1600000000);
+	put_file(dst, "roms/psx/Game/Game.bin", 4000, 40, 1600000000);    /* same size and date */
+	put_file(src, "roms/nes/Link.nes", 700, 41, 1600000000);
+	put_file(dst, "roms/nes/Link.nes", 700, 41, 1600000000);
+	r = transfer_plan_build(src, dst, &p);
+	CHECK(r == 0 && p);
+	if (!p)
+		return;
+	pathf(a, sizeof(a), "%s/roms/nes/Link.nes", src);
+	pathf(b, sizeof(b), "%s/roms/nes/Link.nes", dst);
+	CHECK(unlink(a) == 0 && symlink(b, a) == 0);
+	r = transfer_import_run(p, &o, NULL, NULL, NULL, &res);
+	CHECK(r == 0 && res.state == TRANSFER_DONE && res.kept == 0 && res.failed == 0);
+	CHECK(exists(dst, "roms/snes/Zelda.sfc") && !exists(src, "roms/snes/Zelda.sfc"));
+	CHECK(exists(dst, "roms/snes/Same.sfc") && !exists(src, "roms/snes/Same.sfc"));
+	CHECK(exists(dst, "roms/snes/media/covers/Zelda.jpg") && !exists(src, "roms/snes/media/covers/Zelda.jpg"));
+	CHECK(exists(src, "roms/snes/gamelist.xml"));
+	CHECK(exists(src, "roms/psx/Game/Game.cue") && exists(src, "roms/psx/Game/Game.bin"));
+	CHECK(lstat(a, &st) == 0 && S_ISLNK(st.st_mode) && exists(dst, "roms/nes/Link.nes"));
+	CHECK(exists(src, "bios/scph5501.bin"));
+	CHECK(res.moved == 3 && res.move_held >= 2);
+	transfer_plan_free(p);
+	p = NULL;
+	CHECK(unlink(a) == 0);
+
+	/* 3. a failed file (its destination folder is a file): nothing deleted */
+	put_file(src, "roms/gba/Fail.gba", 900, 42, 1600000000);
+	put_file(src, "roms/snes/Ok.sfc", 900, 43, 1600000000);
+	put_file(dst, "roms/gba", 10, 44, 1600000000);
+	r = transfer_plan_build(src, dst, &p);
+	CHECK(r == 0 && p);
+	if (p) {
+		r = transfer_import_run(p, &o, NULL, NULL, NULL, &res);
+		CHECK(res.failed > 0 && res.moved == 0);
+		CHECK(exists(src, "roms/gba/Fail.gba") && exists(src, "roms/snes/Ok.sfc"));
+		transfer_plan_free(p);
+		p = NULL;
+	}
+	pathf(a, sizeof(a), "%s/roms/gba", dst);
+	CHECK(unlink(a) == 0);
+
+	/* 4. cancelled after an identical file (on the move list) and during a
+	 * copy: nothing deleted */
+	put_file(src, "roms/n64/A.z64", 1000, 45, 1600000000);
+	put_file(dst, "roms/n64/A.z64", 1000, 45, 1600000000);
+	put_file(src, "roms/n64/B.z64", 3 << 20, 46, 1600000000);
+	r = transfer_plan_build(src, dst, &p);
+	CHECK(r == 0 && p);
+	if (p) {
+		g_cancel = 0;
+		r = transfer_import_run(p, &o, cancel_cb, NULL, &g_cancel, &res);
+		CHECK(res.state == TRANSFER_CANCELLED && res.moved == 0);
+		CHECK(exists(src, "roms/n64/A.z64") && exists(src, "roms/n64/B.z64"));
+		CHECK(exists(src, "roms/gba/Fail.gba") && exists(src, "roms/snes/Ok.sfc"));
+		transfer_plan_free(p);
+		p = NULL;
+		g_cancel = 0;
+	}
+
+	/* 5. a source that is its own copy (the same inode: a hard link here,
+	 * a bind mount or a linked folder on a console): kept */
+	pathf(a, sizeof(a), "%s/roms/n64/A.z64", src);
+	pathf(b, sizeof(b), "%s/roms/n64/A.z64", dst);
+	CHECK(unlink(b) == 0 && link(a, b) == 0);
+	pathf(b, sizeof(b), "%s/roms/n64/B.z64", dst);
+	unlink(b);
+	pathf(a, sizeof(a), "%s/roms/n64/B.z64", src);
+	CHECK(unlink(a) == 0);
+	r = transfer_plan_build(src, dst, &p);
+	CHECK(r == 0 && p);
+	if (p) {
+		r = transfer_import_run(p, &o, NULL, NULL, NULL, &res);
+		CHECK(res.state == TRANSFER_DONE && res.failed == 0 && res.kept == 0);
+		CHECK(exists(src, "roms/n64/A.z64") && res.move_held >= 1);
+		CHECK(!exists(src, "roms/snes/Ok.sfc") && exists(dst, "roms/snes/Ok.sfc"));
+		transfer_plan_free(p);
+		p = NULL;
+	}
+
+	/* 6. the source as its own destination: nothing deleted */
 	r = transfer_plan_build(src, src, &p);
 	CHECK(r == 0 && p);
 	if (p) {
 		r = transfer_import_run(p, &o, NULL, NULL, NULL, &res);
-		CHECK(res.moved == 0 && exists(src, "roms/snes/Differs.sfc"));
+		CHECK(res.moved == 0 && exists(src, "roms/n64/A.z64"));
 		transfer_plan_free(p);
 	}
 	pathf(cmd, sizeof(cmd), "rm -rf '%s' '%s'", src, dst);
