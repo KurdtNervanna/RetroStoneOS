@@ -64,6 +64,7 @@ int coreinfo_load(struct core_info *ci, const char *dir, const char *id)
 	copy_val(&ci->ini, "core", "default_systems", ci->default_systems, sizeof(ci->default_systems));
 	ci->need_fullpath = ini_get_bool(&ci->ini, "core", "need_fullpath", false);
 	ci->block_extract = ini_get_bool(&ci->ini, "core", "block_extract", false);
+	ci->force_extract = ini_get_bool(&ci->ini, "core", "force_extract", false);
 	ci->savestates = ini_get_bool(&ci->ini, "core", "savestates", true);
 	ci->experimental = ini_get_bool(&ci->ini, "core", "experimental", false);
 	ci->no_content = ini_get_bool(&ci->ini, "core", "no_content", false);
@@ -125,6 +126,8 @@ const char *system_display_name(const char *system)
 		{ "scummvm", "ScummVM" }, { "c64", "Commodore 64" }, { "zxspectrum", "ZX Spectrum" },
 		{ "amstradcpc", "Amstrad CPC" }, { "pico8", "PICO-8" }, { "doom", "Doom" },
 		{ "cavestory", "Cave Story" },
+		/* atari800 core: one core, two folders (docs/cores.md) */
+		{ "atari800", "Atari 800" }, { "atari5200", "Atari 5200" },
 	};
 
 	if (!system || !*system)
@@ -378,6 +381,7 @@ static const char *const default_cores[][2] = {
 	{ "supergrafx", "mednafen_supergrafx" }, { "pokemini", "pokemini" }, { "dos", "dosbox_pure" },
 	{ "scummvm", "scummvm" }, { "c64", "vice_x64" }, { "zxspectrum", "fuse" }, { "amstradcpc", "cap32" },
 	{ "pico8", "fake08" }, { "doom", "prboom" }, { "cavestory", "nxengine" },
+	{ "atari800", "atari800" }, { "atari5200", "atari800" },
 	/* The one documented exception to "never an experimental default":
 	 * neocd has no other core (docs/cores.md). */
 	{ "neocd", "geolith" },

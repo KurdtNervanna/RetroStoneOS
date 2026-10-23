@@ -1,0 +1,20 @@
+config BR2_PACKAGE_LIBRETRO_ATARI800
+	bool "libretro-atari800"
+	depends on BR2_PACKAGE_RSOS_LIBRETRO_ARCH_SUPPORTS # package/libretro-common.mk
+	depends on !BR2_STATIC_LIBS # shared object loaded with dlopen()
+	help
+	  Atari800 7.0.0: Atari 400/800, XL/XE and XEGS computers and
+	  the Atari 5200 console, built as a libretro core (GPL-2.0+).
+	  The Altirra OS, 5200 OS and BASIC replacement ROMs are built
+	  in, so every original ROM is optional. Has its own on-screen
+	  keyboard.
+
+	  Installs /usr/lib/libretro/atari800_libretro.so and
+	  /usr/share/rsos/cores/atari800.ini. ROM folders: atari800,
+	  atari5200.
+
+	  https://github.com/libretro/libretro-atari800
+
+comment "libretro-atari800 needs a toolchain w/ dynamic library"
+	depends on BR2_PACKAGE_RSOS_LIBRETRO_ARCH_SUPPORTS
+	depends on BR2_STATIC_LIBS

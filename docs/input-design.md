@@ -55,6 +55,9 @@ a Settings switch "Extra C/Z buttons fitted" (default off) enables the 6-button 
 - **Arcade 6-button games** (Street Fighter II and similar, in FBNeo/MAME 2003-Plus): the same 6-button face gives LP/MP/HP on the top row and
   LK/MK/HK on the bottom row. It's shipped as the default for the `arcade`/`fbneo` systems, and set per game where needed.
 - **Neo Geo** (4 buttons A/B/C/D): the default follows the physical layout of the MVS/AES arcade panel.
+- **Atari 800 / 5200** (atari800 core): A fires (on the computers B fires too; on the 5200 B is the second button),
+  R2 opens the core's on-screen keyboard (its own button is L3/R3, the C/Z buttons); details in docs/cores.md
+  "Atari 800 and 5200".
 - **SNES/GBA/GB/NES/PS1**: identity (positional). C/Z are free, and could become turbo buttons later (P2).
 - **N64**: see §1c.
 

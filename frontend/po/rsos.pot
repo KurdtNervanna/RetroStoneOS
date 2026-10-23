@@ -45,27 +45,27 @@ msgid "Cannot read the game file (%s)"
 msgstr ""
 
 #. TRANSLATORS: start of "<system> needs <BIOS file> in /bios" when the system is unknown
-#: src/host/coreinfo.c:132
+#: src/host/coreinfo.c:135
 msgid "This system"
 msgstr ""
 
 #. TRANSLATORS: warning shown by the menu before a game starts:
 #. "PS1: scph5501.bin is not the expected BIOS dump"
-#: src/host/coreinfo.c:235
+#: src/host/coreinfo.c:238
 #, c-format
 msgid "%s: %s is not the expected BIOS dump"
 msgstr ""
 
 #. TRANSLATORS: the last two of a list of BIOS files the user
 #. can choose from: "bios_CD_U.bin, bios_CD_E.bin or bios_CD_J.bin"
-#: src/host/coreinfo.c:252
+#: src/host/coreinfo.c:255
 #, c-format
 msgid "%s or %s"
 msgstr ""
 
 #. TRANSLATORS: error shown by the menu instead of starting the game:
 #. "PS1 needs scph5501.bin in /bios" (system, BIOS file(s), folder)
-#: src/host/coreinfo.c:267
+#: src/host/coreinfo.c:270
 #, c-format
 msgid "%s needs %s in %s"
 msgstr ""
@@ -75,181 +75,181 @@ msgstr ""
 msgid "Powering off..."
 msgstr ""
 
-#: src/host/host.c:752
+#: src/host/host.c:759
 msgid "Player 1 controller disconnected: paused"
 msgstr ""
 
 #. TRANSLATORS: toast; %s is the controller's name
-#: src/host/host.c:759 src/ui/ui.c:1223
+#: src/host/host.c:766 src/ui/ui.c:1223
 #, c-format
 msgid "Player 1: %s"
 msgstr ""
 
-#: src/host/host.c:796
+#: src/host/host.c:803
 msgid "Saving..."
 msgstr ""
 
-#: src/host/host.c:819
+#: src/host/host.c:826
 msgid "This game cannot save a state now"
 msgstr ""
 
 #. TRANSLATORS: toast; %s is the system's English error text
-#: src/host/host.c:822
+#: src/host/host.c:829
 #, c-format
 msgid "State NOT saved: %s"
 msgstr ""
 
-#: src/host/host.c:831
+#: src/host/host.c:838
 #, c-format
 msgid "State loaded, slot %d"
 msgstr ""
 
-#: src/host/host.c:833
+#: src/host/host.c:840
 #, c-format
 msgid "No state in slot %d"
 msgstr ""
 
-#: src/host/host.c:835
+#: src/host/host.c:842
 #, c-format
 msgid "Cannot load the state of slot %d"
 msgstr ""
 
-#: src/host/host.c:843
+#: src/host/host.c:850
 #, c-format
 msgid "State slot %d"
 msgstr ""
 
 #. TRANSLATORS: toast after Select+Left/Right: the slot holds no state
-#: src/host/host.c:846
+#: src/host/host.c:853
 #, c-format
 msgid "State slot %d (empty)"
 msgstr ""
 
-#: src/host/host.c:956
+#: src/host/host.c:963
 msgid "No picture to save yet"
 msgstr ""
 
 #. TRANSLATORS: toast after Select+L2
-#: src/host/host.c:989
+#: src/host/host.c:996
 msgid "Screenshot saved"
 msgstr ""
 
-#: src/host/host.c:992
+#: src/host/host.c:999
 msgid "Screenshot NOT saved"
 msgstr ""
 
 #. TRANSLATORS: toast after Select+Y when no other game was played yet
-#: src/host/host.c:1007
+#: src/host/host.c:1014
 msgid "No other game played recently"
 msgstr ""
 
 #. TRANSLATORS: toast: the game was reset (Select+B)
-#: src/host/host.c:1073 src/host/menu.c:571
+#: src/host/host.c:1080 src/host/menu.c:571
 msgctxt "toast"
 msgid "Reset"
 msgstr ""
 
 #. TRANSLATORS: toast; %s is the controller's name
-#: src/host/host.c:1091
+#: src/host/host.c:1098
 #, c-format
 msgid "Connected: %s"
 msgstr ""
 
 #. TRANSLATORS: shown 10 s before the automatic power-off (no input
 #. for the time set in Settings > Power); any button cancels it
-#: src/host/host.c:1286 src/ui/ui.c:1695 src/ui/ui.c:1702
+#: src/host/host.c:1293 src/ui/ui.c:1695 src/ui/ui.c:1702
 msgid "Powering off in 10 s — press any button to cancel"
 msgstr ""
 
-#: src/host/host.c:1368
+#: src/host/host.c:1375
 msgid "Battery empty: game saved"
 msgstr ""
 
-#: src/host/host.c:1373
+#: src/host/host.c:1380
 #, c-format
 msgid "Battery low (%d%%)"
 msgstr ""
 
 #. TRANSLATORS: in-game menu > Benchmark, value of the "Runs" row
 #. (right half of a 640 px row: keep it short)
-#: src/host/host.c:1720
+#: src/host/host.c:1727
 #, c-format
 msgid "%d setting, about %d min"
 msgid_plural "%d settings, about %d min"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/host/host.c:1749
+#: src/host/host.c:1756
 msgid "No benchmark for this system"
 msgstr ""
 
-#: src/host/host.c:1778
+#: src/host/host.c:1785
 msgid "Benchmark: this game cannot save a state now"
 msgstr ""
 
-#: src/host/host.c:1794
+#: src/host/host.c:1801
 #, c-format
 msgid "Benchmark: cannot write %s"
 msgstr ""
 
-#: src/host/host.c:2002
+#: src/host/host.c:2009
 msgid "No result to use"
 msgstr ""
 
 #. TRANSLATORS: %s is a benchmark configuration id ("glide-640")
-#: src/host/host.c:2008
+#: src/host/host.c:2015
 #, c-format
 msgid "Unknown configuration %s"
 msgstr ""
 
 #. TRANSLATORS: %s is the system's English error text
-#: src/host/host.c:2017
+#: src/host/host.c:2024
 #, c-format
 msgid "Could not save: %s"
 msgstr ""
 
 #. TRANSLATORS: %s is a benchmark configuration id ("glide-640")
-#: src/host/host.c:2022
+#: src/host/host.c:2029
 #, c-format
 msgid "Saved \"%s\" for this game (applies next start)"
 msgstr ""
 
 #. TRANSLATORS: configuration id, then the core's name ("mupen64plus_next")
-#: src/host/host.c:2026
+#: src/host/host.c:2033
 #, c-format
 msgid "Saved \"%s\": next start uses %s"
 msgstr ""
 
-#: src/host/host.c:2094
+#: src/host/host.c:2101
 msgid "The emulator stopped responding"
 msgstr ""
 
-#: src/host/host.c:2422
+#: src/host/host.c:2429
 msgid "Cannot load the emulator core"
 msgstr ""
 
-#: src/host/host.c:2439
+#: src/host/host.c:2446
 msgid "Benchmark: bad plan"
 msgstr ""
 
-#: src/host/host.c:2443
+#: src/host/host.c:2450
 msgid "Cannot start the save thread"
 msgstr ""
 
-#: src/host/host.c:2488
+#: src/host/host.c:2495
 msgid "Cannot open the display"
 msgstr ""
 
-#: src/host/host.c:2513
+#: src/host/host.c:2520
 msgid "This core needs a game file"
 msgstr ""
 
-#: src/host/host.c:2520
+#: src/host/host.c:2527
 msgid "The emulator could not load this game"
 msgstr ""
 
 #. TRANSLATORS: toast: the game continues from the resume state
-#: src/host/host.c:2572 src/host/host.c:2579
+#: src/host/host.c:2579 src/host/host.c:2586
 msgid "Resumed"
 msgstr ""
 
@@ -2823,82 +2823,92 @@ msgctxt "system"
 msgid "Atari 2600"
 msgstr ""
 
-#: src/ui/systems.c:50 src/ui/transfer_ui.c:53
+#: src/ui/systems.c:50
+msgctxt "system"
+msgid "Atari 5200"
+msgstr ""
+
+#: src/ui/systems.c:51 src/ui/transfer_ui.c:53
 msgctxt "system"
 msgid "Atari 7800"
 msgstr ""
 
-#: src/ui/systems.c:51 src/ui/transfer_ui.c:54
+#: src/ui/systems.c:52 src/ui/transfer_ui.c:54
 msgctxt "system"
 msgid "Lynx"
 msgstr ""
 
-#: src/ui/systems.c:52 src/ui/transfer_ui.c:59
+#: src/ui/systems.c:53 src/ui/transfer_ui.c:59
 msgctxt "system"
 msgid "ColecoVision"
 msgstr ""
 
-#: src/ui/systems.c:54 src/ui/transfer_ui.c:67
+#: src/ui/systems.c:55
+msgctxt "system"
+msgid "Atari 800"
+msgstr ""
+
+#: src/ui/systems.c:56 src/ui/transfer_ui.c:67
 msgctxt "system"
 msgid "Commodore 64"
 msgstr ""
 
-#: src/ui/systems.c:55 src/ui/transfer_ui.c:68
+#: src/ui/systems.c:57 src/ui/transfer_ui.c:68
 msgctxt "system"
 msgid "ZX Spectrum"
 msgstr ""
 
-#: src/ui/systems.c:56 src/ui/transfer_ui.c:60
+#: src/ui/systems.c:58 src/ui/transfer_ui.c:60
 msgctxt "system"
 msgid "MSX"
 msgstr ""
 
-#: src/ui/systems.c:57 src/ui/transfer_ui.c:69
+#: src/ui/systems.c:59 src/ui/transfer_ui.c:69
 msgctxt "system"
 msgid "Amstrad CPC"
 msgstr ""
 
-#: src/ui/systems.c:58 src/ui/transfer_ui.c:70
+#: src/ui/systems.c:60 src/ui/transfer_ui.c:70
 msgctxt "system"
 msgid "MS-DOS"
 msgstr ""
 
-#: src/ui/systems.c:59 src/ui/transfer_ui.c:71
+#: src/ui/systems.c:61 src/ui/transfer_ui.c:71
 msgctxt "system"
 msgid "ScummVM"
 msgstr ""
 
-#: src/ui/systems.c:60
+#: src/ui/systems.c:62
 msgctxt "system"
 msgid "Arcade"
 msgstr ""
 
-#: src/ui/systems.c:61
+#: src/ui/systems.c:63
 msgctxt "system"
 msgid "FinalBurn Neo"
 msgstr ""
 
-#: src/ui/systems.c:62 src/ui/transfer_ui.c:64
+#: src/ui/systems.c:64 src/ui/transfer_ui.c:64
 msgctxt "system"
 msgid "Neo Geo"
 msgstr ""
 
-#: src/ui/systems.c:63 src/ui/transfer_ui.c:61
+#: src/ui/systems.c:65 src/ui/transfer_ui.c:61
 msgctxt "system"
 msgid "Neo Geo CD"
 msgstr ""
 
-#: src/ui/systems.c:65 src/ui/transfer_ui.c:72
+#: src/ui/systems.c:67 src/ui/transfer_ui.c:72
 msgctxt "system"
 msgid "PICO-8"
 msgstr ""
 
-#: src/ui/systems.c:66 src/ui/transfer_ui.c:73
+#: src/ui/systems.c:68 src/ui/transfer_ui.c:73
 msgctxt "system"
 msgid "Doom"
 msgstr ""
 
-#: src/ui/systems.c:67 src/ui/transfer_ui.c:74
+#: src/ui/systems.c:69 src/ui/transfer_ui.c:74
 msgctxt "system"
 msgid "Cave Story"
 msgstr ""

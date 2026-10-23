@@ -721,14 +721,21 @@ static unsigned pick_port_device(int port, bool analog)
 static void update_ports(bool initial)
 {
 	bool n64 = !strcasecmp(H.system, "n64");
+	/* "rsos-port-device = core" (the core .ini's [options], e.g. atari800):
+	 * the core keeps the controller it chose itself (libretro: a RetroPad
+	 * is assumed when the frontend sets none). */
+	const char *pd = opts_value("rsos-port-device");
+	bool core_picks = pd && !strcasecmp(pd, "core");
 
+	if (initial && core_picks)
+		hlog(HLOG_INFO, "ports: the core chooses its controllers (rsos-port-device = core)");
 	for (int p = 0; p < HOST_MAX_PORTS; p++) {
 		struct input_port_info pi;
 		unsigned dev;
 
 		hin_port_info(p, &pi);
 		dev = pick_port_device(p, pi.connected && pi.has_analog);
-		if (initial || dev != H.port_device[p]) {
+		if (!core_picks && (initial || dev != H.port_device[p])) {
 			H.core.set_controller_port_device((unsigned)p, dev);
 			if (!initial || dev != RETRO_DEVICE_JOYPAD)
 				hlog(HLOG_INFO, "port %d: device 0x%x (%s)", p + 1, dev, pi.connected ? pi.name : "none");
@@ -2434,7 +2441,7 @@ int host_run(const struct host_config *cfg)
 
 	op.ship_dir = cfg->coreopts_ship;
 	op.user_dir = cfg->coreopts_user;
-	opts_init(H.core_id, H.game, &H.info.ini, &op);
+	opts_init(H.core_id, H.system, H.game, &H.info.ini, &op);
 	if (cfg->bench_step >= 0 && bench_step_setup() < 0) {
 		ret = fail(HOST_EXIT_FAIL, N_("Benchmark: bad plan"));
 		goto out_opts;

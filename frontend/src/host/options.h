@@ -7,7 +7,8 @@
  *   4. /data/rsos/coreopts/<core>/<game>.ini   per game   (user, in-game menu)
  *   3. /data/rsos/coreopts/<core>.ini          per system (user, in-game menu)
  *   2. /usr/share/rsos/coreopts/<core>.ini     RetroStone defaults (shipped)
- *   1. [options] of /usr/share/rsos/cores/<core>.ini (core package defaults)
+ *   1. [options] of /usr/share/rsos/cores/<core>.ini (core package defaults),
+ *      overridden by its [options.<system>] for the ROM folder being played
  *   0. the core's own default
  *
  * Files use `key = "value"` (RetroArch .opt syntax, unquoted accepted). A
@@ -45,7 +46,9 @@ struct opts_paths {
 	const char *user_dir;  /* /data/rsos/coreopts */
 };
 
-void opts_init(const char *core_id, const char *game, const struct ini *core_ini,
+/* system: the ROM folder (H.system), selects [options.<system>]; NULL or ""
+ * for none. */
+void opts_init(const char *core_id, const char *system, const char *game, const struct ini *core_ini,
 	       const struct opts_paths *paths);
 void opts_free(void);
 

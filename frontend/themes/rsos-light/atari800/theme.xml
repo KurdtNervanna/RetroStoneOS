@@ -1,0 +1,10 @@
+<!-- RetroStoneOS rsos-light: atari800 sets its accent color, icon (_art/icon-atari800.svg, RetroStoneOS original art) and tagline. -->
+<theme>
+	<formatVersion>7</formatVersion>
+	<variables>
+		<accent>c8742c</accent>
+		<icon>icon-atari800</icon>
+		<tagline>Atari · 1979</tagline>
+	</variables>
+	<include>./../theme.xml</include>
+</theme>
