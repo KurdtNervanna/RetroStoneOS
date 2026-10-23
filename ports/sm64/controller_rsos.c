@@ -4,7 +4,7 @@
  *
  * The console's controls are three evdev devices: "RetroStone2 Buttons"
  * (face buttons, D-pad, Start/Select), "RetroStone2 Shoulder Buttons" (L1,
- * R1, L2, R2) and the optional analog stick (adc-joystick). They are read
+ * R1, L2, R2) and the optional analog stick ("analog-stick"). They are read
  * here together, straight from /dev/input; controller_sdl leaves them
  * alone (it would see three separate pads) and keeps USB pads.
  *
@@ -66,8 +66,11 @@ static void controller_rsos_init(void) {
         if (fd < 0) {
             continue;
         }
+        /* the buttons are "RetroStone2 ...", the stick (adc-joystick) is
+         * named after its device tree node, as in the menu's board.ini */
         if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) < 0 ||
-            strncmp(name, "RetroStone2", 11) != 0 || strstr(name, "Brightness") != NULL) {
+            (strcmp(name, "analog-stick") != 0 &&
+             (strncmp(name, "RetroStone2", 11) != 0 || strstr(name, "Brightness") != NULL))) {
             close(fd);
             continue;
         }
@@ -90,14 +93,44 @@ static void controller_rsos_init(void) {
     closedir(d);
 }
 
-/* -1..1 from an axis, 0 in the dead zone or out of range (no stick fitted:
- * the ADC inputs float above the range) */
+static bool axis_in_range(int v, const struct input_absinfo *a, bool near_centre) {
+    int lo = a->minimum < a->maximum ? a->minimum : a->maximum;
+    int hi = a->minimum < a->maximum ? a->maximum : a->minimum;
+
+    if (near_centre) {
+        return abs(v - (lo + (hi - lo) / 2)) <= (hi - lo) / 4;
+    }
+    return v >= lo && v <= hi;
+}
+
+/*
+ * Fitted or not, as the menu decides (input.c): a reading out of range means
+ * no stick (the ADC inputs float above it); fitted again only once both axes
+ * read near the centre (floating inputs can wander into the range near an
+ * edge and would hold a direction).
+ */
+static bool stick_fitted(const struct rsos_dev *sd) {
+    static bool fitted;
+
+    if (!axis_in_range(abs_x, &sd->ax, false) || !axis_in_range(abs_y, &sd->ay, false)) {
+        if (fitted) {
+            fprintf(stderr, "controller_rsos: analog stick reads %d, %d: not fitted\n", abs_x, abs_y);
+        }
+        fitted = false;
+    } else if (!fitted && axis_in_range(abs_x, &sd->ax, true) && axis_in_range(abs_y, &sd->ay, true)) {
+        fprintf(stderr, "controller_rsos: analog stick fitted (%d, %d)\n", abs_x, abs_y);
+        fitted = true;
+    }
+    return fitted;
+}
+
+/* -1..1 from an axis, 0 in the dead zone */
 static float stick_axis(int v, const struct input_absinfo *a) {
     int lo = a->minimum < a->maximum ? a->minimum : a->maximum;
     int hi = a->minimum < a->maximum ? a->maximum : a->minimum;
     float half = (hi - lo) / 2.0f, f;
 
-    if (v < lo || v > hi || half <= 0) {
+    if (half <= 0) {
         return 0;
     }
     f = (v - (lo + half)) / half;
@@ -138,7 +171,7 @@ static void controller_rsos_read(OSContPad *pad) {
     if (keys[BTN_TR2]) pad->button |= D_CBUTTONS;
 
     /* the analog stick, when fitted and moved */
-    if (sd != NULL) {
+    if (sd != NULL && stick_fitted(sd)) {
         float fx = stick_axis(abs_x, &sd->ax), fy = stick_axis(abs_y, &sd->ay);
 
         if (fx != 0 || fy != 0) {
