@@ -353,7 +353,8 @@ nes, `sg-1000` -> sg1000, `sms`/`ms` -> mastersystem, `gg` -> gamegear,
 `32x`/`THIRTYTWOX` -> sega32x, `megacd` -> segacd, `ps`/`ps1` -> psx,
 `pce`/`tg16` -> pcengine, `pce-cd`/`tg-cd` -> pcenginecd, `mame`/`mame-libretro`/`mame2003`/
 `mame2003-plus` -> arcade, `fba`/`fbalpha` -> fbneo, `wswan`/`wswanc` -> wonderswan/wonderswancolor,
-`lynx` -> atarilynx, `colecovision` -> coleco, `msx2` -> msx, `neogeocd` -> neocd, `Game Boy (GB)` -> gb...
+`lynx` -> atarilynx, `colecovision` -> coleco, `msx2` -> msx, `neogeocd` -> neocd, `Game Boy (GB)` -> gb,
+`a5200`/`FIFTYTWOHUNDRED` -> atari5200, `a800`/`atarixl`/`atarixe`/`atari8bit`/`EIGHTHUNDRED` -> atari800...
 Every system of the carousel has an entry (`make check-transfer` compares `sysmap.c` with
 `src/ui/systems.c`). Folders with no
 match (e.g. `dreamcast`) are listed as "not supported" with their file count.

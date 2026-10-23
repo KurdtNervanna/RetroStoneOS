@@ -12,8 +12,9 @@ Where things go
       nes  fds  snes  n64  gb  gbc  gba  pokemini
       sg1000  mastersystem  megadrive  segacd  sega32x  pico  gamegear
       psx  pcengine  pcenginecd  supergrafx  ngp  ngpc
-      wonderswan  wonderswancolor  atari2600  atari7800  atarilynx
-      coleco  msx  c64  zxspectrum  amstradcpc  dos  scummvm
+      wonderswan  wonderswancolor  atari2600  atari5200  atari7800
+      atarilynx  coleco  atari800  msx  c64  zxspectrum  amstradcpc
+      dos  scummvm
       pico8  doom  cavestory  neocd
       arcade   (MAME 2003-Plus = MAME 0.78 romsets, .zip)
       fbneo    (FinalBurn Neo romsets, .zip)

@@ -185,6 +185,7 @@ BR2_PACKAGE_LIBRETRO_FUSE=y
 BR2_PACKAGE_LIBRETRO_CAP32=y
 BR2_PACKAGE_LIBRETRO_POKEMINI=y
 BR2_PACKAGE_LIBRETRO_VICE=y
+BR2_PACKAGE_LIBRETRO_ATARI800=y
 
 # SMB share \RETROSTONE (in-kernel ksmbd): never started at boot. Not wired
 # yet: the frontend will start it on demand (docs/rom-transfer.md 3.3,

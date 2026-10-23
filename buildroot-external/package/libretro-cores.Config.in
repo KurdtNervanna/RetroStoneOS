@@ -55,5 +55,7 @@ source "$BR2_EXTERNAL_RETROSTONE_PATH/package/libretro-fuse/Config.in"
 source "$BR2_EXTERNAL_RETROSTONE_PATH/package/libretro-cap32/Config.in"
 source "$BR2_EXTERNAL_RETROSTONE_PATH/package/libretro-pokemini/Config.in"
 source "$BR2_EXTERNAL_RETROSTONE_PATH/package/libretro-vice/Config.in"
+# Atari 400/800/XL/XE and 5200: one core, two ROM folders (docs/cores.md)
+source "$BR2_EXTERNAL_RETROSTONE_PATH/package/libretro-atari800/Config.in"
 
 endmenu

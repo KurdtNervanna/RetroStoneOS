@@ -1,0 +1,10 @@
+<!-- RetroStoneOS rsos-light: atari5200 sets its accent color, icon (_art/icon-atari5200.svg, RetroStoneOS original art) and tagline. -->
+<theme>
+	<formatVersion>7</formatVersion>
+	<variables>
+		<accent>9c6b3c</accent>
+		<icon>icon-atari5200</icon>
+		<tagline>Atari · 1982</tagline>
+	</variables>
+	<include>./../theme.xml</include>
+</theme>

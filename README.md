@@ -83,9 +83,9 @@ layer cake, and every setting lives in one menu.
 | NEC | PC Engine/TurboGrafx-16, PC Engine CD, SuperGrafx |
 | SNK | Neo Geo, Neo Geo CD, Neo Geo Pocket (Color) |
 | Arcade | MAME 2003-Plus, FinalBurn Neo |
-| Computers | MS-DOS (DOSBox Pure), Commodore 64, ZX Spectrum, Amstrad CPC, MSX |
+| Computers | MS-DOS (DOSBox Pure), Commodore 64, ZX Spectrum, Amstrad CPC, MSX, Atari 400/800/XL/XE |
 | Game engines and ports | ScummVM, Doom (Freedoom included), Cave Story, PICO-8 (fake-08) |
-| Others | Atari 2600/7800/Lynx, WonderSwan (Color), ColecoVision |
+| Others | Atari 2600/5200/7800/Lynx, WonderSwan (Color), ColecoVision |
 
 Pre-installed games, so the console is fun out of the box: the **RetroStone** system (Bomber Mole, Leady Squid, Duck Parade, Blueberry Tumble, Beaver Rush, Pancake Tower and Pogo Mamie),
 **µCity** (Game Boy Color, GPL-3.0+ / CC BY-SA 4.0) and **Freedoom** (Doom, BSD-3-Clause); see

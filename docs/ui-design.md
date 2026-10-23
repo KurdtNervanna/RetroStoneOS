@@ -403,7 +403,7 @@ Lookup per system, as ES: `<rom folder>/theme.xml`, then `<set>/<theme folder>/t
 system (e.g. `megadrive`, `genesis`; `fbneo`, `fba`, `arcade`), then (ours, not ES) the folder of a related
 console for systems many sets lack (`pcenginecd`→`pcengine`/`tg16`, `neocd`→`neogeo`,
 `wonderswancolor`→`wonderswan`, `ngpc`→`ngp`, `gbc`→`gb`, `pico`/`segacd`/`sega32x`→`megadrive`/`genesis`,
-`neogeo`→`fba`/`arcade`, `atari7800`→`atari2600`; table in `theme/theme.c`), then `<set>/theme.xml`. Collections use
+`neogeo`→`fba`/`arcade`, `atari7800`/`atari5200`→`atari2600`, `atari800`→`atarist`/`atari2600`; table in `theme/theme.c`), then `<set>/theme.xml`. Collections use
 `auto-favorites` / `auto-lastplayed`. Parse order per file, as ES: `<variables>` (first definition wins),
 `<include>` (recursive, relative to the including file), `<resolution>`, `<view>`, `<feature supported="...">`
 (all features accepted). View and element `name` lists (`"basic, detailed"`) are split on spaces/commas. Paths: `./`
@@ -487,7 +487,7 @@ Licence: `themes/rsos-{dark,light}/LICENSE.txt` (the Carbon art CC BY-NC-SA, the
 | supergrafx, zxspectrum (Sinclair wordmark removed), amstradcpc, c64, scummvm | Carbon's own art for that system (third batch of cores, docs/cores.md) |
 | dos → `pc` | Carbon's art (Carbon's folder name) |
 | doom, cavestory → `ports` | alias (Carbon's "ports" keyboard art; it has no art for them) |
-| pico8 → `icon-pico8`, pokemini → `icon-pokemini` | our own icons (`_art/`, project licence; Carbon has no art for them) |
+| pico8 → `icon-pico8`, pokemini → `icon-pokemini`, atari800 → `icon-atari800`, atari5200 → `icon-atari5200` | our own icons (`_art/`, project licence; Carbon has no art for them in this tree) |
 | retrostone → `icon-retrostone` | the stones of the RetroStone2 logo as pixel art (`_art/`, 8BCraft; docs/vc-games.md) |
 | auto-favorites, auto-lastplayed, auto-allgames | Carbon's collection folders (star, clock, grid) |
 | anything else | our `icon-console.svg` |
@@ -523,6 +523,8 @@ to the default, then to the first theme found. The default stays `rsos-dark` (pr
   arcade systems, then PICO-8 and the ports Doom and Cave Story; folders `pc`/`msdos` are read as `dos`, `sgfx` as
   `supergrafx`, `spectrum`/`zx`, `cpc`/`amstrad`, `prboom`, `nxengine`; `host/coreinfo.c` and `transfer/sysmap.c`
   know the same names); the transfer module's table also has `pico`. Preview `b2-fr-carousel-new-systems.png`.
+  0.1.4 added the Atari 5200 after the 2600 and the Atari 800 first of the computers (one core, docs/cores.md
+  "Atari 800 and 5200").
 - **Scan**: extensions from every core of the system, plus `.zip/.7z` for cores that do not use archives
   themselves (the host extracts); `.cue` tracks and `.m3u` discs are hidden behind their playlist; hidden files,
   macOS `._*`/`.DS_Store`/`.Trashes`/`.fseventsd`/`.Spotlight-V100` and Windows `System Volume Information`,

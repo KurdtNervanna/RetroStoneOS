@@ -45,6 +45,11 @@ static const struct sysmap g_sys[] = {
 	/* second batch of cores (docs/cores.md): missing here until 0.1.4, so
 	 * an import listed these folders as "not supported" */
 	{ "atari7800", "Atari 7800", { "a7800", "7800", NULL } },
+	/* one core (atari800), two folders: the 5200 console and the 8-bit
+	 * computers (RetroPie/Batocera: atari5200, atari800; Onion/MinUI tags) */
+	{ "atari5200", "Atari 5200", { "a5200", "5200", "fiftytwohundred", NULL } },
+	{ "atari800", "Atari 800", { "a800", "atari8bit", "atarixl", "atarixe", "atari400", "atari800xl",
+				     "eighthundred", NULL } },
 	{ "atarilynx", "Lynx", { "lynx", "lnx", NULL } },
 	{ "ngp", "Neo Geo Pocket", { "neogeopocket", NULL } },
 	{ "ngpc", "Neo Geo Pocket Color", { "neogeopocketcolor", NULL } },

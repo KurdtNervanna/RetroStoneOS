@@ -47,10 +47,12 @@ static const struct sysdef g_systems[] = {
 	{ "wonderswan", NC_("system", "WonderSwan"), "Bandai", { "wonderswan", "wswan", NULL }, { "wswan", NULL }, "mednafen_wswan", "ws", 1999 },
 	{ "wonderswancolor", NC_("system", "WonderSwan Color"), "Bandai", { "wonderswancolor", "wswanc", NULL }, { "wswanc", NULL }, "mednafen_wswan", "wsc", 2000 },
 	{ "atari2600", NC_("system", "Atari 2600"), "Atari", { "atari2600", NULL }, { NULL }, "stella2014", "a26", 1977 },
+	{ "atari5200", NC_("system", "Atari 5200"), "Atari", { "atari5200", NULL }, { NULL }, "atari800", "a52,bin", 1982 },
 	{ "atari7800", NC_("system", "Atari 7800"), "Atari", { "atari7800", NULL }, { NULL }, "prosystem", "a78", 1986 },
 	{ "atarilynx", NC_("system", "Lynx"), "Atari", { "atarilynx", "lynx", NULL }, { "lynx", NULL }, "handy", "lnx", 1989 },
 	{ "coleco", NC_("system", "ColecoVision"), "Coleco", { "coleco", "colecovision", NULL }, { "colecovision", NULL }, "gearcoleco", "col", 1982 },
 	/* home computers, then the PC and its game engine */
+	{ "atari800", NC_("system", "Atari 800"), "Atari", { "atari800", NULL }, { NULL }, "atari800", "atr,xfd,atx,xex,car,cas", 1979 },
 	{ "c64", NC_("system", "Commodore 64"), "Commodore", { "c64", NULL }, { "commodore64", NULL }, "vice_x64", "d64,g64,t64,tap,prg,crt", 1982 },
 	{ "zxspectrum", NC_("system", "ZX Spectrum"), "Sinclair", { "zxspectrum", "zx", NULL }, { "spectrum", "zx", NULL }, "fuse", "tzx,tap,z80,sna,szx,dsk,trd", 1982 },
 	{ "msx", NC_("system", "MSX"), "Home computer", { "msx", NULL }, { "msx1", NULL }, "bluemsx", "rom,mx1,mx2,dsk", 1983 },

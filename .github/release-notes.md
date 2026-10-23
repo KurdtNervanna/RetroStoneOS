@@ -18,7 +18,9 @@ folder names `wswan` and `wswanc` work on the card too. **Settings > Game lists 
 every folder whatever the caches say. **Raspberry Pi**: the HDMI I2C driver the display waits for is built in,
 so HDMI should work with the normal `config.txt` (a Pi 3 needed `vc4-fkms-v3d`; the Pi 2, 4 and 5 had the same
 bug), and the **Adafruit PiGRRL 2** is supported, untested, through a block at the end of `config.txt`. On a
-**keyboard**, Esc in a game opens the in-game menu and Tab+Space leaves the game.
+**keyboard**, Esc in a game opens the in-game menu and Tab+Space leaves the game. **New systems: Atari 800 and
+Atari 5200** (the Atari800 core; folders `atari800` and `atari5200`, no BIOS needed, untested on the device yet).
+R2 opens the core's on-screen keyboard (the Atari keys, or the 5200 keypad).
 
 Game source: [RetroStone VC c900b9839c15](https://github.com/PaddleStroke/RetroStoneVC/tree/c900b9839c15bfc7c75c05fe91ffb6e86c57b89e).
 

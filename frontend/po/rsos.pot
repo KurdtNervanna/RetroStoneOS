@@ -45,27 +45,27 @@ msgid "Cannot read the game file (%s)"
 msgstr ""
 
 #. TRANSLATORS: start of "<system> needs <BIOS file> in /bios" when the system is unknown
-#: src/host/coreinfo.c:132
+#: src/host/coreinfo.c:135
 msgid "This system"
 msgstr ""
 
 #. TRANSLATORS: warning shown by the menu before a game starts:
 #. "PS1: scph5501.bin is not the expected BIOS dump"
-#: src/host/coreinfo.c:235
+#: src/host/coreinfo.c:238
 #, c-format
 msgid "%s: %s is not the expected BIOS dump"
 msgstr ""
 
 #. TRANSLATORS: the last two of a list of BIOS files the user
 #. can choose from: "bios_CD_U.bin, bios_CD_E.bin or bios_CD_J.bin"
-#: src/host/coreinfo.c:252
+#: src/host/coreinfo.c:255
 #, c-format
 msgid "%s or %s"
 msgstr ""
 
 #. TRANSLATORS: error shown by the menu instead of starting the game:
 #. "PS1 needs scph5501.bin in /bios" (system, BIOS file(s), folder)
-#: src/host/coreinfo.c:267
+#: src/host/coreinfo.c:270
 #, c-format
 msgid "%s needs %s in %s"
 msgstr ""
@@ -75,181 +75,181 @@ msgstr ""
 msgid "Powering off..."
 msgstr ""
 
-#: src/host/host.c:752
+#: src/host/host.c:759
 msgid "Player 1 controller disconnected: paused"
 msgstr ""
 
 #. TRANSLATORS: toast; %s is the controller's name
-#: src/host/host.c:759 src/ui/ui.c:1221
+#: src/host/host.c:766 src/ui/ui.c:1221
 #, c-format
 msgid "Player 1: %s"
 msgstr ""
 
-#: src/host/host.c:796
+#: src/host/host.c:803
 msgid "Saving..."
 msgstr ""
 
-#: src/host/host.c:819
+#: src/host/host.c:826
 msgid "This game cannot save a state now"
 msgstr ""
 
 #. TRANSLATORS: toast; %s is the system's English error text
-#: src/host/host.c:822
+#: src/host/host.c:829
 #, c-format
 msgid "State NOT saved: %s"
 msgstr ""
 
-#: src/host/host.c:831
+#: src/host/host.c:838
 #, c-format
 msgid "State loaded, slot %d"
 msgstr ""
 
-#: src/host/host.c:833
+#: src/host/host.c:840
 #, c-format
 msgid "No state in slot %d"
 msgstr ""
 
-#: src/host/host.c:835
+#: src/host/host.c:842
 #, c-format
 msgid "Cannot load the state of slot %d"
 msgstr ""
 
-#: src/host/host.c:843
+#: src/host/host.c:850
 #, c-format
 msgid "State slot %d"
 msgstr ""
 
 #. TRANSLATORS: toast after Select+Left/Right: the slot holds no state
-#: src/host/host.c:846
+#: src/host/host.c:853
 #, c-format
 msgid "State slot %d (empty)"
 msgstr ""
 
-#: src/host/host.c:956
+#: src/host/host.c:963
 msgid "No picture to save yet"
 msgstr ""
 
 #. TRANSLATORS: toast after Select+L2
-#: src/host/host.c:989
+#: src/host/host.c:996
 msgid "Screenshot saved"
 msgstr ""
 
-#: src/host/host.c:992
+#: src/host/host.c:999
 msgid "Screenshot NOT saved"
 msgstr ""
 
 #. TRANSLATORS: toast after Select+Y when no other game was played yet
-#: src/host/host.c:1007
+#: src/host/host.c:1014
 msgid "No other game played recently"
 msgstr ""
 
 #. TRANSLATORS: toast: the game was reset (Select+B)
-#: src/host/host.c:1073 src/host/menu.c:571
+#: src/host/host.c:1080 src/host/menu.c:571
 msgctxt "toast"
 msgid "Reset"
 msgstr ""
 
 #. TRANSLATORS: toast; %s is the controller's name
-#: src/host/host.c:1091
+#: src/host/host.c:1098
 #, c-format
 msgid "Connected: %s"
 msgstr ""
 
 #. TRANSLATORS: shown 10 s before the automatic power-off (no input
 #. for the time set in Settings > Power); any button cancels it
-#: src/host/host.c:1286 src/ui/ui.c:1691 src/ui/ui.c:1698
+#: src/host/host.c:1293 src/ui/ui.c:1691 src/ui/ui.c:1698
 msgid "Powering off in 10 s — press any button to cancel"
 msgstr ""
 
-#: src/host/host.c:1368
+#: src/host/host.c:1375
 msgid "Battery empty: game saved"
 msgstr ""
 
-#: src/host/host.c:1373
+#: src/host/host.c:1380
 #, c-format
 msgid "Battery low (%d%%)"
 msgstr ""
 
 #. TRANSLATORS: in-game menu > Benchmark, value of the "Runs" row
 #. (right half of a 640 px row: keep it short)
-#: src/host/host.c:1720
+#: src/host/host.c:1727
 #, c-format
 msgid "%d setting, about %d min"
 msgid_plural "%d settings, about %d min"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/host/host.c:1749
+#: src/host/host.c:1756
 msgid "No benchmark for this system"
 msgstr ""
 
-#: src/host/host.c:1778
+#: src/host/host.c:1785
 msgid "Benchmark: this game cannot save a state now"
 msgstr ""
 
-#: src/host/host.c:1794
+#: src/host/host.c:1801
 #, c-format
 msgid "Benchmark: cannot write %s"
 msgstr ""
 
-#: src/host/host.c:2002
+#: src/host/host.c:2009
 msgid "No result to use"
 msgstr ""
 
 #. TRANSLATORS: %s is a benchmark configuration id ("glide-640")
-#: src/host/host.c:2008
+#: src/host/host.c:2015
 #, c-format
 msgid "Unknown configuration %s"
 msgstr ""
 
 #. TRANSLATORS: %s is the system's English error text
-#: src/host/host.c:2017
+#: src/host/host.c:2024
 #, c-format
 msgid "Could not save: %s"
 msgstr ""
 
 #. TRANSLATORS: %s is a benchmark configuration id ("glide-640")
-#: src/host/host.c:2022
+#: src/host/host.c:2029
 #, c-format
 msgid "Saved \"%s\" for this game (applies next start)"
 msgstr ""
 
 #. TRANSLATORS: configuration id, then the core's name ("mupen64plus_next")
-#: src/host/host.c:2026
+#: src/host/host.c:2033
 #, c-format
 msgid "Saved \"%s\": next start uses %s"
 msgstr ""
 
-#: src/host/host.c:2094
+#: src/host/host.c:2101
 msgid "The emulator stopped responding"
 msgstr ""
 
-#: src/host/host.c:2421
+#: src/host/host.c:2429
 msgid "Cannot load the emulator core"
 msgstr ""
 
-#: src/host/host.c:2438
+#: src/host/host.c:2446
 msgid "Benchmark: bad plan"
 msgstr ""
 
-#: src/host/host.c:2442
+#: src/host/host.c:2450
 msgid "Cannot start the save thread"
 msgstr ""
 
-#: src/host/host.c:2487
+#: src/host/host.c:2495
 msgid "Cannot open the display"
 msgstr ""
 
-#: src/host/host.c:2512
+#: src/host/host.c:2520
 msgid "This core needs a game file"
 msgstr ""
 
-#: src/host/host.c:2519
+#: src/host/host.c:2527
 msgid "The emulator could not load this game"
 msgstr ""
 
 #. TRANSLATORS: toast: the game continues from the resume state
-#: src/host/host.c:2571 src/host/host.c:2578
+#: src/host/host.c:2579 src/host/host.c:2586
 msgid "Resumed"
 msgstr ""
 
@@ -813,19 +813,19 @@ msgstr ""
 
 #. TRANSLATORS: the favorite games collection in the system carousel
 #. (big text, uppercase in the built-in themes) and its list header
-#: src/ui/loader.c:490
+#: src/ui/loader.c:538
 msgid "Favorites"
 msgstr ""
 
 #. TRANSLATORS: the recently played games collection in the system
 #. carousel (big text, uppercase in the built-in themes) and its list header
-#: src/ui/loader.c:494
+#: src/ui/loader.c:542
 msgid "Last played"
 msgstr ""
 
 #. TRANSLATORS: toast when a system opened from the carousel has no
 #. game any more (removed while the console was off)
-#: src/ui/loader.c:1249
+#: src/ui/loader.c:1297
 msgid "No games found any more in this folder"
 msgstr ""
 
@@ -847,13 +847,13 @@ msgstr ""
 msgid "select"
 msgstr ""
 
-#: src/ui/menu.c:100 src/ui/menu.c:471 src/ui/menu.c:474 src/ui/transfer_ui.c:1898
+#: src/ui/menu.c:100 src/ui/menu.c:471 src/ui/menu.c:474 src/ui/transfer_ui.c:1908
 #: src/ui/view_gamelist.c:1005
 msgid "back"
 msgstr ""
 
 #. TRANSLATORS: dialog button, uppercase, short
-#: src/ui/menu.c:633 src/ui/screens.c:1815 src/ui/transfer_ui.c:269
+#: src/ui/menu.c:633 src/ui/screens.c:1815 src/ui/transfer_ui.c:279
 msgid "OK"
 msgstr ""
 
@@ -879,7 +879,7 @@ msgid "ok"
 msgstr ""
 
 #. TRANSLATORS: help bar: B stops the copy
-#: src/ui/menu.c:760 src/ui/transfer_ui.c:1099
+#: src/ui/menu.c:760 src/ui/transfer_ui.c:1109
 msgid "cancel"
 msgstr ""
 
@@ -1322,7 +1322,7 @@ msgid "Transfer games from a computer or phone"
 msgstr ""
 
 #. TRANSLATORS: screen title (the Settings > Network row of the same name)
-#: src/ui/screens.c:987 src/ui/transfer_ui.c:1902
+#: src/ui/screens.c:987 src/ui/transfer_ui.c:1912
 msgid "Transfer over network"
 msgstr ""
 
@@ -1365,7 +1365,7 @@ msgstr ""
 msgid "Bluetooth on"
 msgstr ""
 
-#: src/ui/screens.c:1033 src/ui/transfer_ui.c:1757
+#: src/ui/screens.c:1033 src/ui/transfer_ui.c:1767
 msgid "failed"
 msgstr ""
 
@@ -1442,7 +1442,7 @@ msgid "Always"
 msgstr ""
 
 #. TRANSLATORS: toggle: copy the games
-#: src/ui/screens.c:1178 src/ui/screens.c:1413 src/ui/screens.c:1718 src/ui/transfer_ui.c:601
+#: src/ui/screens.c:1178 src/ui/screens.c:1413 src/ui/screens.c:1718 src/ui/transfer_ui.c:611
 msgid "Games"
 msgstr ""
 
@@ -1510,8 +1510,8 @@ msgid "Game storage"
 msgstr ""
 
 #. TRANSLATORS: a USB stick with no volume label and no vendor name
-#: src/ui/screens.c:1289 src/ui/transfer_ui.c:173 src/ui/transfer_ui.c:681
-#: src/ui/transfer_ui.c:957
+#: src/ui/screens.c:1289 src/ui/transfer_ui.c:183 src/ui/transfer_ui.c:691
+#: src/ui/transfer_ui.c:967
 msgid "USB drive"
 msgstr ""
 
@@ -1619,7 +1619,7 @@ msgid "%s, UI %dx%d"
 msgstr ""
 
 #. TRANSLATORS: part of "3 systems, 120 games, 1.5 GB"
-#: src/ui/screens.c:1389 src/ui/transfer_ui.c:497
+#: src/ui/screens.c:1389 src/ui/transfer_ui.c:507
 #, c-format
 msgid "%d system"
 msgid_plural "%d systems"
@@ -2100,7 +2100,7 @@ msgctxt "system"
 msgid "Game Boy Advance"
 msgstr ""
 
-#: src/ui/systems.c:33 src/ui/transfer_ui.c:56
+#: src/ui/systems.c:33 src/ui/transfer_ui.c:66
 msgctxt "system"
 msgid "Pokémon mini"
 msgstr ""
@@ -2150,117 +2150,127 @@ msgctxt "system"
 msgid "PC Engine"
 msgstr ""
 
-#: src/ui/systems.c:43
+#: src/ui/systems.c:43 src/ui/transfer_ui.c:51
 msgctxt "system"
 msgid "PC Engine CD"
 msgstr ""
 
-#: src/ui/systems.c:44 src/ui/transfer_ui.c:55
+#: src/ui/systems.c:44 src/ui/transfer_ui.c:65
 msgctxt "system"
 msgid "SuperGrafx"
 msgstr ""
 
-#: src/ui/systems.c:45
+#: src/ui/systems.c:45 src/ui/transfer_ui.c:55
 msgctxt "system"
 msgid "Neo Geo Pocket"
 msgstr ""
 
-#: src/ui/systems.c:46
+#: src/ui/systems.c:46 src/ui/transfer_ui.c:56
 msgctxt "system"
 msgid "Neo Geo Pocket Color"
 msgstr ""
 
-#: src/ui/systems.c:47
+#: src/ui/systems.c:47 src/ui/transfer_ui.c:57
 msgctxt "system"
 msgid "WonderSwan"
 msgstr ""
 
-#: src/ui/systems.c:48
+#: src/ui/systems.c:48 src/ui/transfer_ui.c:58
 msgctxt "system"
 msgid "WonderSwan Color"
 msgstr ""
 
-#: src/ui/systems.c:49 src/ui/transfer_ui.c:51
+#: src/ui/systems.c:49 src/ui/transfer_ui.c:52
 msgctxt "system"
 msgid "Atari 2600"
 msgstr ""
 
 #: src/ui/systems.c:50
 msgctxt "system"
+msgid "Atari 5200"
+msgstr ""
+
+#: src/ui/systems.c:51 src/ui/transfer_ui.c:53
+msgctxt "system"
 msgid "Atari 7800"
 msgstr ""
 
-#: src/ui/systems.c:51
+#: src/ui/systems.c:52 src/ui/transfer_ui.c:54
 msgctxt "system"
 msgid "Lynx"
 msgstr ""
 
-#: src/ui/systems.c:52
+#: src/ui/systems.c:53 src/ui/transfer_ui.c:59
 msgctxt "system"
 msgid "ColecoVision"
 msgstr ""
 
-#: src/ui/systems.c:54 src/ui/transfer_ui.c:57
+#: src/ui/systems.c:55
+msgctxt "system"
+msgid "Atari 800"
+msgstr ""
+
+#: src/ui/systems.c:56 src/ui/transfer_ui.c:67
 msgctxt "system"
 msgid "Commodore 64"
 msgstr ""
 
-#: src/ui/systems.c:55 src/ui/transfer_ui.c:58
+#: src/ui/systems.c:57 src/ui/transfer_ui.c:68
 msgctxt "system"
 msgid "ZX Spectrum"
 msgstr ""
 
-#: src/ui/systems.c:56
+#: src/ui/systems.c:58 src/ui/transfer_ui.c:60
 msgctxt "system"
 msgid "MSX"
 msgstr ""
 
-#: src/ui/systems.c:57 src/ui/transfer_ui.c:59
+#: src/ui/systems.c:59 src/ui/transfer_ui.c:69
 msgctxt "system"
 msgid "Amstrad CPC"
 msgstr ""
 
-#: src/ui/systems.c:58 src/ui/transfer_ui.c:60
+#: src/ui/systems.c:60 src/ui/transfer_ui.c:70
 msgctxt "system"
 msgid "MS-DOS"
 msgstr ""
 
-#: src/ui/systems.c:59 src/ui/transfer_ui.c:61
+#: src/ui/systems.c:61 src/ui/transfer_ui.c:71
 msgctxt "system"
 msgid "ScummVM"
 msgstr ""
 
-#: src/ui/systems.c:60
+#: src/ui/systems.c:62
 msgctxt "system"
 msgid "Arcade"
 msgstr ""
 
-#: src/ui/systems.c:61
+#: src/ui/systems.c:63
 msgctxt "system"
 msgid "FinalBurn Neo"
 msgstr ""
 
-#: src/ui/systems.c:62 src/ui/transfer_ui.c:54
+#: src/ui/systems.c:64 src/ui/transfer_ui.c:64
 msgctxt "system"
 msgid "Neo Geo"
 msgstr ""
 
-#: src/ui/systems.c:63
+#: src/ui/systems.c:65 src/ui/transfer_ui.c:61
 msgctxt "system"
 msgid "Neo Geo CD"
 msgstr ""
 
-#: src/ui/systems.c:65 src/ui/transfer_ui.c:62
+#: src/ui/systems.c:67 src/ui/transfer_ui.c:72
 msgctxt "system"
 msgid "PICO-8"
 msgstr ""
 
-#: src/ui/systems.c:66 src/ui/transfer_ui.c:63
+#: src/ui/systems.c:68 src/ui/transfer_ui.c:73
 msgctxt "system"
 msgid "Doom"
 msgstr ""
 
-#: src/ui/systems.c:67 src/ui/transfer_ui.c:64
+#: src/ui/systems.c:69 src/ui/transfer_ui.c:74
 msgctxt "system"
 msgid "Cave Story"
 msgstr ""
@@ -2285,106 +2295,106 @@ msgctxt "system"
 msgid "Sega Pico"
 msgstr ""
 
-#: src/ui/transfer_ui.c:52
+#: src/ui/transfer_ui.c:62
 msgctxt "system"
 msgid "Arcade (MAME 2003-Plus)"
 msgstr ""
 
-#: src/ui/transfer_ui.c:53
+#: src/ui/transfer_ui.c:63
 msgctxt "system"
 msgid "Arcade (FinalBurn Neo)"
 msgstr ""
 
 #. TRANSLATORS: why an import stopped ("The copy stopped: ...").
-#: src/ui/transfer_ui.c:75
+#: src/ui/transfer_ui.c:85
 msgid "The SD card is full"
 msgstr ""
 
-#: src/ui/transfer_ui.c:76
+#: src/ui/transfer_ui.c:86
 msgid "The USB drive was removed"
 msgstr ""
 
-#: src/ui/transfer_ui.c:77
+#: src/ui/transfer_ui.c:87
 msgid "Read error: was the USB drive removed?"
 msgstr ""
 
 #. TRANSLATORS: why an export / saves backup stopped ("Stopped: ...").
-#: src/ui/transfer_ui.c:79
+#: src/ui/transfer_ui.c:89
 msgid "The USB drive is full"
 msgstr ""
 
-#: src/ui/transfer_ui.c:80
+#: src/ui/transfer_ui.c:90
 msgid "The USB drive is read-only"
 msgstr ""
 
-#: src/ui/transfer_ui.c:81
+#: src/ui/transfer_ui.c:91
 msgid "Write error: was the USB drive removed?"
 msgstr ""
 
 #. TRANSLATORS: why the network transfer stopped by itself ("Stopped: idle"):
 #. nothing was received for a while (src/transfer/webshare.c).
-#: src/ui/transfer_ui.c:84
+#: src/ui/transfer_ui.c:94
 msgctxt "webshare stop reason"
 msgid "idle"
 msgstr ""
 
-#: src/ui/transfer_ui.c:157 src/ui/transfer_ui.c:606
+#: src/ui/transfer_ui.c:167 src/ui/transfer_ui.c:616
 msgid "BIOS files"
 msgstr ""
 
-#: src/ui/transfer_ui.c:159 src/ui/transfer_ui.c:615
+#: src/ui/transfer_ui.c:169 src/ui/transfer_ui.c:625
 msgid "Themes"
 msgstr ""
 
 #. TRANSLATORS: toast, short
-#: src/ui/transfer_ui.c:252
+#: src/ui/transfer_ui.c:262
 msgid "The USB drive is busy"
 msgstr ""
 
 #. TRANSLATORS: toast
-#: src/ui/transfer_ui.c:255 src/ui/transfer_ui.c:1486 src/ui/transfer_ui.c:1603
+#: src/ui/transfer_ui.c:265 src/ui/transfer_ui.c:1496 src/ui/transfer_ui.c:1613
 msgid "USB drive ejected: you can unplug it"
 msgstr ""
 
 #. TRANSLATORS: dialog button, uppercase, short
-#: src/ui/transfer_ui.c:269
+#: src/ui/transfer_ui.c:279
 msgid "EJECT"
 msgstr ""
 
 #. TRANSLATORS: a game library found at the root of the USB stick
-#: src/ui/transfer_ui.c:348
+#: src/ui/transfer_ui.c:358
 msgid "Top of the drive"
 msgstr ""
 
 #. TRANSLATORS: a folder name, then this: a RetroStone backup folder
-#: src/ui/transfer_ui.c:351
+#: src/ui/transfer_ui.c:361
 #, c-format
 msgid "%s (backup)"
 msgstr ""
 
 #. TRANSLATORS: "From: all 3 libraries" (game libraries on the USB stick)
-#: src/ui/transfer_ui.c:423
+#: src/ui/transfer_ui.c:433
 #, c-format
 msgid "all %d library"
 msgid_plural "all %d libraries"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/transfer_ui.c:461 src/ui/transfer_ui.c:797
+#: src/ui/transfer_ui.c:471 src/ui/transfer_ui.c:807
 msgid "Another copy is already running."
 msgstr ""
 
-#: src/ui/transfer_ui.c:462 src/ui/transfer_ui.c:798
+#: src/ui/transfer_ui.c:472 src/ui/transfer_ui.c:808
 msgid "The copy could not start."
 msgstr ""
 
 #. TRANSLATORS: menu section header: the game libraries found on the USB stick
-#: src/ui/transfer_ui.c:488
+#: src/ui/transfer_ui.c:498
 msgid "Game libraries on the drive"
 msgstr ""
 
 #. TRANSLATORS: part of "3 systems, 120 games, 1.5 GB"
-#: src/ui/transfer_ui.c:499
+#: src/ui/transfer_ui.c:509
 #, c-format
 msgid "%d game"
 msgid_plural "%d games"
@@ -2392,14 +2402,14 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: a game library: "3 systems", "120 games", its size ("1.5 GB")
-#: src/ui/transfer_ui.c:501
+#: src/ui/transfer_ui.c:511
 #, c-format
 msgctxt "library summary"
 msgid "%s, %s, %s"
 msgstr ""
 
 #. TRANSLATORS: a number of files and their size ("12 files, 40 MB")
-#: src/ui/transfer_ui.c:504 src/ui/transfer_ui.c:861
+#: src/ui/transfer_ui.c:514 src/ui/transfer_ui.c:871
 #, c-format
 msgid "%d file, %s"
 msgid_plural "%d files, %s"
@@ -2407,7 +2417,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: menu row: import every game library found on the USB stick
-#: src/ui/transfer_ui.c:512
+#: src/ui/transfer_ui.c:522
 #, c-format
 msgid "All (%d library)"
 msgid_plural "All (%d libraries)"
@@ -2415,7 +2425,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: a number of games and their size ("120 games, 1.5 GB")
-#: src/ui/transfer_ui.c:515
+#: src/ui/transfer_ui.c:525
 #, c-format
 msgid "%d game, %s"
 msgid_plural "%d games, %s"
@@ -2423,37 +2433,37 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: menu row: unmount the USB stick so it can be unplugged
-#: src/ui/transfer_ui.c:517 src/ui/transfer_ui.c:545 src/ui/transfer_ui.c:594
-#: src/ui/transfer_ui.c:651 src/ui/transfer_ui.c:844 src/ui/transfer_ui.c:920
+#: src/ui/transfer_ui.c:527 src/ui/transfer_ui.c:555 src/ui/transfer_ui.c:604
+#: src/ui/transfer_ui.c:661 src/ui/transfer_ui.c:854 src/ui/transfer_ui.c:930
 msgid "Eject"
 msgstr ""
 
 #. TRANSLATORS: menu row while the USB stick is scanned (the stick's name on the right)
-#: src/ui/transfer_ui.c:533
+#: src/ui/transfer_ui.c:543
 msgid "Looking for games on the drive..."
 msgstr ""
 
 #. TRANSLATORS: menu row while the stick is compared with the console
-#: src/ui/transfer_ui.c:535
+#: src/ui/transfer_ui.c:545
 msgid "Comparing with the console..."
 msgstr ""
 
-#: src/ui/transfer_ui.c:544 src/ui/transfer_ui.c:843
+#: src/ui/transfer_ui.c:554 src/ui/transfer_ui.c:853
 msgid "This drive could not be read."
 msgstr ""
 
 #. TRANSLATORS: menu row: where the import copies from (a folder of the USB stick on the right)
-#: src/ui/transfer_ui.c:551
+#: src/ui/transfer_ui.c:561
 msgid "From"
 msgstr ""
 
 #. TRANSLATORS: menu section header: the games found on the USB stick, per system
-#: src/ui/transfer_ui.c:556
+#: src/ui/transfer_ui.c:566
 msgid "Games on the drive"
 msgstr ""
 
 #. TRANSLATORS: games of a system on the stick: "3 new of 10, 40 MB, saves"
-#: src/ui/transfer_ui.c:567
+#: src/ui/transfer_ui.c:577
 #, c-format
 msgid "%d new of %d, %s, saves"
 msgid_plural "%d new of %d, %s, saves"
@@ -2461,7 +2471,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: games of a system on the stick: "3 new of 10, 40 MB"
-#: src/ui/transfer_ui.c:571
+#: src/ui/transfer_ui.c:581
 #, c-format
 msgid "%d new of %d, %s"
 msgid_plural "%d new of %d, %s"
@@ -2469,7 +2479,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: "10 (games), already on the console, (and) saves"
-#: src/ui/transfer_ui.c:576
+#: src/ui/transfer_ui.c:586
 #, c-format
 msgid "%d, already here, saves"
 msgid_plural "%d, already here, saves"
@@ -2477,7 +2487,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: "10 (games), already on the console"
-#: src/ui/transfer_ui.c:579
+#: src/ui/transfer_ui.c:589
 #, c-format
 msgid "%d, already here"
 msgid_plural "%d, already here"
@@ -2485,42 +2495,42 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: menu row: a folder of the stick for no known system (its name)
-#: src/ui/transfer_ui.c:587
+#: src/ui/transfer_ui.c:597
 #, c-format
 msgid "Not supported: %s"
 msgstr ""
 
-#: src/ui/transfer_ui.c:589 src/ui/transfer_ui.c:887
+#: src/ui/transfer_ui.c:599 src/ui/transfer_ui.c:897
 #, c-format
 msgid "%d file"
 msgid_plural "%d files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/transfer_ui.c:593
+#: src/ui/transfer_ui.c:603
 msgid "Nothing new on this drive"
 msgstr ""
 
 #. TRANSLATORS: menu section header: what to copy (toggles follow)
-#: src/ui/transfer_ui.c:598
+#: src/ui/transfer_ui.c:608
 msgctxt "import section"
 msgid "Copy"
 msgstr ""
 
-#: src/ui/transfer_ui.c:611
+#: src/ui/transfer_ui.c:621
 msgid "Saves & save states"
 msgstr ""
 
-#: src/ui/transfer_ui.c:620
+#: src/ui/transfer_ui.c:630
 msgid "Screenshots"
 msgstr ""
 
 #. TRANSLATORS: menu row: files of the stick that are already on the console
-#: src/ui/transfer_ui.c:626
+#: src/ui/transfer_ui.c:636
 msgid "Already on the console"
 msgstr ""
 
-#: src/ui/transfer_ui.c:627
+#: src/ui/transfer_ui.c:637
 #, c-format
 msgid "%d file, skipped"
 msgid_plural "%d files, skipped"
@@ -2528,12 +2538,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: menu row: files of the stick that differ from the console's copy
-#: src/ui/transfer_ui.c:633
+#: src/ui/transfer_ui.c:643
 msgid "Different on the console"
 msgstr ""
 
 #. TRANSLATORS: "4 (files, saves among them): you will be asked (what to do)"
-#: src/ui/transfer_ui.c:637
+#: src/ui/transfer_ui.c:647
 #, c-format
 msgid "%d (saves too): you will be asked"
 msgid_plural "%d (saves too): you will be asked"
@@ -2541,7 +2551,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: "4 (files): you will be asked (what to do with each)"
-#: src/ui/transfer_ui.c:640
+#: src/ui/transfer_ui.c:650
 #, c-format
 msgid "%d: you will be asked"
 msgid_plural "%d: you will be asked"
@@ -2549,105 +2559,105 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: menu row: how much the import will copy / there is not enough free space
-#: src/ui/transfer_ui.c:645 src/ui/transfer_ui.c:891
+#: src/ui/transfer_ui.c:655 src/ui/transfer_ui.c:901
 msgid "To copy"
 msgstr ""
 
-#: src/ui/transfer_ui.c:645 src/ui/transfer_ui.c:891
+#: src/ui/transfer_ui.c:655 src/ui/transfer_ui.c:901
 msgid "Not enough space"
 msgstr ""
 
 #. TRANSLATORS: "up to 1.5 GB, 12 GB free" (on the console's SD card)
-#: src/ui/transfer_ui.c:647
+#: src/ui/transfer_ui.c:657
 #, c-format
 msgid "up to %s, %s free"
 msgstr ""
 
 #. TRANSLATORS: menu row: start the copy
-#: src/ui/transfer_ui.c:649
+#: src/ui/transfer_ui.c:659
 msgid "Copy"
 msgstr ""
 
 #. TRANSLATORS: menu title, the USB stick's name follows
-#: src/ui/transfer_ui.c:660 src/ui/transfer_ui.c:694
+#: src/ui/transfer_ui.c:670 src/ui/transfer_ui.c:704
 #, c-format
 msgid "Import from %s"
 msgstr ""
 
-#: src/ui/transfer_ui.c:686 src/ui/transfer_ui.c:975
+#: src/ui/transfer_ui.c:696 src/ui/transfer_ui.c:985
 msgid "This drive is busy (a scan or a copy is running)."
 msgstr ""
 
-#: src/ui/transfer_ui.c:790
+#: src/ui/transfer_ui.c:800
 msgid "The USB drive cannot be written to (is it write-protected?)."
 msgstr ""
 
 #. TRANSLATORS: menu row while the console is compared with the USB stick
-#: src/ui/transfer_ui.c:838
+#: src/ui/transfer_ui.c:848
 msgid "Comparing with the drive..."
 msgstr ""
 
 #. TRANSLATORS: menu row: the folder of the USB stick the copy goes to (its name on the right)
-#: src/ui/transfer_ui.c:851
+#: src/ui/transfer_ui.c:861
 msgid "Folder on the drive"
 msgstr ""
 
 #. TRANSLATORS: a folder name, then this: the folder will be created
-#: src/ui/transfer_ui.c:856
+#: src/ui/transfer_ui.c:866
 #, c-format
 msgid "%s (new)"
 msgstr ""
 
 #. TRANSLATORS: menu row: the games on the console ("120 files, 1.5 GB")
-#: src/ui/transfer_ui.c:859
+#: src/ui/transfer_ui.c:869
 msgid "Games on the console"
 msgstr ""
 
 #. TRANSLATORS: toggle: also copy the BIOS files
-#: src/ui/transfer_ui.c:864
+#: src/ui/transfer_ui.c:874
 msgid "BIOS files too"
 msgstr ""
 
 #. TRANSLATORS: choice: the saves of which games (All games / Last played: <game>)
-#: src/ui/transfer_ui.c:870
+#: src/ui/transfer_ui.c:880
 msgctxt "saves of"
 msgid "Games"
 msgstr ""
 
-#: src/ui/transfer_ui.c:872
+#: src/ui/transfer_ui.c:882
 msgid "All games"
 msgstr ""
 
 #. TRANSLATORS: choice value: only the last played game (its name follows)
-#: src/ui/transfer_ui.c:875
+#: src/ui/transfer_ui.c:885
 #, c-format
 msgid "Last played: %s"
 msgstr ""
 
 #. TRANSLATORS: toggle: also copy the per-game settings
-#: src/ui/transfer_ui.c:882
+#: src/ui/transfer_ui.c:892
 msgid "Settings too (core options, remaps)"
 msgstr ""
 
 #. TRANSLATORS: menu row: files already on the USB stick, not copied again
-#: src/ui/transfer_ui.c:886
+#: src/ui/transfer_ui.c:896
 msgid "Already on the drive"
 msgstr ""
 
 #. TRANSLATORS: "12 files, 1.5 GB (20 GB free)" (on the USB stick)
-#: src/ui/transfer_ui.c:893
+#: src/ui/transfer_ui.c:903
 #, c-format
 msgid "%d file, %s (%s free)"
 msgid_plural "%d files, %s (%s free)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/transfer_ui.c:896
+#: src/ui/transfer_ui.c:906
 msgid "Nothing to copy: the drive is up to date"
 msgstr ""
 
 #. TRANSLATORS: menu row (FAT32 cannot store files of 4 GB or more), about 45 characters
-#: src/ui/transfer_ui.c:903
+#: src/ui/transfer_ui.c:913
 #, c-format
 msgid "%d file over 4 GB: FAT32 can't hold it"
 msgid_plural "%d files over 4 GB: FAT32 can't hold them"
@@ -2655,81 +2665,81 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: menu row: a file that is not copied (its name on the right)
-#: src/ui/transfer_ui.c:911
+#: src/ui/transfer_ui.c:921
 msgid "skipped"
 msgstr ""
 
 #. TRANSLATORS: menu row: start copying the games / the saves to the USB stick
-#: src/ui/transfer_ui.c:918
+#: src/ui/transfer_ui.c:928
 msgid "Export"
 msgstr ""
 
-#: src/ui/transfer_ui.c:918
+#: src/ui/transfer_ui.c:928
 msgid "Back up"
 msgstr ""
 
-#: src/ui/transfer_ui.c:951 src/ui/transfer_ui.c:1369
+#: src/ui/transfer_ui.c:961 src/ui/transfer_ui.c:1379
 msgid "The USB drive is not there any more."
 msgstr ""
 
 #. TRANSLATORS: menu title, the USB stick's name follows
-#: src/ui/transfer_ui.c:981
+#: src/ui/transfer_ui.c:991
 #, c-format
 msgid "Export games to %s"
 msgstr ""
 
 #. TRANSLATORS: menu title, the USB stick's name follows
-#: src/ui/transfer_ui.c:984
+#: src/ui/transfer_ui.c:994
 #, c-format
 msgid "Back up saves to %s"
 msgstr ""
 
 #. TRANSLATORS: a file's date is not known (duplicate file prompt)
-#: src/ui/transfer_ui.c:1031
+#: src/ui/transfer_ui.c:1041
 msgid "unknown date"
 msgstr ""
 
 #. TRANSLATORS: dialog buttons, uppercase, short: what to do with a file that is
 #. already on the console (this one / every next one)
-#: src/ui/transfer_ui.c:1053
+#: src/ui/transfer_ui.c:1063
 msgid "SKIP"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1053
+#: src/ui/transfer_ui.c:1063
 msgid "REPLACE"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1053
+#: src/ui/transfer_ui.c:1063
 msgid "SKIP ALL"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1053
+#: src/ui/transfer_ui.c:1063
 msgid "REPLACE ALL"
 msgstr ""
 
 #. TRANSLATORS: the first line of the duplicate file prompt (the file name follows)
-#: src/ui/transfer_ui.c:1064
+#: src/ui/transfer_ui.c:1074
 msgid "This settings file is already on the console, but different:"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1066
+#: src/ui/transfer_ui.c:1076
 msgid "This save is already on the console, but different:"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1068
+#: src/ui/transfer_ui.c:1078
 msgid "This game is already on the console, but different:"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1070
+#: src/ui/transfer_ui.c:1080
 msgid "This BIOS file is already on the console, but different:"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1072
+#: src/ui/transfer_ui.c:1082
 msgid "This file is already on the console, but different:"
 msgstr ""
 
 #. TRANSLATORS: the two copies of a file: size, date ("USB drive: 2 MB, 2024-05-01 10:00")
-#: src/ui/transfer_ui.c:1074
+#: src/ui/transfer_ui.c:1084
 #, c-format
 msgid ""
 "USB drive: %s, %s\n"
@@ -2737,31 +2747,31 @@ msgid ""
 msgstr ""
 
 #. TRANSLATORS: %s is the save's file name ("Zelda.srm" -> "Zelda.srm.bak")
-#: src/ui/transfer_ui.c:1078
+#: src/ui/transfer_ui.c:1088
 #, c-format
 msgid "Saves are precious: if you replace it, the console's copy is kept as %s.bak."
 msgstr ""
 
 #. TRANSLATORS: progress title, the USB stick's name follows
-#: src/ui/transfer_ui.c:1104
+#: src/ui/transfer_ui.c:1114
 #, c-format
 msgid "Copying from %s"
 msgstr ""
 
 #. TRANSLATORS: progress title, the USB stick's name follows
-#: src/ui/transfer_ui.c:1107
+#: src/ui/transfer_ui.c:1117
 #, c-format
 msgid "Exporting games to %s"
 msgstr ""
 
 #. TRANSLATORS: progress title, the USB stick's name follows
-#: src/ui/transfer_ui.c:1110
+#: src/ui/transfer_ui.c:1120
 #, c-format
 msgid "Backing up saves to %s"
 msgstr ""
 
 #. TRANSLATORS: copy progress: "120 MB of 1.5 GB  -  3 of 21 files"
-#: src/ui/transfer_ui.c:1118
+#: src/ui/transfer_ui.c:1128
 #, c-format
 msgid "%s of %s  -  %d of %d file"
 msgid_plural "%s of %s  -  %d of %d files"
@@ -2769,7 +2779,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: copy speed and time left: "4.2 MB/s, about 3 min left"
-#: src/ui/transfer_ui.c:1130
+#: src/ui/transfer_ui.c:1140
 #, c-format
 msgid "%s MB/s, about %d min left"
 msgid_plural "%s MB/s, about %d min left"
@@ -2777,13 +2787,13 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: copy speed: "4.2 MB/s"
-#: src/ui/transfer_ui.c:1134
+#: src/ui/transfer_ui.c:1144
 #, c-format
 msgid "%s MB/s"
 msgstr ""
 
 #. TRANSLATORS: files not copied because they are already there, "12 already there"
-#: src/ui/transfer_ui.c:1138
+#: src/ui/transfer_ui.c:1148
 #, c-format
 msgid "%d already there"
 msgid_plural "%d already there"
@@ -2791,45 +2801,45 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: import summary, first sentence (the counts follow)
-#: src/ui/transfer_ui.c:1157
+#: src/ui/transfer_ui.c:1167
 msgid "Copy cancelled."
 msgstr ""
 
 #. TRANSLATORS: import summary, first sentence: %s is why ("The SD card is full")
-#: src/ui/transfer_ui.c:1160
+#: src/ui/transfer_ui.c:1170
 #, c-format
 msgid "The copy stopped: %s."
 msgstr ""
 
-#: src/ui/transfer_ui.c:1160 src/ui/transfer_ui.c:1184
+#: src/ui/transfer_ui.c:1170 src/ui/transfer_ui.c:1194
 msgid "error"
 msgstr ""
 
 #. TRANSLATORS: import summary: numbers of files imported, already on the console, skipped
 #. (a duplicate kept) and replaced (a duplicate overwritten)
-#: src/ui/transfer_ui.c:1163
+#: src/ui/transfer_ui.c:1173
 #, c-format
 msgid "Imported %d, already there %d, skipped %d, replaced %d."
 msgstr ""
 
 #. TRANSLATORS: import summary, last sentence
-#: src/ui/transfer_ui.c:1166
+#: src/ui/transfer_ui.c:1176
 msgid "Some files failed."
 msgstr ""
 
 #. TRANSLATORS: export / saves backup summary, first sentence (the counts follow)
-#: src/ui/transfer_ui.c:1180
+#: src/ui/transfer_ui.c:1190
 msgid "Cancelled."
 msgstr ""
 
 #. TRANSLATORS: export / saves backup summary, first sentences: %s is why ("The USB drive is full")
-#: src/ui/transfer_ui.c:1183
+#: src/ui/transfer_ui.c:1193
 #, c-format
 msgid "Stopped: %s. The partial file was removed."
 msgstr ""
 
 #. TRANSLATORS: export / saves backup summary: files copied (their size), files already on the stick
-#: src/ui/transfer_ui.c:1189
+#: src/ui/transfer_ui.c:1199
 #, c-format
 msgid "Copied %d file (%s), already there %d."
 msgid_plural "Copied %d files (%s), already there %d."
@@ -2837,7 +2847,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: export summary: files FAT32 cannot store were not copied
-#: src/ui/transfer_ui.c:1195
+#: src/ui/transfer_ui.c:1205
 #, c-format
 msgid "%d file over 4 GB skipped (FAT32)."
 msgid_plural "%d files over 4 GB skipped (FAT32)."
@@ -2845,7 +2855,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: export / saves backup summary: files that could not be copied
-#: src/ui/transfer_ui.c:1202
+#: src/ui/transfer_ui.c:1212
 #, c-format
 msgid "%d failed."
 msgid_plural "%d failed."
@@ -2855,173 +2865,173 @@ msgstr[1] ""
 #. TRANSLATORS: dialog buttons, uppercase, short: stop the copy / go on copying
 #. TRANSLATORS: dialog buttons, uppercase, short: stop the network transfer / keep it running
 #. TRANSLATORS: dialog buttons, uppercase, short: stop the update / go on
-#: src/ui/transfer_ui.c:1283 src/ui/transfer_ui.c:2054 src/ui/update_ui.c:774
+#: src/ui/transfer_ui.c:1293 src/ui/transfer_ui.c:2064 src/ui/update_ui.c:774
 msgid "STOP"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1283 src/ui/update_ui.c:774
+#: src/ui/transfer_ui.c:1293 src/ui/update_ui.c:774
 msgid "CONTINUE"
 msgstr ""
 
 #. TRANSLATORS: B during an import (USB stick -> console)
-#: src/ui/transfer_ui.c:1286
+#: src/ui/transfer_ui.c:1296
 msgid "Stop copying? Files already copied stay."
 msgstr ""
 
 #. TRANSLATORS: B during an export / saves backup (console -> USB stick)
-#: src/ui/transfer_ui.c:1288
+#: src/ui/transfer_ui.c:1298
 msgid "Stop? Files already copied stay on the drive."
 msgstr ""
 
 #. TRANSLATORS: dialog buttons, uppercase, short: what to do with a USB stick just plugged in
-#: src/ui/transfer_ui.c:1394
+#: src/ui/transfer_ui.c:1404
 msgid "IMPORT GAMES"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1394
+#: src/ui/transfer_ui.c:1404
 msgid "EXPORT GAMES"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1394
+#: src/ui/transfer_ui.c:1404
 msgid "BACK UP SAVES"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1394 src/ui/transfer_ui.c:1402
+#: src/ui/transfer_ui.c:1404 src/ui/transfer_ui.c:1412
 msgid "NOTHING"
 msgstr ""
 
 #. TRANSLATORS: USB dialog button, uppercase, short: install the RetroStoneOS update found on the stick
-#: src/ui/transfer_ui.c:1401
+#: src/ui/transfer_ui.c:1411
 msgid "INSTALL UPDATE"
 msgstr ""
 
 #. TRANSLATORS: toast; %s is the stick's name. "Settings > Storage" must match those menus
-#: src/ui/transfer_ui.c:1408 src/ui/transfer_ui.c:1432
+#: src/ui/transfer_ui.c:1418 src/ui/transfer_ui.c:1442
 #, c-format
 msgid "USB drive %s connected: Settings > Storage to use it"
 msgstr ""
 
 #. TRANSLATORS: toast, short; %s is the stick's name
-#: src/ui/transfer_ui.c:1414
+#: src/ui/transfer_ui.c:1424
 #, c-format
 msgid "USB drive %s connected"
 msgstr ""
 
 #. TRANSLATORS: %1$s the stick's name, %2$s its format ("exfat"), %3$s its size
-#: src/ui/transfer_ui.c:1424
+#: src/ui/transfer_ui.c:1434
 #, c-format
 msgid "USB drive \"%s\" connected (%s, %s). What do you want to do?"
 msgstr ""
 
 #. TRANSLATORS: toast
-#: src/ui/transfer_ui.c:1478
+#: src/ui/transfer_ui.c:1488
 msgid "USB drive removed: the copy stopped"
 msgstr ""
 
 #. TRANSLATORS: toast, short
-#: src/ui/transfer_ui.c:1483
+#: src/ui/transfer_ui.c:1493
 msgid "USB drive removed"
 msgstr ""
 
 #. TRANSLATORS: toast
-#: src/ui/transfer_ui.c:1491
+#: src/ui/transfer_ui.c:1501
 msgid "USB drive: format not supported (use FAT32 or exFAT)"
 msgstr ""
 
 #. TRANSLATORS: toast
-#: src/ui/transfer_ui.c:1496
+#: src/ui/transfer_ui.c:1506
 msgid "The USB drive could not be read"
 msgstr ""
 
 #. TRANSLATORS: menu titles over a list of the USB drives plugged in (pick one)
-#: src/ui/transfer_ui.c:1543
+#: src/ui/transfer_ui.c:1553
 msgid "Import games from"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1543
+#: src/ui/transfer_ui.c:1553
 msgid "Export games to"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1543
+#: src/ui/transfer_ui.c:1553
 msgid "Back up saves to"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1550
+#: src/ui/transfer_ui.c:1560
 msgid "USB transfers are not available in this build."
 msgstr ""
 
-#: src/ui/transfer_ui.c:1555
+#: src/ui/transfer_ui.c:1565
 msgid "Plug in a USB drive (FAT32, exFAT or NTFS)."
 msgstr ""
 
 #. TRANSLATORS: toast, short (Eject USB drive with none plugged in)
-#: src/ui/transfer_ui.c:1592
+#: src/ui/transfer_ui.c:1602
 msgid "No USB drive"
 msgstr ""
 
 #. TRANSLATORS: toast, short
-#: src/ui/transfer_ui.c:1601
+#: src/ui/transfer_ui.c:1611
 msgid "A USB drive is busy"
 msgstr ""
 
 #. TRANSLATORS: toast; %s is the helper's own message (English)
-#: src/ui/transfer_ui.c:1757
+#: src/ui/transfer_ui.c:1767
 #, c-format
 msgid "Windows file share: %s"
 msgstr ""
 
 #. TRANSLATORS: toast
-#: src/ui/transfer_ui.c:1792
+#: src/ui/transfer_ui.c:1802
 msgid "Network off: web transfer stopped"
 msgstr ""
 
 #. TRANSLATORS: help bar: A stops the network transfer, B goes back
 #. TRANSLATORS: help bar: B stops the system update
-#: src/ui/transfer_ui.c:1898 src/ui/update_ui.c:728
+#: src/ui/transfer_ui.c:1908 src/ui/update_ui.c:728
 msgid "stop"
 msgstr ""
 
 #. TRANSLATORS: above the web address (URL) to type in a computer's browser
-#: src/ui/transfer_ui.c:1930
+#: src/ui/transfer_ui.c:1940
 msgid "Open this address in a browser:"
 msgstr ""
 
-#: src/ui/transfer_ui.c:1933
+#: src/ui/transfer_ui.c:1943
 msgid "(no network address)"
 msgstr ""
 
 #. TRANSLATORS: a second web address ("or http://retrostone.local")
-#: src/ui/transfer_ui.c:1938
+#: src/ui/transfer_ui.c:1948
 #, c-format
 msgid "or %s"
 msgstr ""
 
 #. TRANSLATORS: the Windows file share's address (\\RETROSTONE)
-#: src/ui/transfer_ui.c:1954
+#: src/ui/transfer_ui.c:1964
 #, c-format
 msgid "Windows: %s"
 msgstr ""
 
 #. TRANSLATORS: the Windows file share is starting
-#: src/ui/transfer_ui.c:1957
+#: src/ui/transfer_ui.c:1967
 #, c-format
 msgid "Windows: %s (starting...)"
 msgstr ""
 
 #. TRANSLATORS: the Windows file share's login, under its
 #. address; keep "retrostone" (the user name to type)
-#: src/ui/transfer_ui.c:1963
+#: src/ui/transfer_ui.c:1973
 #, c-format
 msgid "User: retrostone, Password: %s"
 msgstr ""
 
 #. TRANSLATORS: label above the 4-digit code the web page asks for, short
-#: src/ui/transfer_ui.c:1969
+#: src/ui/transfer_ui.c:1979
 msgid "PIN"
 msgstr ""
 
 #. TRANSLATORS: status; %d is a number of seconds
-#: src/ui/transfer_ui.c:1975
+#: src/ui/transfer_ui.c:1985
 #, c-format
 msgid "Wrong PIN entered: locked for %d s"
 msgid_plural "Wrong PIN entered: locked for %d s"
@@ -3029,55 +3039,55 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: status: a file name, then how much of it arrived ("(40%)")
-#: src/ui/transfer_ui.c:1980
+#: src/ui/transfer_ui.c:1990
 #, c-format
 msgid "Receiving %s (%d%%)"
 msgstr ""
 
 #. TRANSLATORS: status: the transfer stopped by itself, %s is why ("idle")
-#: src/ui/transfer_ui.c:1984
+#: src/ui/transfer_ui.c:1994
 #, c-format
 msgid "Stopped: %s"
 msgstr ""
 
 #. TRANSLATORS: status: the network transfer is stopped
-#: src/ui/transfer_ui.c:1988
+#: src/ui/transfer_ui.c:1998
 msgid "Stopped"
 msgstr ""
 
 #. TRANSLATORS: status: the network transfer runs, nothing arrives yet
-#: src/ui/transfer_ui.c:1991
+#: src/ui/transfer_ui.c:2001
 msgid "Waiting for files..."
 msgstr ""
 
-#: src/ui/transfer_ui.c:1994
+#: src/ui/transfer_ui.c:2004
 #, c-format
 msgid "%d file received"
 msgid_plural "%d files received"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/ui/transfer_ui.c:1999
+#: src/ui/transfer_ui.c:2009
 msgid "Only on your home network. Anyone with the PIN can add files."
 msgstr ""
 
-#: src/ui/transfer_ui.c:2054
+#: src/ui/transfer_ui.c:2064
 msgid "KEEP RECEIVING"
 msgstr ""
 
-#: src/ui/transfer_ui.c:2066
+#: src/ui/transfer_ui.c:2076
 msgid "Keep receiving files in the background?"
 msgstr ""
 
-#: src/ui/transfer_ui.c:2091
+#: src/ui/transfer_ui.c:2101
 msgid "Network transfer is not available in this build."
 msgstr ""
 
-#: src/ui/transfer_ui.c:2098
+#: src/ui/transfer_ui.c:2108
 msgid "Turn on WiFi or Ethernet first (no network address)."
 msgstr ""
 
-#: src/ui/transfer_ui.c:2106
+#: src/ui/transfer_ui.c:2116
 #, c-format
 msgid "The transfer could not start (error %d)."
 msgstr ""
