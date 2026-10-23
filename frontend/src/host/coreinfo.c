@@ -64,6 +64,7 @@ int coreinfo_load(struct core_info *ci, const char *dir, const char *id)
 	copy_val(&ci->ini, "core", "default_systems", ci->default_systems, sizeof(ci->default_systems));
 	ci->need_fullpath = ini_get_bool(&ci->ini, "core", "need_fullpath", false);
 	ci->block_extract = ini_get_bool(&ci->ini, "core", "block_extract", false);
+	ci->force_extract = ini_get_bool(&ci->ini, "core", "force_extract", false);
 	ci->savestates = ini_get_bool(&ci->ini, "core", "savestates", true);
 	ci->experimental = ini_get_bool(&ci->ini, "core", "experimental", false);
 	ci->no_content = ini_get_bool(&ci->ini, "core", "no_content", false);

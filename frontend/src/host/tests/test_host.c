@@ -417,7 +417,7 @@ static void test_options(void)
 	op.ship_dir = strdup(p);
 	snprintf(p, sizeof(p), "%s/user", dir);
 	op.user_dir = strdup(p);
-	opts_init("tcore", "Game (USA)", &core_ini, &op);
+	opts_init("tcore", "tsys", "Game (USA)", &core_ini, &op);
 	opts_env_set_variables(vars);
 	var.key = "t_mode";
 	CHECK(opts_env_get_variable(&var) && !strcmp(var.value, "slow"), "user system file wins: t_mode=%s", var.value);
@@ -444,6 +444,43 @@ static void test_options(void)
 	}
 	opts_free();
 	ini_free(&core_ini);
+
+	/* [options.<system>]: one core, several ROM folders (atari800 runs the
+	 * atari5200 folder in 5200 mode) */
+	{
+		struct ini ci2 = { 0 };
+		static const struct retro_variable v2[] = {
+			{ "t_machine", "Machine; 800xl|5200|130xe" },
+			{ NULL, NULL },
+		};
+		const char *pd;
+
+		ini_parse(&ci2, "[options]\nt_machine = 130xe\nrsos-port-device = core\n"
+			  "[options.sys5200]\nt_machine = 5200\n[options.sysxl]\nt_machine = 800xl\n");
+		opts_init("tcore2", "sys5200", "G", &ci2, &op);
+		opts_env_set_variables(v2);
+		var.key = "t_machine";
+		CHECK(opts_env_get_variable(&var) && !strcmp(var.value, "5200") && opts_source(0) == OPT_SRC_DEFAULT,
+		      "[options.sys5200] wins in that folder: t_machine=%s", var.value);
+		pd = opts_value("rsos-port-device");
+		CHECK(pd && !strcmp(pd, "core"), "the [options] host key still applies: rsos-port-device=%s",
+		      pd ? pd : "NULL");
+		opts_free();
+		opts_init("tcore2", "sysother", "G", &ci2, &op);
+		opts_env_set_variables(v2);
+		var.key = "t_machine";
+		CHECK(opts_env_get_variable(&var) && !strcmp(var.value, "130xe"),
+		      "a folder without its own section gets [options]: t_machine=%s", var.value);
+		opts_free();
+		opts_init("tcore2", NULL, "G", &ci2, &op);
+		opts_env_set_variables(v2);
+		var.key = "t_machine";
+		CHECK(opts_env_get_variable(&var) && !strcmp(var.value, "130xe"),
+		      "no system: [options] only: t_machine=%s", var.value);
+		opts_free();
+		ini_free(&ci2);
+	}
+
 	free((void *)op.ship_dir);
 	free((void *)op.user_dir);
 	{
@@ -569,6 +606,13 @@ static void test_pick_and_tree(void)
 	CHECK(coreinfo_load(&ci, p, "gearboy") == 0 && ci.nbios == 2 &&
 	      !strcmp(ci.bios[0].file, "7800 BIOS (U).rom") && !strcmp(ci.bios[1].file, "Machines/Shared Roms/MSX2P.rom"),
 	      "BIOS names with spaces, parentheses and slashes: \"%s\", \"%s\"", ci.bios[0].file, ci.bios[1].file);
+	CHECK(!ci.force_extract, "force_extract defaults to false");
+	coreinfo_free(&ci);
+	snprintf(p, sizeof(p), "%s/cores/atari800.ini", dir);
+	write_str(p, "[core]\nsystems = atari800, atari5200\nextensions = atr, a52\nforce_extract = true\n");
+	snprintf(p, sizeof(p), "%s/cores", dir);
+	CHECK(coreinfo_load(&ci, p, "atari800") == 0 && ci.force_extract && !ci.block_extract,
+	      "force_extract = true is read (the host unpacks zips the core claims but cannot open)");
 	coreinfo_free(&ci);
 
 	/* system_tree: copy missing files, never overwrite. */
@@ -716,7 +760,7 @@ static void test_options_menu(void)
 	snprintf(p, sizeof(p), "%s/user", dir);
 	op.user_dir = strdup(p);
 
-	opts_init("tcore", "G", NULL, &op);
+	opts_init("tcore", "tsys", "G", NULL, &op);
 	opts_env_set_variables(vars);
 	CHECK(opts_source(0) == OPT_SRC_GAME && !strcmp(opts_source_tag(OPT_SRC_GAME), " (game)"),
 	      "t_mode = slow comes from the game file");
@@ -745,7 +789,7 @@ static void test_options_menu(void)
 	opts_free();
 
 	/* next start: per game > per system > shipped */
-	opts_init("tcore", "G", NULL, &op);
+	opts_init("tcore", "tsys", "G", NULL, &op);
 	opts_env_set_variables(vars);
 	var.key = "t_mode";
 	CHECK(opts_env_get_variable(&var) && !strcmp(var.value, "slow"), "restart: t_mode = %s", var.value);
@@ -758,7 +802,7 @@ static void test_options_menu(void)
 	opts_free();
 
 	/* the benchmark's session override beats every file, is never saved */
-	opts_init("tcore", "G", NULL, &op);
+	opts_init("tcore", "tsys", "G", NULL, &op);
 	opts_set_override("t_mode", "accurate");
 	opts_env_set_variables(vars);
 	var.key = "t_mode";

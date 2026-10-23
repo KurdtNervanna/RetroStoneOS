@@ -233,7 +233,7 @@ of the first batch, including parallel-n64. The second-batch cores use a subset 
 | `SET_CORE_OPTIONS`, `_INTL`, `_V2`, `_V2_INTL` | all | parsed (English `us` set; v2 categories kept for the menu) |
 | `SET_CORE_OPTIONS_DISPLAY`, `SET_CORE_OPTIONS_UPDATE_DISPLAY_CALLBACK` | fceumm, gambatte, pcsx, fbneo, n64 | hidden options are not listed; the callback runs when the options page opens and after each change |
 | `SET_INPUT_DESCRIPTORS` | all | stored, shown on the Controls page |
-| `SET_CONTROLLER_INFO` | fceumm, snes9x2010, pcsx, mame, fbneo, n64 | stored; a port with an analog source gets the core's DualShock/analog device, else `RETRO_DEVICE_JOYPAD` |
+| `SET_CONTROLLER_INFO` | fceumm, snes9x2010, pcsx, mame, fbneo, n64, atari800 | stored; a port with an analog source gets the core's DualShock/analog device, else `RETRO_DEVICE_JOYPAD`; never set when the core .ini has `rsos-port-device = core` (atari800 keeps its own Atari/5200 controller choice) |
 | `GET_INPUT_BITMASKS` | all | true (`JOYPAD_MASK` answered from the input layer's bitmask) |
 | `GET_INPUT_DEVICE_CAPABILITIES`, `GET_INPUT_MAX_USERS` | - | joypad + analog, 4 |
 | `GET_RUMBLE_INTERFACE` | gambatte, gpsp, pcsx, n64 | given; forwarded to `hin_rumble()` (no-op until input.h exposes FF) |
@@ -269,7 +269,7 @@ Effective value of a key (first found wins):
 | 4 per game | `/data/rsos/coreopts/<core>/<game>.ini` | in-game menu (automatically, see below), "Use this for this game" (benchmark) |
 | 3 per system (core) | `/data/rsos/coreopts/<core>.ini` | in-game menu, "Save for all games" |
 | 2 RetroStone defaults | `/usr/share/rsos/coreopts/<core>.ini` | shipped (`src/host/coreopts/`) |
-| 1 package defaults | `[options]` of `/usr/share/rsos/cores/<core>.ini` | the core package |
+| 1 package defaults | `[options]` of `/usr/share/rsos/cores/<core>.ini`, then its `[options.<system>]` for the ROM folder played (one core, several folders: atari800/atari5200) | the core package |
 | 0 | the core's own default | |
 
 Format: `key = "value"` (the RetroArch `.opt` syntax, so RetroArch option files can be copied; unquoted values are
@@ -289,7 +289,8 @@ nothing for the RetroStone/core defaults (` (bench)` during a benchmark run). Re
 drives the menu (`--menu-script`), exits, restarts and checks the value the core receives (section 15).
 
 Keys the core does not declare are answered from the files too; the host's own keys start with `rsos-`
-(`rsos-glthread`: export `mesa_glthread=true` before the EGL context, read right after `retro_init()`).
+(`rsos-glthread`: export `mesa_glthread=true` before the EGL context, read right after `retro_init()`;
+`rsos-port-device = core`: never call `retro_set_controller_port_device`, docs/cores.md "Core metadata files").
 
 Shipped defaults (`src/host/coreopts/`): picodrive 6-button pad + dynarec; pcsx_rearmed dynarec on, NEON enhanced
 resolution off, frameskip off (per game: `auto`, which works with the audio buffer status callback), BIOS logo off;
@@ -310,7 +311,8 @@ and warnings. `n64.bench.ini` is the benchmark plan (section 18). Requirement do
 - **`system_files`** (flat list) and **`system_tree`** (a directory, e.g. bluemsx `Databases/` + `Machines/`) are
   copied into `/data/bios` when missing; existing files are never overwritten.
 - **Zipped ROMs**: arcade cores (`block_extract = true`, mame2003_plus, fbneo) and cores whose extensions include `zip`
-  get the zip as is. Otherwise the first member whose extension the core accepts (or the only file) is extracted with
+  get the zip as is, unless the core .ini says `force_extract = true` (atari800 lists `zip` but cannot open one).
+  Otherwise the first member whose extension the core accepts (or the only file) is extracted with
   miniz to `/tmp/rsos/<pid>/` (tmpfs), max 64 MB; `.7z` is refused with a message. The extracted file is removed at
   exit. **Saves follow RetroArch**: the game name is the content basename without extension, and for an extracted zip
   the name of the file inside it.

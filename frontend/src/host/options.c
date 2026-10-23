@@ -68,20 +68,23 @@ static void load_user_layer(int l, const char *path)
 		     strerror(-r));
 }
 
-void opts_init(const char *core_id, const char *game, const struct ini *core_ini,
+void opts_init(const char *core_id, const char *system, const char *game, const struct ini *core_ini,
 	       const struct opts_paths *paths)
 {
-	char p[4096];
+	char p[4096], sys_sec[96];
 
 	opts_free();
 	memset(O.unreadable, 0, sizeof(O.unreadable));
 	hstrlcpy(O.core_id, core_id, sizeof(O.core_id));
 	hstrlcpy(O.game, game ? game : "", sizeof(O.game));
 	hstrlcpy(O.user_dir, paths->user_dir, sizeof(O.user_dir));
-	/* Layer 1: the core package's [options]. */
-	if (core_ini)
+	/* Layer 1: the core package's [options], then its [options.<system>]
+	 * for the ROM folder being played (one core, several systems: the
+	 * atari5200 folder runs atari800 in 5200 mode). */
+	snprintf(sys_sec, sizeof(sys_sec), "options.%s", system && *system ? system : "");
+	for (int pass = 0; core_ini && pass < 2; pass++)
 		for (int i = 0; i < core_ini->n; i++)
-			if (!strcasecmp(core_ini->e[i].section, "options"))
+			if (!strcasecmp(core_ini->e[i].section, pass ? sys_sec : "options"))
 				ini_set(&O.layer[1], "", core_ini->e[i].key, core_ini->e[i].value);
 	if (hpath(p, sizeof(p), "%s/%s.ini", paths->ship_dir, core_id))
 		ini_load(&O.layer[2], p);
