@@ -101,6 +101,13 @@ SMALL=$(( IMG_MIB + 64 ))                  # tail too small for a 100 MiB backup
 GROWN=$(( BIG - SEEDOFF_MIB - 64 ))        # "grown to the end of the card"
 ROOT_ENTRIES=$(sfdisk -d "$OUT/images/sdcard.img" | grep -E 'img[23] :' | sed 's#.*: ##')
 command -v mkfs.exfat > /dev/null || { echo "mkfs.exfat missing on the host: apt install exfatprogs"; exit 2; }
+# data-partition mounts the new exFAT with the host kernel's driver: without it
+# every conversion would end in "cannot mount the new exFAT" and 50-odd FAILs
+grep -qw exfat /proc/filesystems || modprobe exfat 2> /dev/null
+grep -qw exfat /proc/filesystems || {
+	echo "the host kernel $(uname -r) has no exFAT driver: modprobe exfat (Ubuntu cloud kernels: apt install linux-modules-extra-$(uname -r))"
+	exit 2
+}
 echo "layout: image ${IMG_MIB} MiB, seed at ${SEEDOFF_MIB} MiB, cards ${BIG}/${SMALL} MiB"
 mt() { # mtools on the seed inside the card image
 	local cmd=$1; shift
