@@ -79,7 +79,8 @@
 #                   back); a boot that finds "trial" still set skips it and
 #                   sets rsos_lowvolt=failed (skipped until
 #                   "fw_setenv rsos_lowvolt")
-#   rsos_model      pro|regular, probed at the first start (see below)
+#   rsos_model      pro|regular, probed at the first start (see below;
+#                   informative: it never changes rsos_overlays)
 #   rsos_extraargs  appended to the kernel command line (e.g. "initcall_debug")
 #   rsos_verbose    1: U-Boot prints on the UART (silent otherwise, see bootcmd)
 #
@@ -118,11 +119,16 @@ l_save=0
 # The model: the RetroStone2 Pro has the 16 GB eMMC U23 (and the M.2 slot
 # J1), the regular RetroStone2 has neither. The first start (rsos_model
 # empty) probes U-Boot's mmc 1 (the eMMC) once and saves rsos_model=pro or
-# regular. A Pro gets the overlays "emmc" and "sata" (Settings > Storage can
-# switch them off), a regular unit loses "emmc" (the menu then hides the
-# internal storage). "rsos-storage redetect" (Settings > Storage > Detect the
-# model again) clears rsos_model: the next start probes again.
-if test -z "${rsos_model}"; then
+# regular, for Settings > Storage (a regular unit's menu hides the internal
+# storage). Nothing else changes: rsos_overlays stays the user's (the eMMC
+# and the M.2 SATA slot are off by default, for a fast start; Settings >
+# Storage turns them on). Only with this system's bootcmd (it sets
+# rsos_sysdev): an older U-Boot, kept by a card updated over the air, has no
+# mmc 1 and would take a Pro for a regular unit; rsos_model then stays
+# empty (the menu shows the storage settings). "rsos-storage redetect"
+# (Settings > Storage > Detect the model again) clears rsos_model: the next
+# start probes again.
+if test -z "${rsos_model}" && test -n "${rsos_sysdev}"; then
 	if test ${l_dev} = 1; then
 		setenv rsos_model pro
 	elif mmc dev 1; then
@@ -131,19 +137,7 @@ if test -z "${rsos_model}"; then
 		setenv rsos_model regular
 	fi
 	mmc dev ${l_envdev}
-	l_new=
-	for l_ov in ${rsos_overlays}; do
-		if test "${l_ov}" != "emmc" && test "${l_ov}" != "sata"; then
-			l_new="${l_new} ${l_ov}"
-		elif test "${l_ov}" = "sata" && test "${rsos_model}" = "regular"; then
-			l_new="${l_new} ${l_ov}"
-		fi
-	done
-	if test "${rsos_model}" = "pro"; then
-		l_new="${l_new} emmc sata"
-	fi
-	setenv rsos_overlays ${l_new}
-	echo "rsos: model ${rsos_model}, overlays: ${rsos_overlays}"
+	echo "rsos: model ${rsos_model}"
 	l_save=1
 fi
 
