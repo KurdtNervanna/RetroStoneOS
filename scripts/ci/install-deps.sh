@@ -17,7 +17,7 @@ SUDO=
 [ "$(id -u)" = 0 ] || SUDO=sudo
 apt_install() {
 	i=0
-	until $SUDO apt-get install -y -q --no-install-recommends "$@"; do
+	until $SUDO apt-get install -y -q -o Acquire::Retries=3 --no-install-recommends "$@"; do
 		i=$((i + 1))
 		[ "$i" -lt 3 ] || exit 1
 		sleep 15
