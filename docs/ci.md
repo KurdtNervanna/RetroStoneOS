@@ -96,7 +96,9 @@ defconfig is committed. `scripts/ci/board-info.sh <board>` shows what CI derives
 10. Image tests (not a gate yet; last, so that a slow test cannot cost the release files their time):
     `run-tests.sh image <board> <output>` runs the board/common tests and the board's own `tests/*.sh` against the
     build, from a fake `$HOME` whose `rsos/output` is the CI output: for the RetroStone2 `data-partition-test.sh` (as
-    root: loop devices and a private mount namespace; `modprobe exfat` first) and `boot-ab-qemu-test.sh` (U-Boot for
+    root: loop devices and a private mount namespace; `modprobe exfat` first, installing the runner kernel's
+    `linux-modules-extra-$(uname -r)` when the driver is missing; without it the test stops at once and says so)
+    and `boot-ab-qemu-test.sh` (U-Boot for
     QEMU's cubieboard). They are `continue-on-error` until they have proved stable on the runners: check their
     result in the log.
 
@@ -276,7 +278,7 @@ H=~/rsos/output/host/bin CROSS_CC=$H/arm-linux-gcc CROSS_AR=$H/arm-linux-ar CROS
 | check-defconfigs: "lines of X_defconfig not in the resulting .config" | kconfig dropped these symbols: a dependency is missing (e.g. a core not available for the architecture) or the option was renamed; fix the defconfig |
 | frontend-cross: "libdrm/alsa for ... not found" | the multiarch set-up of `install-deps.sh cross` failed (ports.ubuntu.com unreachable): re-run |
 | check-asan: "AddressSanitizer:DEADLYSIGNAL" at start-up | the `vm.mmap_rnd_bits` step did not run (only the ASan job sets it) |
-| Image tests fail (data partition) | often the runner kernel: no exFAT module, or no free loop device. They are not a gate; run `data-partition-test.sh` in WSL to confirm |
+| Image tests fail (data partition) | often the runner kernel: no exFAT module (the test then stops with "has no exFAT driver"; v0.1.0 to v0.1.4 all failed so, as "unknown filesystem type 'exfat'"), or no free loop device. They are not a gate; run `data-partition-test.sh` in WSL to confirm |
 | make-rsu: "UPDATE_SIGNING_KEY does not match the public key in the image" | the secret holds another key than `frontend/assets/update.pub`: put the right key in the secret (docs/updates.md §3), never change `update.pub` without a key rotation plan |
 | make-rsu: "the image reports version X, the tag says Y" | the tag is not a plain version (`v0.2.0`, `v0.2.0-rc1`), or `BR2_RETROSTONE_VERSION` / `BR2_RETROSTONE_RELEASE` did not reach the image: check the "configure" step's `release build` line |
 | make-rsu: "UPDATE_SIGNING_KEY is not set: no unsigned package for a release" (tag builds) | the `release` environment has no `UPDATE_SIGNING_KEY` secret: add it (section 7), then "Re-run failed jobs" |

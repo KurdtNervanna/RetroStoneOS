@@ -48,7 +48,17 @@ static const char *const g_sysmap_names[] __attribute__((unused)) = {
 	NC_("system", "Sega Pico"),
 	NC_("system", "PlayStation"),
 	NC_("system", "PC Engine"),
+	NC_("system", "PC Engine CD"),
 	NC_("system", "Atari 2600"),
+	NC_("system", "Atari 7800"),
+	NC_("system", "Lynx"),
+	NC_("system", "Neo Geo Pocket"),
+	NC_("system", "Neo Geo Pocket Color"),
+	NC_("system", "WonderSwan"),
+	NC_("system", "WonderSwan Color"),
+	NC_("system", "ColecoVision"),
+	NC_("system", "MSX"),
+	NC_("system", "Neo Geo CD"),
 	NC_("system", "Arcade (MAME 2003-Plus)"),
 	NC_("system", "Arcade (FinalBurn Neo)"),
 	NC_("system", "Neo Geo"),
@@ -1299,6 +1309,13 @@ static void import_summary(struct progress *p, enum transfer_state st, char *msg
 	/* TRANSLATORS: import summary, last sentence */
 	tail = some_failed ? _("Some files failed.") : "";
 	tfmt(msg, n, "%s%s%s%s%s", head, head[0] ? " " : "", body, tail[0] ? " " : "", tail);
+	if (r->move_held) {
+		size_t o = strlen(msg);
+
+		/* TRANSLATORS: Move games between drives, summary: the games that were not deleted from
+		 * the source (a file failed or differs, or the copy stopped: nothing is lost) */
+		tfmt(msg + o, n - o, " %s", _("Games not moved stay on the source drive too."));
+	}
 }
 
 static void backup_summary(struct progress *p, enum transfer_state st, char *msg, size_t n)

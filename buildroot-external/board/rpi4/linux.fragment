@@ -8,6 +8,12 @@
 CONFIG_DRM_VC4=y
 CONFIG_DRM_V3D=y
 CONFIG_SND_SOC=y
+# The HDMI encoders read the EDID over their own I2C controllers (ddc0/ddc1,
+# "brcm,bcm2711-hdmi-i2c", the i2c-brcmstb driver). As a module
+# (bcm2711_defconfig) nothing loads it without udev, and vc4 HDMI then waits
+# for it forever: no DRM device, a black screen (the Pi 2/3 case of
+# issue #6, where the DDC bus is i2c-bcm2835).
+CONFIG_I2C_BRCMSTB=y
 
 # --- CPU frequency (firmware clock driver)
 CONFIG_ARM_RASPBERRYPI_CPUFREQ=y

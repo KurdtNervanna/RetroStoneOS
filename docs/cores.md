@@ -86,12 +86,14 @@ Recommended layout: `/data/roms/<folder>`. The frontend maps a folder to a syste
 | `pcengine` | PC Engine / TurboGrafx-16 (HuCard) | mednafen_pce_fast | |
 | `pcenginecd` | PC Engine CD / TurboGrafx-CD (`.cue`/`.chd`/`.m3u`) | mednafen_pce_fast | |
 | `atari2600` | Atari 2600 | stella2014 | |
+| `atari5200` | Atari 5200 (`.a52`/`.bin`) | atari800 (5200 mode, [Atari 800 and 5200](#atari-800-and-5200-atari800)) | |
 | `atari7800` | Atari 7800 | prosystem | |
+| `atari800` | Atari 400/800, XL/XE, XEGS (`.atr`/`.xex`/`.car`/`.cas`...) | atari800 | |
 | `atarilynx` | Atari Lynx | handy | |
 | `ngp` | Neo Geo Pocket | mednafen_ngp | |
 | `ngpc` | Neo Geo Pocket Color | mednafen_ngp | |
-| `wonderswan` | WonderSwan | mednafen_wswan | |
-| `wonderswancolor` | WonderSwan Color | mednafen_wswan | |
+| `wonderswan` (or `wswan`) | WonderSwan | mednafen_wswan | |
+| `wonderswancolor` (or `wswanc`) | WonderSwan Color | mednafen_wswan | |
 | `coleco` | ColecoVision | gearcoleco | smsplus, bluemsx |
 | `msx` | MSX / MSX2 / MSX2+ / turbo R | bluemsx | |
 | `neocd` | Neo Geo CD (`.cue`/`.chd`) | geolith (experimental) | |
@@ -128,7 +130,7 @@ We suggest `/data/bios/`. Arcade BIOS zips stay in the ROM folder.
 | mame2003_plus, fbneo | software | no |
 | mednafen_pce_fast, stella2014, prosystem, handy, mednafen_ngp, mednafen_wswan, gearsystem, smsplus, gearboy, gearcoleco, bluemsx | software | no |
 | mednafen_supafaust (PPU on a second thread), clownmdemu, geolith (experimental) | software | no |
-| prboom, fake08, dosbox_pure, scummvm, nxengine, mednafen_supergrafx, fuse, cap32, pokemini, vice_x64 | software (scummvm built without OpenGL) | no |
+| prboom, fake08, dosbox_pure, scummvm, nxengine, mednafen_supergrafx, fuse, cap32, pokemini, vice_x64, atari800 | software (scummvm built without OpenGL) | no |
 | parallel_n64, mupen64plus_next | GLES2 through `RETRO_ENVIRONMENT_SET_HW_RENDER` (`RETRO_HW_CONTEXT_OPENGLES2`) | **yes** |
 
 Only the two N64 cores use HW rendering. For everything else the frontend never creates an EGL/GLES context and scans
@@ -365,6 +367,8 @@ default_systems = nes, fds        ; optional: systems for which this core is the
 extensions = nes, fds, unf, unif  ; lowercase, no dot (same list as retro_system_info.valid_extensions)
 need_fullpath = true              ; retro_system_info.need_fullpath: pass a path, not a memory buffer
 block_extract = false             ; true: hand .zip/.7z to the core as-is (arcade)
+force_extract = false             ; optional, true: the host unpacks a .zip even though the core's own
+                                  ; valid_extensions claim zip (atari800 lists it but cannot open one)
 savestates = true                 ; retro_serialize() is implemented
 renderer = software               ; software | gles2 (gles2: needs SET_HW_RENDER, see "Nintendo 64")
 pixel_format = rgb565             ; formats the core may request, first = usual one
@@ -380,7 +384,20 @@ description = Famicom Disk System BIOS (only needed for .fds images)
 
 [options]                         ; optional: core option defaults (RETRO_ENVIRONMENT_GET_VARIABLE)
 parallel-n64-gfxplugin = rice     ; applied unless the user or a per-game file overrides them
+
+[options.atari5200]               ; optional: defaults for one ROM folder only, over [options] (a core that
+atari800_system = 5200            ; runs several systems; same layer, so the user files still win)
 ```
+
+Host keys in `[options]` (not core options; the core never sees them, `rsos-` prefix): `rsos-glthread = true`
+(the N64 cores, see [N64 performance](#n64-performance)) and `rsos-port-device = core`: the host never calls
+`retro_set_controller_port_device` for this core, which keeps the controller type it picked itself (atari800: the
+Atari joystick, or the 5200 controller for a 5200 game; a plain RetroPad breaks its 5200 keypad).
+
+The in-game menu's "save for all games" file (`/data/rsos/coreopts/<core>.ini`) is per core, not per folder: a
+value saved there applies to every folder of the core, over `[options.<system>]`. For atari800, that matters only
+if someone saves `atari800_system` for all games from the `atari800` folder; the 5200 games the core recognises
+(`.a52`, and `.bin` files in its 5200 cartridge database) still start as a 5200.
 
 BIOS checksums listed:
 
@@ -415,6 +432,11 @@ BIOS checksums listed:
 | `neogeo.zip` | - (MAME zip set) | geolith | MVS / Universe BIOS mode only (fbneo reads its own copy from the ROM folder) |
 | `neocdz.zip` | - (MAME zip set) | geolith | Neo Geo CD (all models) |
 | `neocd.zip` | - (MAME zip set) | geolith | Neo Geo CD front/top-loader models only |
+| `5200.rom` | `281f20ea4320404ec820fb7ec0693b38` | atari800 | optional (Altirra 5200 OS built in) |
+| `ATARIXL.ROM` | `06daac977823773a3eea3422fd26a703` | atari800 | optional (AltirraOS built in) |
+| `ATARIOSB.ROM` | `4177f386a3bac989a981d3fe3388cb6c` | atari800 | optional (AltirraOS built in) |
+| `ATARIOSA.ROM` | `eb1f32f5d9f382db1bbfb8d7f9cb343a` | atari800 | optional |
+| `ATARIBAS.ROM` | `0bac0c6a50104045d902df4503a4c30b` | atari800 | optional (Altirra BASIC built in) |
 
 ## Architectures (porting)
 
@@ -452,7 +474,7 @@ Two facts shape the choices:
 | beetle-supergrafx, fuse | `rpi2` | `rpi4_64` | `rpi3_64` | `unix` | `unix` | none |
 | pokemini | `rpi2` | `rpi4` (its 64-bit A72 branch) | `rpi3_64` | `unix` | `unix` | none |
 | cap32 | `rpi2` | `unix` | `unix` | `unix` | `unix` | its rpi3 branch is 32-bit only |
-| prboom, fake08, nxengine, vice (`EMUTYPE=x64`) | `unix` | `unix` | `unix` | `unix` | `unix` | none (prboom: NEON drawers from `__ARM_NEON`) |
+| prboom, fake08, nxengine, vice (`EMUTYPE=x64`), atari800 | `unix` | `unix` | `unix` | `unix` | `unix` | none (prboom: NEON drawers from `__ARM_NEON`) |
 | dosbox-pure | no platform (`MAKE_CPUFLAGS` empty) | `MAKE_CPUFLAGS=-DPAGESIZE=4096` | same | same | empty | DOSBox dynrec: ARMV7LE / ARMV8LE backends, `dynamic_x86` on x86_64, chosen by `include/config.h` |
 | scummvm | `unix HAVE_NEON=1 BUILD_64BIT=0` | `unix HAVE_NEON=1 BUILD_64BIT=1` | same | same | `unix HAVE_NEON=0 BUILD_64BIT=1` | NEON blitters (`SCUMMVM_NEON`); software rendering everywhere |
 
@@ -1116,6 +1138,61 @@ cores.
 
 Not verified: running them. TODO(hw): load a game per system on the RetroStone2, check save states where supported,
 the on-screen keyboards, and frame times (a protected-mode DOS game, a SCI32 game, a C64 game with disk loading).
+
+## Atari 800 and 5200 (atari800)
+
+Asked for in issue #9 (docs/review/feature-parity.md). One core runs two ROM folders.
+
+| System (folder) | Core (package) | Upstream commit | Build flags | Expected on A20 (2x A7 @ ~1 GHz) | BIOS | Known issues |
+|---|---|---|---|---|---|---|
+| Atari 400/800, XL/XE, XEGS (`atari800`); Atari 5200 (`atari5200`) | atari800 (`libretro-atari800`), Atari800 7.0.0 | [`4e7fbc7`](https://github.com/libretro/libretro-atari800/commit/4e7fbc73765c1a9670c7506616046ad1d4ccda51) 2026-09-01 (the repository has no release tags) | `platform=unix GIT_VERSION=` everywhere (-O2; CPU flags from the toolchain wrapper; plain C, bundled zlib) | Full speed with a large margin (a 1.79 MHz 6502; Atari800 ran on 200 MHz-class handhelds). TODO(hw): measure. | none: the Altirra OS (400/800, XL/XE), Altirra 5200 OS and Altirra BASIC are built in; original ROMs optional | The core lists `.zip` but cannot open one (`force_extract`). Disk images are written in place when a game saves to disk. |
+
+- **Content.** `atari800`: disks `.atr .xfd .atx .dcm` (`.m3u` for multi-disk games), tapes `.cas`, programs
+  `.xex .com`, cartridges `.car .rom .bin`. `atari5200`: `.a52 .bin`. Zipped files work: the host unpacks them
+  (`force_extract = true`). The core picks the machine: a `.a52` file, and a `.bin`/`.rom` that is in its 5200
+  cartridge database (CRC), always starts as a 5200; anything else uses the `atari800_system` option.
+- **Two systems, one core: per-system option defaults.** Core option defaults were per core. The host now also reads
+  `[options.<system>]` of the core `.ini` for the ROM folder being played, over `[options]`
+  ([Core metadata files](#core-metadata-files)); `atari800.ini` has `[options.atari5200] atari800_system = 5200`, so
+  a 5200 `.bin` that is not in the database still starts as a 5200, and the `atari800` folder keeps the core
+  default (800XL, 64 KB, the machine that runs most of the library). Test: `test_host` ("core options").
+- **Controllers.** The core declares an "ATARI Joystick" and an "ATARI 5200 Joystick" device and switches ports 1-2 to
+  the 5200 controller itself in 5200 mode. The host normally sets `RETRO_DEVICE_JOYPAD` on every port after
+  `retro_load_game()`, and with that device the core's 5200 code reads no keypad, and its on-screen keyboard button
+  falls on fire. `rsos-port-device = core` in `[options]` makes the host leave the ports to the core.
+- **Input.** Shipped remaps (`frontend/src/input/remaps/atari800.ini`, `atari5200.ini`): A = fire (B fires too on
+  the computers; it is fire 2 on the 5200), X = Return / `*`, Y = Space / `#`, Start = START, Select = SELECT /
+  PAUSE, L = OPTION / keypad 0, R = Help / keypad 1, L2 = Esc / keypad 2, **R2 = the core's on-screen keyboard**
+  (the whole Atari keyboard, or the 5200 keypad with RESET). The core puts its keyboard on L3 (computers) and R3
+  (5200), the optional C/Z buttons, which still work on units that have them. RESET of the computers is the
+  frontend's Select+B (a cold start). Select alone reaches the core; Select+R2 stays fast-forward.
+- **Config file.** The core can load and write the standalone emulator's `.atari800.cfg` in `$HOME`, which is `/`
+  (read-only) for the frontend. `atari800.ini` sets `atari800_cfg = disabled` (also the core default): the file is
+  never read or written. The standalone emulator's ROM download (`download.c`) is not in the libretro build.
+- **Licence.** GPL-2.0+ (Atari800 and the libretro port, `atari800/COPYING`); the Altirra ROMs compiled into the core
+  (`atari800/src/roms/altirra*.c`) carry Avery Lee's all-permissive notice ("Copying and distribution of this file,
+  with or without modification, are permitted in any medium without royalty"); zlib (Zlib). No Atari ROM is in the
+  core or the image.
+
+- **BIOS files**, all optional: `5200.rom`, `ATARIXL.ROM`, `ATARIOSB.ROM`, `ATARIOSA.ROM`, `ATARIBAS.ROM` (MD5s in
+  the table of [Core metadata files](#core-metadata-files), from upstream's `atari800_libretro.info`). The core finds
+  them in the system directory by checksum, whatever their names, and uses them instead of the Altirra ROMs when the
+  "OS ROM" options are on `auto` (the default).
+
+**Verification** (2026-10-23). Buildroot 2026.02.3, `retrostone2_defconfig` in a fresh output directory, Bootlin
+armv7-eabihf glibc stable 2025.08-1 (GCC 14.3), `BR2_DOWNLOAD_FORCE_CHECK_HASHES=y`, the build run without network
+(`unshare -n`): download hash and `atari800/COPYING` hash OK, `libretro-atari800-legal-info` OK. The package builds
+in about 5 s with a warm ccache. `atari800_libretro.so`: 0.80 MB stripped, `ELF 32-bit LSB shared object, ARM,
+EABI5`, `Tag_CPU_name: 7-A`, VFPv4, NEON with FMA, `GNU_STACK RW`, no TEXTREL, NEEDED libm/libc/ld-linux-armhf only,
+the 25 mandatory `retro_*` exported, no download code linked; `make -n` shows `-O2 -fPIC -D__LIBRETRO__` on top of
+the wrapper's Cortex-A7 flags. The log has only unused-variable/function warnings from upstream (no
+incompatible-pointer, implicit-declaration or int-conversion warning). The aarch64 and x86_64 builds (CI) are not
+checked locally.
+
+Not verified: running it. TODO(hw): on the RetroStone2, a 5200 `.a52` and a 5200 `.bin` from the `atari5200`
+folder (5200 mode, keypad on the on-screen keyboard with R2, both fire buttons), an `.atr` and a `.xex` from
+`atari800` (boot with the built-in AltirraOS, Space/Return/OPTION, the on-screen keyboard), a zipped game, a save
+state, and the frame time.
 
 ## RetroStone (the RetroStone VC games)
 

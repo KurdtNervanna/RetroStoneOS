@@ -31,7 +31,9 @@
 #define ST_STATUS S.p_status
 #define ST_PROGRESS S.p_progress
 #define ST_LIBS S.p_libs
-#define ST_POLL_MS 2000
+/* /sys/block (a card or a drive in or out): slowly, so the idle menu sleeps;
+ * Settings > Storage starts its own refresh when it opens */
+#define ST_POLL_MS 10000
 /* RSOS_COVERS_HELPER overrides it (previews, tests) */
 #define COVERS_HELPER S.p_covers
 #define COVERS_MISSING S.p_missing
@@ -91,6 +93,7 @@ static const char *const g_lib_names[3] = { "emmc", "sd", "m2" };
 /* the status the Storage menu was built from (storage_menu_changed) */
 static char g_menu_status[1024];
 static void status_text(char *out, size_t n);
+static void block_sig(char *out, size_t n);
 
 /* --------------------------------------------------------------- state */
 static void read_status(void)
@@ -184,6 +187,8 @@ const char *storage_model_name(void)
 {
 	if (!S.on)
 		return NULL;
+	if (!S.st.boot[0])
+		read_status();    /* a refresh since the start may have written it */
 	if (model_regular())
 		return "RetroStone2";
 	if (!strcmp(S.st.model, "pro") || booted_from_emmc() || S.st.starter || S.st.emmc)
@@ -230,8 +235,13 @@ void storage_init(struct ui *ui)
 	S.helper = h;
 	S.on = h && *h && access(h, X_OK) == 0 && ui->cfg.storage_overlays &&
 	       (strstr(ui->cfg.storage_overlays, "emmc") || strstr(ui->cfg.storage_overlays, "sata"));
-	if (S.on)
+	/* no "rsos-storage refresh" at start: the disks as they are now are the
+	 * baseline (rsos-storage boot mounted the libraries, when there are
+	 * other disks); a change, or Settings > Storage, starts one */
+	if (S.on) {
 		read_status();
+		block_sig(S.sig, sizeof(S.sig));
+	}
 }
 
 /* ----------------------------------------------------------- libraries */
@@ -301,6 +311,19 @@ void storage_poll(struct ui *ui)
 	apply_libraries(ui);
 }
 
+void storage_page_opened(struct ui *ui)
+{
+	int id;
+
+	(void)ui;
+	if (!S.on || S.refresh_job || S.job)
+		return;
+	block_sig(S.sig, sizeof(S.sig));
+	id = job("refresh", NULL, NULL, UI_JOB_STORAGE);
+	if (id > 0)
+		S.refresh_job = id;
+}
+
 /* ------------------------------------------------------------ the page */
 static const char *step_text(const char *step)
 {
@@ -361,6 +384,10 @@ static const char *reason_text(const char *r)
 	if (!strcmp(r, "notrsos"))
 		/* TRANSLATORS: storage task failed */
 		return _("This SD card does not hold RetroStoneOS.");
+	if (!strcmp(r, "oldbootloader"))
+		/* TRANSLATORS: storage task failed: the card's start-up files are from an older version */
+		return _("This SD card's start-up files are too old to start the internal storage. Flash a new "
+			 "RetroStoneOS card first, then try again. Nothing was changed.");
 	/* TRANSLATORS: storage task failed (the reason is in the log) */
 	return _("Something went wrong. Nothing was changed on the microSD card.");
 }
@@ -529,6 +556,7 @@ static int done_buttons(const char **b0, const char **b1)
 
 static void task_start(struct ui *ui, int kind);
 static void cp_job_done(struct ui *ui, const struct hw_job_result *r);
+static void sdstarter_ask(struct ui *ui);
 
 static void task_render(struct ui *ui, struct screen *scr, struct gfx_surface *s)
 {
@@ -619,8 +647,8 @@ static void task_button(struct ui *ui, struct screen *scr, enum input_btn b, enu
 			return;
 		}
 		if (first && (kind == TASK_INSTALL || kind == TASK_INSTALL_KEEP)) {
-			LOGI("storage: install done: making the microSD the starter card");
-			task_start(ui, TASK_SDSTARTER);
+			/* never without the confirmation (CANCEL first) */
+			sdstarter_ask(ui);
 		} else if (first && (kind == TASK_SDSTARTER || kind == TASK_SDFULL)) {
 			LOGI("storage: starter card ready: restarting (system on the eMMC)");
 			ui_power(ui, UI_REBOOT);
@@ -807,7 +835,9 @@ void storage_job_done(struct ui *ui, const struct hw_job_result *r)
 			strlcpy_(S.reason, "unknown", sizeof(S.reason));
 		LOGW("storage: task %d failed (%d, %s): %s", S.kind, r->status, S.reason, r->out);
 	}
-	S.sel = 0;
+	/* an install done: "Keep SD as it is" is preselected (the starter card
+	 * asks again before it changes the card) */
+	S.sel = S.state == TS_DONE && (S.kind == TASK_INSTALL || S.kind == TASK_INSTALL_KEEP) ? 1 : 0;
 	apply_libraries(ui);
 	if (S.kind == TASK_COVERS && !S.task) {
 		char t[160];
@@ -1022,6 +1052,19 @@ static void confirm_task(struct ui *ui, int choice, void *user)
 		task_start(ui, (int)(intptr_t)user);
 }
 
+static void sdstarter_ask(struct ui *ui)
+{
+	/* TRANSLATORS: dialog buttons, uppercase, short (CANCEL is selected) */
+	const char *const buttons[] = { _("CANCEL"), _("CONTINUE"), NULL };
+
+	/* TRANSLATORS: Settings > Storage > Use this SD card as starter card */
+	dialog_select(dialog_open(ui, _("Make this SD card the starter card? It keeps its games and the "
+					"start-up files; its own system is removed, and the console then "
+					"runs from the internal storage. Keep the card in the slot. A "
+					"freshly flashed card brings the SD system back."),
+				  buttons, confirm_task, (void *)(intptr_t)TASK_SDSTARTER), 0);
+}
+
 static void install_ask(struct ui *ui)
 {
 	const struct power_status *bat = ui_battery(ui);
@@ -1065,8 +1108,10 @@ static void install_ask(struct ui *ui)
 	dialog_select(d, 2);
 }
 
-/* Move games between drives: the drives (the system disk's /data first) */
-static const char *g_move_roots[4], *g_move_labels[4];
+/* Move games between drives: the drives (the system disk's /data first).
+ * Copies: a refresh while the dialog is open rewrites S.st.lib[]. */
+static char g_move_roots[4][512];
+static const char *g_move_labels[4];
 static int g_move_n;
 
 static void move_from_choice(struct ui *ui, int choice, void *user)
@@ -1082,12 +1127,13 @@ static void move_ask(struct ui *ui)
 	int n = 0;
 
 	read_status();
-	g_move_roots[n] = ui->cfg.transfer && ui->cfg.transfer->data_root ? ui->cfg.transfer->data_root : "/data";
+	strlcpy_(g_move_roots[n], ui->cfg.transfer && ui->cfg.transfer->data_root ?
+		 ui->cfg.transfer->data_root : "/data", sizeof(g_move_roots[n]));
 	g_move_labels[n++] = booted_from_emmc() ? _("Internal storage") : _("SD card");
 	for (int i = 0; i < 3 && n < 4; i++) {
 		if (!S.st.lib[i][0])
 			continue;
-		g_move_roots[n] = S.st.lib[i];
+		strlcpy_(g_move_roots[n], S.st.lib[i], sizeof(g_move_roots[n]));
 		g_move_labels[n++] = i == 0 ? _("Internal storage") : i == 1 ? _("SD card") : _("M.2 drive");
 	}
 	g_move_n = n;
@@ -1141,17 +1187,8 @@ bool storage_menu_item(struct ui *ui, struct menu *m, struct menu_item *it, int 
 			install_ask(ui);
 		return true;
 	case ID_ST_SDSTARTER:
-		if (!dir) {
-			/* TRANSLATORS: dialog buttons, uppercase, short (CANCEL is selected) */
-			const char *const buttons[] = { _("CANCEL"), _("CONTINUE"), NULL };
-
-			/* TRANSLATORS: Settings > Storage > Use this SD card as starter card */
-			dialog_select(dialog_open(ui, _("Make this SD card the starter card? It keeps its games and the "
-							"start-up files; its own system is removed, and the console then "
-							"runs from the internal storage. Keep the card in the slot. A "
-							"freshly flashed card brings the SD system back."),
-						  buttons, confirm_task, (void *)(intptr_t)TASK_SDSTARTER), 0);
-		}
+		if (!dir)
+			sdstarter_ask(ui);
 		return true;
 	case ID_ST_MOVE:
 		if (!dir)
@@ -1467,7 +1504,9 @@ void discs_group(struct ui *ui)
 	for (int i = 0; i < ui->nsys; i++) {
 		const struct sysent *se = &ui->sys[i];
 
-		if (se->is_collection || !se->games)
+		/* only where a core takes playlists: elsewhere the .m3u would hide
+		 * the discs behind an entry that cannot start */
+		if (se->is_collection || !se->games || !se->def || !systems_ext_ok(se->def->name, "m3u"))
 			continue;
 		for (int j = 0; j < se->games->n; j++) {
 			const struct game *g = &se->games->games[j];
@@ -1497,19 +1536,30 @@ void discs_group(struct ui *ui)
 	qsort(d, (size_t)n, sizeof(*d), cmp_disc);
 	for (int i = 0; i < n;) {
 		int j = i;
-		char m3u[1100];
+		char m3u[1100], tmp[1110];
 		FILE *f;
 
 		while (j < n && !strcmp(d[j].key, d[i].key))
 			j++;
 		snprintf(m3u, sizeof(m3u), "%s.m3u", d[i].key);
-		/* two discs at least, and never over an existing playlist */
-		if (j - i >= 2 && access(m3u, F_OK) != 0 && (f = fopen(m3u, "w"))) {
+		snprintf(tmp, sizeof(tmp), "%s.tmp", m3u);
+		/* two discs at least, and never over an existing playlist; a
+		 * temporary file, synced, then renamed: never a half-written
+		 * playlist after a power cut */
+		if (j - i >= 2 && access(m3u, F_OK) != 0 && (f = fopen(tmp, "w"))) {
+			bool ok = true;
+
 			for (int k = i; k < j; k++)
-				fprintf(f, "%s\n", d[k].file);
-			if (fclose(f) == 0) {
+				ok = fprintf(f, "%s\n", d[k].file) > 0 && ok;
+			ok = fflush(f) == 0 && ok;
+			ok = fsync(fileno(f)) == 0 && ok;
+			ok = fclose(f) == 0 && ok;
+			if (ok && rename(tmp, m3u) == 0) {
 				written++;
 				LOGI("discs: %s (%d discs)", m3u, j - i);
+			} else {
+				LOGW("discs: cannot write %s: %s", m3u, strerror(errno));
+				unlink(tmp);
 			}
 		}
 		i = j;

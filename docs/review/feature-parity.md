@@ -207,7 +207,7 @@ Ranked by value first, then by lowest effort. "Where" names the module that woul
 |---|---|---|---|
 | `RETRO_DEVICE_KEYBOARD` (+ `SET_KEYBOARD_CALLBACK`) from USB keyboards | DOS, C64, Amiga, Spectrum, CPC, Atari 8-bit/ST, TIC-80, ScummVM text input | Keyboards are UI-only; the host answers JOYPAD and ANALOG only | M |
 | `RETRO_DEVICE_MOUSE` / `POINTER` | ScummVM (optional), Amiga/ST games, DOS (optional), TIC-80 | Not answered | S (with the above) |
-| Cores' own virtual keyboards | vice, puae, cap32, fuse, atari800, dosbox-pure, hatari | Work already: they are drawn by the core and driven by the RetroPad. Check each core's vkbd button against our Select hotkey (Select alone does reach the core) | none |
+| Cores' own virtual keyboards | vice, puae, cap32, fuse, atari800, dosbox-pure, hatari | Work already: they are drawn by the core and driven by the RetroPad. Check each core's vkbd button against our Select hotkey (Select alone does reach the core); atari800 (L3/R3) and dosbox-pure (L3) get R2 through a shipped remap | none |
 | `retro_load_game_special` / subsystems | Sufami Turbo, SGB with separate BIOS in some cores, TGB Dual link | `SET_SUBSYSTEM_INFO` ignored | M |
 | Data files in the system dir | ScummVM (`scummvm.zip` data), prboom (`prboom.wad`), fake-08/TIC-80 none | `system_files` / `system_tree` copy mechanism exists (bluemsx) | none |
 | Portrait / rotated output | Vectrex, WonderSwan vertical, arcade vertical | Cores rotate in software | none |
@@ -253,8 +253,8 @@ without the host keyboard support of 2.2; a USB keyboard when docked needs it.
 | Commodore 64 | RP:Commodore-64 | vice **x64** (fast); x64sc per game | x64 full speed; x64sc (cycle-exact) borderline | GPL-2.0 | M (large, `EMUTYPE=x64`) | **Add now/next** |
 | ZX Spectrum | RP:ZX-Spectrum | **fuse** | Full speed, large margin | GPL-3.0 | S | **Add now**; the Spectrum ROMs are built in (Amstrad allows their distribution with emulators) |
 | Amstrad CPC | RP:Amstrad-CPC | **cap32** (crocods is lighter, MIT) | Full speed | GPL-2.0 | S | **Add now**; ROMs built in |
-| Atari 800 / 5200 | RP:Atari-800-and-5200 | atari800 | Full speed | GPL-2.0 | S | Later: needs OS/BASIC/5200 ROMs (check whether the libretro fork has the Altirra replacement ROMs) |
-| Amiga | RP:Amiga | uae4arm-libretro (ARM JIT, written for Pandora-class CPUs); PUAE / puae2021 as fallback | A500 (OCS/ECS) likely full speed with uae4arm; AGA borderline; PUAE heavier | GPL-2.0 | M-L (uae4arm port less maintained; PUAE big) | Later: high value in Europe but Kickstart ROMs are commercial (AROS replacement works for some games) and WHDLoad setup is fiddly |
+| Atari 800 / 5200 | RP:Atari-800-and-5200 | atari800 | Full speed | GPL-2.0 | S | **Added in 0.1.4** (issue #9; docs/cores.md "Atari 800 and 5200"): `libretro-atari800` 7.0.0 in every defconfig, folders `atari800` and `atari5200`, no BIOS needed (Altirra OS, 5200 OS and BASIC built in; to check on the device). The 5200 folder gets `atari800_system = 5200` from a new per-system section of the core `.ini` (`[options.atari5200]`; the core also picks the 5200 itself for `.a52` and the `.bin` files of its database); the host leaves the controller type to the core (`rsos-port-device = core`, the 5200 keypad needs it); `.atari800.cfg` is never read or written (`atari800_cfg = disabled`); zips are unpacked by the host (`force_extract`); R2 opens the core's on-screen keyboard (shipped remaps). TODO(hw) |
+| Amiga | RP:Amiga | uae4arm-libretro (ARM JIT, written for Pandora-class CPUs); PUAE / puae2021 as fallback | A500 (OCS/ECS) likely full speed with uae4arm; AGA borderline; PUAE heavier | GPL-2.0 | M-L (uae4arm port less maintained; PUAE big) | Later (asked for in issue #9): high value in Europe, but on the RetroStone2 PUAE is too heavy (2 A7 cores at ~1 GHz with slow DDR3; a Pi 3 is about the floor for A500 games at full speed); uae4arm-libretro (ARM JIT, still updated in 2026) is the only candidate there, to be timed on the device. Kickstart ROMs are commercial (PUAE falls back on AROS, which runs only part of the library), WHDLoad `.lha` games want a real Kickstart, and many games need disk swaps (`.m3u` + disk control: the host has it) or the keyboard (the core's on-screen keyboard only). Start with the Pi 4/5 and Orange Pi 5 images |
 | Atari ST | RP:Atari-ST-STE-TT-Falcon | hatari | ST probably full speed; STE borderline; Falcon no | GPL-2.0 | M (needs zlib, some patches) | Later: EmuTOS (GPL) can be shipped; many games need a mouse |
 | Apple II | RP:Apple-II | AppleWin (libretro port) | Probably full speed (6502 at 1 MHz), but the port is young and untested on ARM32 | GPL-2.0 | M | Not now |
 | Macintosh (68k) | RP:Macintosh | minivmac | Full speed (Mac Plus class) | GPL-2.0 | S | Not now (mouse-only, ROM needed) |
@@ -314,8 +314,8 @@ Next tier: HDMI volume (S), BIOS status screen (S), WiFi scan + NTP (S), LCD gri
 | 9 | nxengine (Cave Story) | S | A complete freeware game, full speed |
 | 10 | PokeMini (Pokémon mini) | S | Full speed, tiny |
 
-Next: atari800, Genesis Plus GX (per game), mGBA (SGB only), beetle-vb (experimental), mrboom, TIC-80, tyrquake,
-uae4arm/PUAE, hatari. Not viable on the A20: Saturn, Dreamcast, PSP, NDS (libretro), 3DO, Jaguar, GameCube and up.
+Next (atari800 was added in 0.1.4): Genesis Plus GX (per game), mGBA (SGB only), beetle-vb (experimental), mrboom,
+TIC-80, tyrquake, uae4arm/PUAE, hatari. Not viable on the A20: Saturn, Dreamcast, PSP, NDS (libretro), 3DO, Jaguar, GameCube and up.
 
 ## 5. Notes for other owners
 

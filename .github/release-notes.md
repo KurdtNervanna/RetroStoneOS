@@ -11,10 +11,31 @@ Puffin Plunge, Raccoon Recycler, Radish Rascals, Seal Shove, Snail Switch, Snowb
 Unicorn Hop. Bomber Mole, Goat Gorge, Lemur Leap, Prickle Patch and Puffin Plunge are one-player games; the 33 others
 support up to four players.
 
-**New in RetroStoneOS 0.1.3**: four one-player arcade games, Goat Gorge (a precision platformer up a gorge),
-Lemur Leap (an endless jump up a beanstalk into space), Prickle Patch (a hedgehog keeps the vegetable patch from
-endless pests) and Puffin Plunge (an endless dive down a well). In Beaver Rush, the PAUSED text no longer garbles the
-timer bar in Japanese, Greek, Russian and the other languages beyond the Latin alphabet.
+**New in RetroStoneOS 0.1.4**: Import from USB and the network upload page recognise every system's folder: the
+WonderSwan, Neo Geo Pocket, Atari 7800, Lynx, ColecoVision, MSX, PC Engine CD and Neo Geo CD folders were reported
+as "not supported", and imported PC Engine CD games went to the HuCard list where they never showed. The Batocera
+folder names `wswan` and `wswanc` work on the card too. **Settings > Game lists > Refresh game lists** now rescans
+every folder whatever the caches say. **Raspberry Pi**: the HDMI I2C driver the display waits for is built in,
+so HDMI should work with the normal `config.txt` (a Pi 3 needed `vc4-fkms-v3d`; the Pi 2, 4 and 5 had the same
+bug), and the **Adafruit PiGRRL 2** is supported, untested, through a block at the end of `config.txt`. On a
+**keyboard**, Esc in a game opens the in-game menu and Tab+Space leaves the game. **New systems: Atari 800 and
+Atari 5200** (the Atari800 core; folders `atari800` and `atari5200`, no BIOS needed, untested on the device yet).
+R2 opens the core's on-screen keyboard (the Atari keys, or the 5200 keypad). **Buttons that seemed held down**
+(RetroStone2 and RetroStone1): the buttons' internal pull-ups are on again, closing the in-game menu with A, B or
+Start no longer sends that button to the game, a RetroStone2 without the analog stick no longer takes floating
+inputs for a held stick, and a lost button release is corrected (and logged) within a second.
+
+**RetroStone2 Pro storage** (contributed by KurdtNervanna): **Settings > Storage** turns on the Pro's 16 GB internal
+eMMC and an M.2 SATA SSD (both stay off by default, so every RetroStone2 starts as fast as before), copies
+RetroStoneOS to the eMMC (the microSD then stays in the slot as a small "starter card": the A20 cannot start this
+eMMC by itself), prepares a drive for games and moves games between drives; the games of every drive show in the
+lists. **It needs a card freshly flashed with 0.1.4**: an update over the air keeps the old boot loader, which
+cannot start the eMMC. Settings > Storage and System information show the model (RetroStone2 or RetroStone2 Pro).
+Also new: **Settings > Game lists > Download game covers** (box art from the libretro thumbnail server, WiFi needed)
+and **Group multi-disc games** (one entry per multi-disc game, for the systems whose emulator takes `.m3u`
+playlists); **Rename this game** in a game's options; **Settings > Power > Memory speed** (RetroStone2,
+**experimental**): a faster memory clock (+12 % or +25 %), tried at the next start and kept only after a memory
+test passes; a start that fails goes back to the normal speed by itself.
 
 Game source: [RetroStone VC c900b9839c15](https://github.com/PaddleStroke/RetroStoneVC/tree/c900b9839c15bfc7c75c05fe91ffb6e86c57b89e).
 
@@ -50,7 +71,8 @@ are about 1.2 GB (2.2 GB for the Orange Pi 5) once written. 8 GB or more leaves 
   screen says "Preparing the SD card..."). It takes a few seconds; do not remove the power meanwhile (an
   interrupted first boot resumes at the next one).
 - Afterwards the card shows up on a PC as the drive **RETROSTONE**: put your games in `roms/<system>/` (the folders
-  are already there), BIOS files in `bios/`. `README.txt` on the card explains the layout.
+  are already there), BIOS files in `bios/`. `README.txt` on the card explains the layout. Games copied from a PC
+  show up at the next start (or with **Settings > Game lists > Refresh game lists**).
 {{HOMEBREW}}
 - WiFi, Bluetooth and Ethernet are off until you turn them on in the settings.
 

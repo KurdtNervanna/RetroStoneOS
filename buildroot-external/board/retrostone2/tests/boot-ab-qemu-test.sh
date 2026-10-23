@@ -78,6 +78,10 @@ grep -q '=== KERNEL' boot.cmd.test || { echo "could not patch boot.cmd"; exit 1;
 sed 's|^\([[:space:]]*\)elif mmc dev 1; then$|\1elif true; then|' boot.cmd.test > boot-pro.cmd
 grep -q 'elif true; then' boot-pro.cmd || { echo "could not patch the model probe"; exit 1; }
 "$H/bin/mkimage" -A arm -O linux -T script -C none -n test -d boot-pro.cmd boot-pro.scr > /dev/null
+# an older bootcmd (a card updated over the air keeps its U-Boot and its
+# saved bootcmd): rsos_sysdev is never set
+{ echo "setenv rsos_sysdev"; cat boot.cmd.test; } > boot-old.cmd
+"$H/bin/mkimage" -A arm -O linux -T script -C none -n test -d boot-old.cmd boot-old.scr > /dev/null
 
 # make_slot <dir> good|bad|none
 make_slot() {
@@ -268,7 +272,7 @@ make_card noscr empty
 boot
 check "bootflow scan, then poweroff" "grep -q 'poweroff ...' out.txt && no_kernel"
 
-echo "== 14: the model probe (rsos_model), a regular unit"
+echo "== 14: the model probe (rsos_model), a regular unit: the model only, never the overlays"
 make_card good empty
 boot
 check "first start: rsos_model=regular saved, no overlay" 	"grep -q 'rsos: model regular' out.txt && [ \"\$(env_get rsos_model)\" = regular ] && [ -z \"\$(env_get rsos_overlays)\" ] && started a pending"
@@ -276,22 +280,31 @@ confirm
 env_set rsos_model
 env_set rsos_overlays "emmc sata foo"
 boot
-check "probed again: emmc removed, sata and the others kept" 	"[ \"\$(env_get rsos_model)\" = regular ] && [ \"\$(env_get rsos_overlays)\" = 'sata foo' ] && ! grep -q 'overlay emmc applied' out.txt && started a pending"
+check "probed again: rsos_overlays left as the user set it" 	"grep -q 'rsos: model regular' out.txt && [ \"\$(env_get rsos_model)\" = regular ] && [ \"\$(env_get rsos_overlays)\" = 'emmc sata foo' ] && started a pending"
 confirm
 boot
-check "probed once only" "! grep -q 'rsos: model' out.txt && [ \"\$(env_get rsos_overlays)\" = 'sata foo' ] && started a pending"
+check "probed once only" "! grep -q 'rsos: model' out.txt && [ \"\$(env_get rsos_overlays)\" = 'emmc sata foo' ] && started a pending"
 
-echo "== 15: the model probe, a Pro (the eMMC answers)"
+echo "== 15: the model probe, a Pro (the eMMC answers): the overlays stay off"
 SCR=boot-pro.scr make_card good empty
 boot
-check "first start: rsos_model=pro, overlays emmc and sata" 	"[ \"\$(env_get rsos_model)\" = pro ] && [ \"\$(env_get rsos_overlays)\" = 'emmc sata' ] && grep -q 'overlay emmc applied' out.txt && started a pending"
+check "first start: rsos_model=pro, no overlay switched on" 	"grep -q 'rsos: model pro' out.txt && [ \"\$(env_get rsos_model)\" = pro ] && [ -z \"\$(env_get rsos_overlays)\" ] && ! grep -q 'overlay emmc applied' out.txt && started a pending"
 confirm
 env_set rsos_model
 env_set rsos_overlays "foo emmc"
 boot
-check "probed again: the others kept, emmc and sata once each" 	"[ \"\$(env_get rsos_overlays)\" = 'foo emmc sata' ] && grep -q 'overlay emmc applied' out.txt && started a pending"
+check "probed again: rsos_overlays left as the user set it" 	"[ \"\$(env_get rsos_model)\" = pro ] && [ \"\$(env_get rsos_overlays)\" = 'foo emmc' ] && grep -q 'overlay emmc applied' out.txt && started a pending"
 
-echo "== 16: CPU speed (rsos_cpuspeed): a trial that only an orderly shutdown ends"
+echo "== 16: an older bootcmd (no rsos_sysdev: a card updated over the air keeps its U-Boot): no probe"
+SCR=boot-old.scr make_card good empty
+boot
+check "first start: no probe, rsos_model stays empty" 	"! grep -q 'rsos: model' out.txt && [ -z \"\$(env_get rsos_model)\" ] && started a pending"
+confirm
+env_set rsos_overlays "emmc"
+boot
+check "rsos_overlays untouched (the user's emmc applied)" 	"! grep -q 'rsos: model' out.txt && [ -z \"\$(env_get rsos_model)\" ] && [ \"\$(env_get rsos_overlays)\" = emmc ] && grep -q 'overlay emmc applied' out.txt && started a pending"
+
+echo "== 17: CPU speed (rsos_cpuspeed): a trial that only an orderly shutdown ends"
 make_card good empty
 boot; confirm
 env_set rsos_cpuspeed 1
@@ -317,4 +330,3 @@ check "back to normal: no overlay, nothing set" "! grep -q 'overlay cpu-oc' out.
 
 echo "PASS=$pass FAIL=$fail"
 [ $fail -eq 0 ]
-

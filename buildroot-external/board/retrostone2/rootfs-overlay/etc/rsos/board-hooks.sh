@@ -20,8 +20,15 @@ rsos_board_late_audio() {
 # Then the game libraries of the other disks (rsos-storage boot: the eMMC
 # or the microSD that the system does not run from, the M.2 drive), and the
 # first start from the eMMC carries the microSD's overlays over. In the
-# background: the SATA link takes a moment to come up.
+# background: the SATA link takes a moment to come up. Only when there is
+# such a disk: the eMMC controller (the emmc overlay, 1c11000.mmc) or the
+# SATA controller (the sata overlay) is enabled, or the system does not run
+# from the microSD. A RetroStone2 with both off (the default: fast boot)
+# starts nothing here.
 rsos_board_late_storage() {
 	[ -d /sys/bus/platform/devices/1c18000.sata ] && modprobe -q ahci_sunxi
-	[ -x /usr/bin/rsos-storage ] && /usr/bin/rsos-storage boot < /dev/null > /dev/null 2>&1 &
+	if [ -e /sys/bus/platform/devices/1c11000.mmc ] || [ -e /sys/bus/platform/devices/1c18000.sata ] ||
+		[ "${RSOS_DISK:-/dev/mmcblk0}" != /dev/mmcblk0 ]; then
+		[ -x /usr/bin/rsos-storage ] && /usr/bin/rsos-storage boot < /dev/null > /dev/null 2>&1 &
+	fi
 }

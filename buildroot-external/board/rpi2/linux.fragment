@@ -9,6 +9,21 @@
 # HDMI audio through ASoC
 CONFIG_DRM_VC4=y
 CONFIG_SND_SOC=y
+# The HDMI encoder reads the EDID over the i2c2 controller (ddc = <&i2c2>,
+# enabled by vc4-kms-v3d). As a module (bcm2709_defconfig) nothing loads it
+# without udev: vc4 HDMI then waits for it forever, no DRM device appears and
+# the screen stays black (issue #6: a Pi 3 only showed a picture with
+# vc4-fkms-v3d, where the firmware drives HDMI).
+CONFIG_I2C_BCM2835=y
+
+# --- Optional SPI screen (docs/boards/pigrrl2.md): the Adafruit PiTFT 2.8"
+# (ILI9341) of the PiGRRL 2, config.txt "dtoverlay=pitft28-resistive,drm":
+# the SPI controller, the ILI9341 DRM driver and the gpio-backlight on the
+# STMPE610's GPIO (MFD_STMPE, STMPE_SPI and GPIO_STMPE are built in by
+# bcm2709_defconfig). Nothing probes unless the overlay is in config.txt.
+CONFIG_SPI_BCM2835=y
+CONFIG_TINYDRM_ILI9341=y
+CONFIG_BACKLIGHT_GPIO=y
 
 # --- CPU frequency (firmware clock driver)
 CONFIG_ARM_RASPBERRYPI_CPUFREQ=y

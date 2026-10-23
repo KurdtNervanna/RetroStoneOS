@@ -1622,6 +1622,7 @@ static void open_storage(struct ui *ui)
 	m->on_refresh = storage_refresh;
 	m->refresh_every = 3000;
 	menu_open(ui, m);
+	storage_page_opened(ui);
 }
 
 /* ------------------------------------------------------------- system info */

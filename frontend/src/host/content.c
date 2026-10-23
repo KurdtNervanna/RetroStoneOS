@@ -138,7 +138,7 @@ int content_prepare(char *err, size_t n)
 	hpath_stem(H.rom_path, H.game, sizeof(H.game));
 	hpath_ext(H.rom_path, ext, sizeof(ext));
 	if ((!strcmp(ext, "zip") || !strcmp(ext, "7z")) && !H.info.block_extract &&
-	    !hlist_has(valid_exts(), ext)) {
+	    (H.info.force_extract || !hlist_has(valid_exts(), ext))) {
 		int ret;
 
 		if (!strcmp(ext, "7z")) {

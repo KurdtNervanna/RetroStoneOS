@@ -36,8 +36,28 @@ static const struct sysmap g_sys[] = {
 	{ "gamegear", "Game Gear", { "gg", "segagamegear", NULL } },
 	{ "pico", "Sega Pico", { "segapico", NULL } },
 	{ "psx", "PlayStation", { "ps1", "ps", "playstation", "psone", "sonyplaystation", NULL } },
-	{ "pcengine", "PC Engine", { "pce", "tg16", "turbografx16", "turbografx", "pcenginecd", NULL } },
+	{ "pcengine", "PC Engine", { "pce", "tg16", "turbografx16", "turbografx", NULL } },
+	/* its own folder since the second batch of cores: CD games in
+	 * pcengine/ were not listed (that system only takes .pce) */
+	{ "pcenginecd", "PC Engine CD", { "pcecd", "tgcd", "turbografxcd", "turbografx16cd", "pcenginecdrom",
+					   NULL } },
 	{ "atari2600", "Atari 2600", { "a2600", "2600", "atarivcs", NULL } },
+	/* second batch of cores (docs/cores.md): missing here until 0.1.4, so
+	 * an import listed these folders as "not supported" */
+	{ "atari7800", "Atari 7800", { "a7800", "7800", NULL } },
+	/* one core (atari800), two folders: the 5200 console and the 8-bit
+	 * computers (RetroPie/Batocera: atari5200, atari800; Onion/MinUI tags) */
+	{ "atari5200", "Atari 5200", { "a5200", "5200", "fiftytwohundred", NULL } },
+	{ "atari800", "Atari 800", { "a800", "atari8bit", "atarixl", "atarixe", "atari400", "atari800xl",
+				     "eighthundred", NULL } },
+	{ "atarilynx", "Lynx", { "lynx", "lnx", NULL } },
+	{ "ngp", "Neo Geo Pocket", { "neogeopocket", NULL } },
+	{ "ngpc", "Neo Geo Pocket Color", { "neogeopocketcolor", NULL } },
+	{ "wonderswan", "WonderSwan", { "wswan", "ws", "bandaiwonderswan", NULL } },
+	{ "wonderswancolor", "WonderSwan Color", { "wswanc", "wsc", "bandaiwonderswancolor", NULL } },
+	{ "coleco", "ColecoVision", { "colecovision", "col", "cv", NULL } },
+	{ "msx", "MSX", { "msx1", "msx2", "msx2plus", "msxturbor", NULL } },
+	{ "neocd", "Neo Geo CD", { "neogeocd", "neocdz", NULL } },
 	{ "arcade", "Arcade (MAME 2003-Plus)", { "mame", "mamelibretro", "mame2003", "mame2003plus",
 						 "mamemame4all", "mame4all", "mame078", NULL } },
 	{ "fbneo", "Arcade (FinalBurn Neo)", { "fba", "fbalpha", "finalburnneo", "finalburnalpha",

@@ -49,8 +49,16 @@ image)
 	eval "$(sh "$HERE/board-info.sh" "$BOARD")"
 	ln -s "$OUT" "$FAKE/rsos/output"
 	TESTS=$(ls "$EXT"/board/common/tests/*.sh "$EXT/board/$BOARD_DIR"/tests/*.sh 2>/dev/null)
-	# the data partition test mounts exFAT on loop devices
-	$SUDO modprobe exfat 2>/dev/null || true
+	# The data partition test mounts exFAT on loop devices with the host
+	# kernel's driver. The GitHub runners' Azure kernel keeps it in
+	# linux-modules-extra-<kernel>, which the runner image does not install.
+	exfat_ok() { grep -qw exfat /proc/filesystems; }
+	exfat_ok || $SUDO modprobe exfat 2>/dev/null || true
+	if ! exfat_ok && [ "${GITHUB_ACTIONS:-}" = true ]; then
+		$SUDO apt-get install -y -q --no-install-recommends "linux-modules-extra-$(uname -r)" &&
+			$SUDO modprobe exfat || true
+	fi
+	exfat_ok || echo "run-tests: the host kernel $(uname -r) has no exFAT driver: data-partition-test.sh cannot run"
 	;;
 *) echo "run-tests: unknown mode $MODE" >&2; exit 1 ;;
 esac

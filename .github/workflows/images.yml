@@ -121,8 +121,11 @@ jobs:
         timeout-minutes: 15
         run: sh scripts/ci/free-disk.sh
 
+      # (40 min: on some runners the Azure Ubuntu mirror serves the cross
+      # compiler at ~50 kB/s; v0.1.4 lost its Orange Pi One build three times
+      # to the old 15-minute limit)
       - name: Install the Buildroot host dependencies
-        timeout-minutes: 15
+        timeout-minutes: 40
         run: sh scripts/ci/install-deps.sh buildroot tests
 
       # The caches share GitHub's 10 GB per repository (docs/ci.md, "Caches"):

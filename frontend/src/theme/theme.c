@@ -513,6 +513,8 @@ static const char *const g_related[][4] = {
 	{ "sega32x", "megadrive", "genesis", NULL },
 	{ "neogeo", "fba", "arcade", NULL },
 	{ "atari7800", "atari2600", NULL },
+	{ "atari5200", "atari2600", NULL },
+	{ "atari800", "atarist", "atari2600", NULL },
 };
 
 static const char *related_folder(const char *set_dir, const char *const *theme_names,

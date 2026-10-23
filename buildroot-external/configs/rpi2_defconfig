@@ -58,6 +58,9 @@ BR2_LINUX_KERNEL_DTS_SUPPORT=y
 # Pi 2 (BCM2836 and BCM2837 revisions), Pi 3 / 3B+ / Zero 2 W / CM3 in 32-bit
 # mode: the firmware picks the device tree of the board it runs on.
 BR2_LINUX_KERNEL_INTREE_DTS_NAME="broadcom/bcm2709-rpi-2-b broadcom/bcm2710-rpi-2-b broadcom/bcm2710-rpi-3-b broadcom/bcm2710-rpi-3-b-plus broadcom/bcm2710-rpi-zero-2-w broadcom/bcm2710-rpi-cm3"
+# The PiGRRL 2 buttons overlay (config.txt "dtoverlay=pigrrl2-buttons",
+# docs/boards/pigrrl2.md); post-image.sh puts it in overlays/
+BR2_LINUX_KERNEL_CUSTOM_DTS_PATH="$(BR2_EXTERNAL_RETROSTONE_PATH)/board/rpi2/pigrrl2-buttons.dtso"
 BR2_LINUX_KERNEL_NEEDS_HOST_OPENSSL=y
 
 # Firmware: bootcode.bin + the Pi 0-3 GPU firmware, config.txt, cmdline.txt,
@@ -172,6 +175,7 @@ BR2_PACKAGE_LIBRETRO_FUSE=y
 BR2_PACKAGE_LIBRETRO_CAP32=y
 BR2_PACKAGE_LIBRETRO_POKEMINI=y
 BR2_PACKAGE_LIBRETRO_VICE=y
+BR2_PACKAGE_LIBRETRO_ATARI800=y
 
 # SMB share \RETROSTONE (in-kernel ksmbd), started on demand by the frontend
 BR2_PACKAGE_KSMBD_TOOLS=y

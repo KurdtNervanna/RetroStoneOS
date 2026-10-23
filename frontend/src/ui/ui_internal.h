@@ -580,6 +580,9 @@ void storage_poll(struct ui *ui);                 /* every ui_update() */
 int storage_timeout(const struct ui *ui, int64_t now_ms);
 void storage_job_done(struct ui *ui, const struct hw_job_result *r);
 void storage_menu_items(struct ui *ui, struct menu *m);
+/* Settings > Storage opened: one "rsos-storage refresh" (the state of the
+ * disks; nothing at UI start or at boot on a unit with them off) */
+void storage_page_opened(struct ui *ui);
 /* true when it was one of the storage items */
 bool storage_menu_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir);
 /* true when the items changed (the menu is built again) */

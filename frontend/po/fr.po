@@ -2976,3 +2976,531 @@ msgstr ""
 msgctxt "theme"
 msgid "Original games · 2026"
 msgstr "Jeux originaux · 2026"
+
+#. TRANSLATORS: Settings > Game lists: box pictures from the libretro thumbnail server
+msgid "Download game covers"
+msgstr "Télécharger les jaquettes"
+
+#. TRANSLATORS: Settings > Game lists: one entry per multi-disc game (.m3u playlists)
+msgid "Group multi-disc games"
+msgstr "Regrouper les jeux multi-disques"
+
+#. TRANSLATORS: System information: the people who made RetroStoneOS
+msgid "Credits"
+msgstr "Crédits"
+
+#. TRANSLATORS: System information > Credits, when the list is missing
+msgid "No credits list on this system"
+msgstr "Aucune liste de crédits sur ce système"
+
+#. TRANSLATORS: System information: RetroStone2 or RetroStone2 Pro
+#. TRANSLATORS: Settings > Storage: RetroStone2 or RetroStone2 Pro (found at the first start)
+msgid "Model"
+msgstr "Modèle"
+
+#. TRANSLATORS: Settings > Power > Memory speed: the DRAM clock (normal 384 MHz,
+#. +12 % = 432 MHz, +25 % = 480 MHz)
+msgid "Normal"
+msgstr "Normale"
+
+msgid "Faster (+12 %)"
+msgstr "Plus rapide (+12 %)"
+
+msgid "Fastest (+25 %)"
+msgstr "La plus rapide (+25 %)"
+
+#. TRANSLATORS: Settings > Storage: the switch could not be saved
+msgid "The setting could not be saved."
+msgstr "Le réglage n’a pas pu être enregistré."
+
+#. TRANSLATORS: Settings > Power > Memory speed, a faster level chosen
+msgid "The next start tries the faster memory speed. After 30 seconds without a problem, a quick memory test confirms it. If the console freezes, hold the power button to turn it off: it then starts at the normal speed by itself."
+msgstr "Le prochain démarrage essaie la mémoire plus rapide. Après 30 secondes sans problème, un test rapide de la mémoire la confirme. Si la console se bloque, maintiens le bouton marche pour l’éteindre : elle repart ensuite d’elle-même à la vitesse normale."
+
+#. TRANSLATORS: Settings > Power > Memory speed, back to normal
+msgid "Restart required: the change applies at the next start."
+msgstr "Redémarrage nécessaire : le changement s’applique au prochain démarrage."
+
+#. TRANSLATORS: Settings > Power section header
+msgid "Performance"
+msgstr "Performances"
+
+#. TRANSLATORS: Settings > Power: the faster memory did not work on this unit
+msgid "Last faster try failed"
+msgstr "Dernier essai plus rapide raté"
+
+#. TRANSLATORS: value: the console went back to the normal memory speed
+msgid "normal speed"
+msgstr "vitesse normale"
+
+msgid "Memory clock now"
+msgstr "Fréquence mémoire actuelle"
+
+#. TRANSLATORS: Settings > Power: the DRAM clock
+msgid "Memory speed"
+msgstr "Vitesse de la mémoire"
+
+#. TRANSLATORS: Rename this game: the characters a file name cannot have on the card
+msgid "A game name cannot start with a dot or contain / \\ : * ? \" < > |"
+msgstr "Un nom de jeu ne peut pas commencer par un point ni contenir / \\ : * ? \" < > |"
+
+#. TRANSLATORS: Rename this game: the new name is taken
+msgid "Another game already has this name."
+msgstr "Un autre jeu porte déjà ce nom."
+
+#. TRANSLATORS: Rename this game failed; %s is the system's reason
+#, c-format
+msgid "The game could not be renamed (%s)."
+msgstr "Le jeu n’a pas pu être renommé (%s)."
+
+#. TRANSLATORS: toast after Rename this game
+msgid "Game renamed"
+msgstr "Jeu renommé"
+
+#. TRANSLATORS: dialog buttons, uppercase, short
+msgid "SEARCH"
+msgstr "CHERCHER"
+
+#. TRANSLATORS: after Rename this game
+msgid "Look for a cover with the new name now?"
+msgstr "Chercher une jaquette avec le nouveau nom maintenant ?"
+
+#. TRANSLATORS: on-screen keyboard title: the game's new file name
+msgid "Rename game"
+msgstr "Renommer le jeu"
+
+#. TRANSLATORS: game options: change the game's file name (covers are found by it)
+msgid "Rename this game"
+msgstr "Renommer ce jeu"
+
+#. TRANSLATORS: storage task page, the step that runs
+msgid "Copying the system..."
+msgstr "Copie du système…"
+
+#. TRANSLATORS: storage task page, the step that runs
+msgid "Checking the copy..."
+msgstr "Vérification de la copie…"
+
+#. TRANSLATORS: storage task page, the step that runs
+msgid "Copying your settings and saves..."
+msgstr "Copie de tes réglages et sauvegardes…"
+
+#. TRANSLATORS: storage task page, the step that runs
+msgid "Copying your games..."
+msgstr "Copie de tes jeux…"
+
+#. TRANSLATORS: storage task page, the step that runs
+msgid "Writing the start-up files..."
+msgstr "Écriture des fichiers de démarrage…"
+
+#. TRANSLATORS: storage task page, the step that runs
+msgid "Downloading game covers..."
+msgstr "Téléchargement des jaquettes…"
+
+#. TRANSLATORS: storage task failed
+msgid "The internal storage was not found. Turn on Internal eMMC in Settings > Storage and restart the console, then try again."
+msgstr "Le stockage interne est introuvable. Active « eMMC interne » dans Paramètres > Stockage et redémarre la console, puis réessaie."
+
+#. TRANSLATORS: storage task failed
+msgid "There is not enough room on the internal storage. Try again without copying the games."
+msgstr "Il n’y a pas assez de place sur le stockage interne. Réessaie sans copier les jeux."
+
+#. TRANSLATORS: storage task failed
+msgid "The internal storage is too small."
+msgstr "Le stockage interne est trop petit."
+
+#. TRANSLATORS: storage task failed (write or read-back error)
+msgid "Writing to the disk failed: it may be faulty. The microSD card still works as before."
+msgstr "L’écriture sur le disque a échoué : il est peut-être défaillant. La carte microSD fonctionne toujours comme avant."
+
+#. TRANSLATORS: storage task failed
+msgid "The disk is in use. Restart the console and try again."
+msgstr "Le disque est utilisé. Redémarre la console et réessaie."
+
+#. TRANSLATORS: game covers failed
+msgid "The cover server could not be reached. Check the WiFi connection (Settings > Network) and try again later."
+msgstr "Le serveur de jaquettes est injoignable. Vérifie la connexion Wi-Fi (Paramètres > Réseau) et réessaie plus tard."
+
+#. TRANSLATORS: game covers failed: HTTPS needs the right date
+msgid "The secure connection failed. Check the date and time (Settings > Date & time), then try again."
+msgstr "La connexion sécurisée a échoué. Vérifie la date et l’heure (Paramètres > Date et heure), puis réessaie."
+
+#. TRANSLATORS: game covers failed
+msgid "The storage is full."
+msgstr "Le stockage est plein."
+
+#. TRANSLATORS: storage task failed
+msgid "This only works while the console is started by its SD starter card."
+msgstr "Cela ne marche que si la console a démarré avec sa carte SD de démarrage."
+
+#. TRANSLATORS: storage task failed
+msgid "This SD card does not hold RetroStoneOS."
+msgstr "Cette carte SD ne contient pas RetroStoneOS."
+
+#. TRANSLATORS: storage task failed: the card's start-up files are from an older version
+msgid "This SD card's start-up files are too old to start the internal storage. Flash a new RetroStoneOS card first, then try again. Nothing was changed."
+msgstr "Les fichiers de démarrage de cette carte SD sont trop anciens pour démarrer le stockage interne. Flashe d’abord une nouvelle carte RetroStoneOS, puis réessaie. Rien n’a été modifié."
+
+#. TRANSLATORS: storage task failed (the reason is in the log)
+msgid "Something went wrong. Nothing was changed on the microSD card."
+msgstr "Un problème est survenu. Rien n’a été modifié sur la carte microSD."
+
+#. TRANSLATORS: title of the page while RetroStoneOS is copied to the eMMC
+#. TRANSLATORS: Settings > Storage action: copy RetroStoneOS to the eMMC
+msgid "Install to internal storage"
+msgstr "Installer sur le stockage interne"
+
+#. TRANSLATORS: title: the microSD becomes a card for games only
+msgid "SD card for games"
+msgstr "Carte SD pour les jeux"
+
+#. TRANSLATORS: title
+msgid "Erase the SD card"
+msgstr "Effacer la carte SD"
+
+#. TRANSLATORS: title: the microSD keeps only the start-up files and the games
+msgid "SD starter card"
+msgstr "Carte SD de démarrage"
+
+#. TRANSLATORS: title: pictures of the game boxes, downloaded
+msgid "Game covers"
+msgstr "Jaquettes"
+
+#. TRANSLATORS: title: the starter card becomes a full system again
+msgid "SD card system"
+msgstr "Système sur la carte SD"
+
+#. TRANSLATORS: title
+msgid "Prepare the M.2 drive"
+msgstr "Préparer le disque M.2"
+
+#, c-format
+msgid "%d of %d games"
+msgstr "%d jeux sur %d"
+
+#. TRANSLATORS: storage task page: the step, then a warning
+msgid "Do not turn the console off."
+msgstr "N’éteins pas la console."
+
+#. TRANSLATORS: after the install to the eMMC: the starter card question
+msgid ""
+"RetroStoneOS is now on the internal storage.\n"
+"\n"
+"The RetroStone2's processor cannot start from this internal storage by itself. Use this SD card as the starter card: it keeps its games and the start-up files, and the console then runs from the internal storage (keep the card in the slot)."
+msgstr ""
+"RetroStoneOS est maintenant sur le stockage interne.\n"
+"\n"
+"Le processeur de la RetroStone2 ne peut pas démarrer seul depuis ce stockage interne. Utilise cette carte SD comme carte de démarrage : elle garde ses jeux et les fichiers de démarrage, et la console fonctionne ensuite depuis le stockage interne (laisse la carte dans la fente)."
+
+#. TRANSLATORS: done: the starter card holds a full system again
+msgid "The SD card holds a full system again, with your current settings and saves. From the next start the console runs from the SD card; the internal storage keeps RetroStoneOS and its games appear as extra games."
+msgstr "La carte SD contient de nouveau un système complet, avec tes réglages et sauvegardes actuels. Au prochain démarrage, la console fonctionne depuis la carte SD ; le stockage interne garde RetroStoneOS et ses jeux s’ajoutent aux autres."
+
+#. TRANSLATORS: done: the microSD is the starter card now
+msgid "This SD card is now the starter card. Keep it in the slot: from the next start, the console runs from the internal storage, and the card's games appear with the others."
+msgstr "Cette carte SD est maintenant la carte de démarrage. Laisse-la dans la fente : au prochain démarrage, la console fonctionne depuis le stockage interne, et les jeux de la carte apparaissent avec les autres."
+
+#. TRANSLATORS: game covers done: how many were found
+#, c-format
+msgid "Covers found for %d games."
+msgstr "Jaquettes trouvées pour %d jeux."
+
+#. TRANSLATORS: game covers done: those not found, and where their list is
+#, c-format
+msgid "%d not found (their file names do not match the libretro names; arcade games need Skraper). The list is in rsos/logs/covers-missing.txt."
+msgstr "%d introuvables (leurs noms de fichiers ne correspondent pas aux noms libretro ; les jeux d’arcade demandent Skraper). La liste est dans rsos/logs/covers-missing.txt."
+
+#. TRANSLATORS: game covers done
+#, c-format
+msgid "%d could not be downloaded: try again later."
+msgstr "%d n’ont pas pu être téléchargées : réessaie plus tard."
+
+#. TRANSLATORS: done: the microSD only holds games now
+msgid "The SD card is now a games card: its games appear with the others, and the console keeps starting from the internal storage."
+msgstr "La carte SD est maintenant une carte de jeux : ses jeux apparaissent avec les autres, et la console continue de démarrer depuis le stockage interne."
+
+#. TRANSLATORS: done: an erased disk ready for games
+msgid "Done. Copy games to its roms folder from a PC, or with Import games."
+msgstr "Terminé. Copie des jeux dans son dossier roms depuis un PC, ou avec « Importer des jeux »."
+
+#. TRANSLATORS: install done: make the microSD the starter card
+msgid "Use as starter card"
+msgstr "Carte de démarrage"
+
+#. TRANSLATORS: install done: leave the microSD as it is
+msgid "Keep SD as it is"
+msgstr "Garder la carte SD"
+
+#. TRANSLATORS: storage task page button
+msgid "Restart now"
+msgstr "Redémarrer"
+
+#. TRANSLATORS: storage task page button: back to the menu
+msgid "Later"
+msgstr "Plus tard"
+
+msgid "continue in the background"
+msgstr "continuer en arrière-plan"
+
+#. TRANSLATORS: toast: the cover download goes on while the player plays
+msgid "Game covers: downloading in the background"
+msgstr "Jaquettes : téléchargement en arrière-plan"
+
+#. TRANSLATORS: a storage task or cover download is still running
+msgid "Please wait: another task is still running."
+msgstr "Patiente : une autre tâche est encore en cours."
+
+#. TRANSLATORS: the storage helper could not be started
+msgid "This could not start."
+msgstr "Impossible de démarrer."
+
+#. TRANSLATORS: toast at the end of a cover download that ran in the background
+#, c-format
+msgid "Game covers: %d found, %d not found"
+msgstr "Jaquettes : %d trouvées, %d introuvables"
+
+#. TRANSLATORS: what a disk holds (Settings > Storage)
+msgid "RetroStoneOS"
+msgstr "RetroStoneOS"
+
+#. TRANSLATORS: what a disk holds (Settings > Storage)
+msgid "games"
+msgstr "jeux"
+
+#. TRANSLATORS: what a disk holds: the start-up files and games (a starter card)
+msgid "starter + games"
+msgstr "démarrage + jeux"
+
+#. TRANSLATORS: what a disk holds: another system that can start the console
+msgid "another system"
+msgstr "un autre système"
+
+#. TRANSLATORS: what a disk holds (Settings > Storage)
+msgid "empty"
+msgstr "vide"
+
+#. TRANSLATORS: what a disk holds: a format the console does not use
+msgid "not used"
+msgstr "inutilisé"
+
+#. TRANSLATORS: Settings > Storage section header: which RetroStone2 this is
+msgid "This console"
+msgstr "Cette console"
+
+#. TRANSLATORS: value of Model before the first start probed it
+msgid "found at the next start"
+msgstr "détecté au prochain démarrage"
+
+#. TRANSLATORS: Settings > Storage action: look for the eMMC again at the next start
+msgid "Detect the model again"
+msgstr "Détecter à nouveau le modèle"
+
+#. TRANSLATORS: Settings > Storage section header: the Pro's built-in 16 GB eMMC
+msgid "Internal storage"
+msgstr "Stockage interne"
+
+#. TRANSLATORS: Settings > Storage: the system runs from the eMMC
+msgid "Started from"
+msgstr "Démarré depuis"
+
+#. TRANSLATORS: Settings > Storage, Started from: the eMMC system, started by the SD starter card
+msgid "internal + SD starter card"
+msgstr "interne + carte SD de démarrage"
+
+#. TRANSLATORS: "internal storage (15 GB)"
+#, c-format
+msgid "internal storage (%s)"
+msgstr "stockage interne (%s)"
+
+#. TRANSLATORS: Settings > Storage action (the eMMC already has RetroStoneOS)
+msgid "Update internal storage"
+msgstr "Mettre à jour le stockage interne"
+
+#. TRANSLATORS: value: the eMMC is switched on, but this unit has none (not a Pro)
+msgid "not fitted"
+msgstr "absent"
+
+#. TRANSLATORS: value of "Install to internal storage" before the eMMC is on
+msgid "restart first"
+msgstr "redémarre d’abord"
+
+msgid "turn on first"
+msgstr "à activer d’abord"
+
+#. TRANSLATORS: Settings > Storage action: the SD card keeps only the start-up files and games
+msgid "Use this SD card as starter card"
+msgstr "En faire la carte de démarrage"
+
+#. TRANSLATORS: Settings > Storage section header: the card in the microSD slot
+msgid "SD card"
+msgstr "Carte SD"
+
+#. TRANSLATORS: Settings > Storage: the console needs the starter card to start
+msgid "Keep it in: the console starts with it"
+msgstr "Laisse-la : la console démarre avec"
+
+#. TRANSLATORS: warning row: with this card in, the console starts from it
+msgid "Starts the console instead"
+msgstr "Démarre la console à la place"
+
+#. TRANSLATORS: Settings > Storage action: undo the starter card
+msgid "Make this SD card a full system again"
+msgstr "Remettre un système complet sur la carte SD"
+
+#. TRANSLATORS: Settings > Storage action: keep the card's games, remove its system
+msgid "Turn this SD card into a games card"
+msgstr "En faire une carte de jeux"
+
+#. TRANSLATORS: Settings > Storage action: erase the card, then use it for games
+#. TRANSLATORS: Settings > Storage action: erase the M.2 drive for games
+msgid "Erase it and use it for games"
+msgstr "L’effacer pour y mettre des jeux"
+
+#. TRANSLATORS: Settings > Storage section header: the optional M.2 SSD
+msgid "M.2 drive"
+msgstr "Disque M.2"
+
+#. TRANSLATORS: value: the M.2 slot is on, but no drive answers
+msgid "no drive found"
+msgstr "aucun disque trouvé"
+
+#. TRANSLATORS: Settings > Storage section header: the drives that hold games
+msgid "Game drives"
+msgstr "Disques de jeux"
+
+#. TRANSLATORS: Settings > Storage action: copy or move games from one drive to another
+msgid "Move games between drives"
+msgstr "Déplacer des jeux entre disques"
+
+#. TRANSLATORS: Settings > Storage: free space of a game disk; %s: Internal storage, SD card, M.2 drive
+#, c-format
+msgid "Games on %s"
+msgstr "Jeux sur %s"
+
+msgid "internal storage"
+msgstr "stockage interne"
+
+#. TRANSLATORS: Settings > Storage > Use this SD card as starter card
+msgid "Make this SD card the starter card? It keeps its games and the start-up files; its own system is removed, and the console then runs from the internal storage. Keep the card in the slot. A freshly flashed card brings the SD system back."
+msgstr "Faire de cette carte SD la carte de démarrage ? Elle garde ses jeux et les fichiers de démarrage ; son propre système est supprimé, et la console fonctionne ensuite depuis le stockage interne. Laisse la carte dans la fente. Une carte fraîchement flashée ramène le système sur la carte SD."
+
+#. TRANSLATORS: Settings > Storage > Install: the eMMC switch is on, not applied yet
+msgid "Restart the console first: the internal storage appears after a restart."
+msgstr "Redémarre d’abord la console : le stockage interne apparaît après un redémarrage."
+
+#. TRANSLATORS: Settings > Storage > Install: the eMMC switch is off
+msgid "Turn on Internal eMMC above and restart the console first."
+msgstr "Active d’abord « eMMC interne » ci-dessus, puis redémarre la console."
+
+#. TRANSLATORS: Settings > Storage > Install
+msgid "Plug in the charger first (or charge the battery above 30 %)."
+msgstr "Branche d’abord le chargeur (ou charge la batterie au-dessus de 30 %)."
+
+#. TRANSLATORS: dialog buttons, uppercase, short
+msgid "KEEP GAMES"
+msgstr "GARDER LES JEUX"
+
+msgid "ERASE ALL"
+msgstr "TOUT EFFACER"
+
+#. TRANSLATORS: Settings > Storage > Update internal storage
+msgid "The internal storage already has RetroStoneOS. Update its system with this one and keep its games and saves, or erase everything on it and copy your settings, saves and games from this SD card?"
+msgstr "Le stockage interne a déjà RetroStoneOS. Mettre à jour son système avec celui-ci en gardant ses jeux et sauvegardes, ou tout effacer et y copier tes réglages, sauvegardes et jeux depuis cette carte SD ?"
+
+#. TRANSLATORS: dialog buttons, uppercase, short
+msgid "WITH MY GAMES"
+msgstr "AVEC MES JEUX"
+
+msgid "WITHOUT GAMES"
+msgstr "SANS LES JEUX"
+
+#. TRANSLATORS: Settings > Storage > Install; %s: the eMMC's size ("15 GB")
+#, c-format
+msgid "Copy RetroStoneOS to the internal storage (%s), so the console starts without the SD card? Everything on the internal storage is erased. Your settings and saves come along, and your games too if you want. The SD card is not changed."
+msgstr "Copier RetroStoneOS sur le stockage interne (%s), pour que la console démarre sans la carte SD ? Tout ce qui est sur le stockage interne est effacé. Tes réglages et sauvegardes sont copiés, et tes jeux aussi si tu veux. La carte SD n’est pas modifiée."
+
+#. TRANSLATORS: Settings > Storage > Move games between drives: the source
+msgid "Copy or move games from which drive?"
+msgstr "Copier ou déplacer des jeux depuis quel disque ?"
+
+#. TRANSLATORS: Settings > Storage > Detect the model again
+msgid "The console looks for its internal storage at the next start, and shows the options of the model it finds."
+msgstr "La console cherche son stockage interne au prochain démarrage, puis affiche les options du modèle trouvé."
+
+#. TRANSLATORS: Settings > Storage > Make this SD card a full system again
+msgid "Put the system back on this SD card? The system that runs now and your current settings and saves are copied to it (its games stay). The console then starts from the SD card again; the internal storage keeps RetroStoneOS."
+msgstr "Remettre le système sur cette carte SD ? Le système actuel et tes réglages et sauvegardes y sont copiés (ses jeux restent). La console démarre ensuite de nouveau depuis la carte SD ; le stockage interne garde RetroStoneOS."
+
+#. TRANSLATORS: Settings > Storage > Turn this SD card into a games card
+msgid "Remove RetroStoneOS from this SD card and keep it for games? Its games stay on it and appear in the menu. Its settings and saves are not used any more. The console will no longer start from it."
+msgstr "Retirer RetroStoneOS de cette carte SD et la garder pour les jeux ? Ses jeux y restent et apparaissent dans le menu. Ses réglages et sauvegardes ne servent plus. La console ne démarrera plus depuis elle."
+
+msgid "ERASE"
+msgstr "EFFACER"
+
+#. TRANSLATORS: Settings > Storage > Erase it and use it for games
+msgid "Erase everything on this drive and prepare it for games? This cannot be undone."
+msgstr "Tout effacer sur ce disque et le préparer pour les jeux ? Impossible de revenir en arrière."
+
+#. TRANSLATORS: Settings > Game lists > Download game covers, on a system without the helper
+msgid "Cover downloads are not available on this system."
+msgstr "Le téléchargement des jaquettes n’est pas disponible sur ce système."
+
+#. TRANSLATORS: Settings > Game lists > Download game covers, without a network
+msgid "Connect to WiFi first (Settings > Network), then try again."
+msgstr "Connecte-toi d’abord au Wi-Fi (Paramètres > Réseau), puis réessaie."
+
+#. TRANSLATORS: Settings > Game lists > Download game covers
+msgid "All your games already have a picture."
+msgstr "Tous tes jeux ont déjà une image."
+
+msgid "DOWNLOAD"
+msgstr "TÉLÉCHARGER"
+
+#. TRANSLATORS: Settings > Game lists > Download game covers: %d games, %d systems
+#, c-format
+msgid "Download box covers for %d games (%d systems) from the libretro thumbnail server, as RetroArch does? Games that already have a picture keep it. This can take a few minutes."
+msgstr "Télécharger les jaquettes de %d jeux (%d systèmes) depuis le serveur de vignettes libretro, comme RetroArch ? Les jeux qui ont déjà une image la gardent. Cela peut prendre quelques minutes."
+
+#. TRANSLATORS: Settings > Game lists > Group multi-disc games: nothing to do
+msgid "No multi-disc game without a playlist was found."
+msgstr "Aucun jeu multi-disques sans liste de disques n’a été trouvé."
+
+#. TRANSLATORS: Settings > Game lists > Group multi-disc games: %d playlists written
+#, c-format
+msgid "%d multi-disc games grouped: each is one entry now. Change discs in the in-game menu (SELECT + X)."
+msgstr "%d jeux multi-disques regroupés : chacun n’a plus qu’une entrée. Change de disque dans le menu en jeu (SELECT + X)."
+
+#. TRANSLATORS: import option: the disk that receives the games
+#. (SD card, Internal storage, M.2 drive)
+msgid "Copy games to"
+msgstr "Copier les jeux vers"
+
+#. TRANSLATORS: import, with "Copy games to" another disk
+msgid "Only the games go to this drive"
+msgstr "Seuls les jeux vont sur ce disque"
+
+#. TRANSLATORS: Move games between drives: a toggle, "%s" the source
+#. (Internal storage, SD card, M.2 drive); off = a copy
+#, c-format
+msgid "Delete from %s after copying"
+msgstr "Supprimer de « %s » après la copie"
+
+#. TRANSLATORS: menu row: start moving the games
+msgctxt "import"
+msgid "Move"
+msgstr "Déplacer"
+
+#. TRANSLATORS: Move games between drives, with a single drive
+msgid "There is no other drive to copy the games to."
+msgstr "Il n’y a pas d’autre disque où copier les jeux."
+
+#. TRANSLATORS: menu title, Move games between drives: the source drive follows
+#, c-format
+msgid "Copy games from %s"
+msgstr "Copier des jeux depuis %s"
+
+#. TRANSLATORS: Move games between drives, summary: the games that were not deleted from
+#. the source (a file failed or differs, or the copy stopped: nothing is lost)
+msgid "Games not moved stay on the source drive too."
+msgstr "Les jeux non déplacés restent aussi sur le disque de départ."

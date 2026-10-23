@@ -28,6 +28,9 @@ struct core_info {
 	char extensions[256];
 	bool need_fullpath;
 	bool block_extract;
+	/* force_extract = true: the host unpacks a .zip even though the core's
+	 * own extension list claims zip (atari800 lists it but cannot open one) */
+	bool force_extract;
 	bool savestates;
 	bool experimental;     /* never the automatic default (docs/cores.md) */
 	/* no_content = true: a game built into the core (RetroStone VC). Its menu
