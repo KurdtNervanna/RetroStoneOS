@@ -326,7 +326,7 @@ check-ui: $(UIPREVIEW)
 	@echo "          countdown code on its own, smaller struct; check-asan catches the overflow)"
 	$(UIPREVIEW) --root $(UI_CHECK_DIR) --quiet \
 		--keys "start down down a expect:menu:Network|WiFi down a wait:1500 expect:menu:WiFi_networks| \
-			down down expect:menu:WiFi_networks|Other_network a wait:1500 expect:osk:WiFi_network_name| \
+			down expect:menu:WiFi_networks|Other_network a wait:1500 expect:osk:WiFi_network_name| \
 			a wait:1500 expect:osk:WiFi_network_name|q x wait:300 expect:osk:WiFi_network_name|q_ \
 			select wait:300 expect:menu:WiFi_networks|Other_network b wait:300 expect:menu:Network|WiFi_network \
 			down a wait:1500 expect:osk:WiFi_password| select wait:300 expect:menu:Network|WiFi_password"
