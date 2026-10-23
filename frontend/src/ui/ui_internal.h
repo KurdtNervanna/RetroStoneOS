@@ -610,6 +610,13 @@ void discs_group(struct ui *ui);
 bool memspeed_available(void);
 int memspeed_get(bool *failed, int *mhz);
 int memspeed_set(int level);
+/* Settings > Power > CPU speed (the RetroStone2's CPU clock, boot.cmd's
+ * cpu-oc overlays through rsos-cpuspeed): the level asked for (0 normal 960
+ * MHz, 1 = 1008, 2 = 1056; -1 unknown), whether its last start failed, the
+ * top clock now. */
+bool cpuspeed_available(void);
+int cpuspeed_get(bool *failed, int *mhz);
+int cpuspeed_set(int level);
 /* Where Import games can copy the games: [0] = /data (root NULL), then the
  * mounted game disks (their roots, holding roms/), with their names.
  * 0 when there is no other disk (no choice to offer). */

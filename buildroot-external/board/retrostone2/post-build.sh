@@ -49,6 +49,9 @@ mkdir -p "$TARGET/usr/libexec/rsos"
 # (Settings > Power > Memory speed; rsos-boot-ok, tools/rsos-memtest.c).
 "$CC" -O2 -s -Wall -Wextra -Werror -o "$TARGET/usr/libexec/rsos/memtest" \
 	"$BOARD_DIR/tools/rsos-memtest.c"
+# /usr/libexec/rsos/cputest: the quick CPU check of the faster CPU trial
+# (Settings > Power > CPU speed; rsos-cpuspeed verify, tools/rsos-cputest.c).
+"$CC" -O2 -s -Wall -Wextra -Werror -pthread -o "$TARGET/usr/libexec/rsos/cputest" 	"$BOARD_DIR/tools/rsos-cputest.c"
 
 # --- The boot loader, for "Install to internal storage" on the Pro
 # (rsos-storage install writes it at 8 KiB on the eMMC): the image's own
@@ -62,6 +65,8 @@ fi
 # rsos-storage: Settings > Storage on the Pro (eMMC, M.2 SATA, game disks).
 # (Windows checkouts lose the executable bit: board/common/post-build.sh.)
 chmod 0755 "$TARGET/usr/bin/rsos-storage"
+# rsos-cpuspeed: Settings > Power > CPU speed (boot.cmd's cpu-oc trial).
+chmod 0755 "$TARGET/usr/bin/rsos-cpuspeed"
 mkdir -p "$TARGET/usr/share/rsos/bootloader"
 cp "$UBOOT_BIN" "$TARGET/usr/share/rsos/bootloader/u-boot-sunxi-with-spl.bin"
 (cd "$TARGET/usr/share/rsos/bootloader" && sha256sum u-boot-sunxi-with-spl.bin > u-boot-sunxi-with-spl.bin.sha256)

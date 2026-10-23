@@ -1588,6 +1588,64 @@ int memspeed_set(int level)
 	return 0;
 }
 
+/* ------------------------------------------------------- CPU speed */
+/* The RetroStone2's CPU clock (Settings > Power > CPU speed): boot.cmd's
+ * cpu-oc overlays through /usr/bin/rsos-cpuspeed (RSOS_CPUSPEED overrides
+ * it: previews). */
+static const char *cpu_tool(void)
+{
+	const char *e = getenv("RSOS_CPUSPEED");
+
+	return e && *e ? e : "/usr/bin/rsos-cpuspeed";
+}
+
+bool cpuspeed_available(void)
+{
+	return access(cpu_tool(), X_OK) == 0;
+}
+
+int cpuspeed_get(bool *failed, int *mhz)
+{
+	char cmd[300], state[24] = "", line[96] = "";
+	int lvl = 0, clk = 0;
+	FILE *p;
+
+	*failed = false;
+	*mhz = 0;
+	snprintf(cmd, sizeof(cmd), "'%s' get 2>/dev/null", cpu_tool());
+	p = popen(cmd, "r");
+	if (!p)
+		return -1;
+	if (!fgets(line, sizeof(line), p) || sscanf(line, "%d %23s %d", &lvl, state, &clk) != 3) {
+		pclose(p);
+		return -1;
+	}
+	pclose(p);
+	*mhz = clk;
+	*failed = !strcmp(state, "failed");
+	return lvl < 0 || lvl > 2 ? 0 : lvl;
+}
+
+int cpuspeed_set(int level)
+{
+	char arg[4];
+	pid_t pid;
+	int st = 0;
+
+	snprintf(arg, sizeof(arg), "%d", level);
+	pid = fork();
+	if (pid < 0)
+		return -1;
+	if (pid == 0) {
+		execl(cpu_tool(), cpu_tool(), "set", arg, (char *)NULL);
+		_exit(127);
+	}
+	if (waitpid(pid, &st, 0) < 0 || !WIFEXITED(st) || WEXITSTATUS(st))
+		return -1;
+	LOGI("power: CPU speed level %d requested (applies at the next start, as a trial)", level);
+	return 0;
+}
+
 /* One game's cover (after Rename this game): the same task, a one-line
  * request. Quietly nothing without the helper or a network. */
 bool covers_can_start(void)

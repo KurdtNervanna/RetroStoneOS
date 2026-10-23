@@ -86,6 +86,7 @@ make_slot() {
 	cp "$HOME/rsos/output/images/sun7i-a20-retrostone2.dtb" "$1/boot/"
 	mkdir -p "$1/boot/overlays"
 	cp "$HOME/rsos/output/target/boot/overlays/emmc.dtbo" "$HOME/rsos/output/target/boot/overlays/cpu-lowvolt.dtbo" \
+		"$HOME/rsos/output/target/boot/overlays/cpu-oc1.dtbo" "$HOME/rsos/output/target/boot/overlays/cpu-oc2.dtbo" \
 		"$1/boot/overlays/"
 	case $2 in
 	good) { echo GOOD; head -c 100000 /dev/zero; } > "$1/boot/zImage" ;;
@@ -289,6 +290,30 @@ env_set rsos_model
 env_set rsos_overlays "foo emmc"
 boot
 check "probed again: the others kept, emmc and sata once each" 	"[ \"\$(env_get rsos_overlays)\" = 'foo emmc sata' ] && grep -q 'overlay emmc applied' out.txt && started a pending"
+
+echo "== 16: CPU speed (rsos_cpuspeed): a trial that only an orderly shutdown ends"
+make_card good empty
+boot; confirm
+env_set rsos_cpuspeed 1
+boot
+check "level 1: overlay cpu-oc1 applied, rsos_cpuoc=trial" \
+	"grep -q 'rsos: overlay cpu-oc1 applied' out.txt && [ \"\$(env_get rsos_cpuoc)\" = trial ] && started a pending"
+env_set rsos_cpuoc
+boot
+check "after an orderly shutdown (rcK cleared it): applied again" \
+	"grep -q 'rsos: overlay cpu-oc1 applied' out.txt && [ \"\$(env_get rsos_cpuoc)\" = trial ] && started a pending"
+boot
+check "a start that did not shut down: normal speed, failed" \
+	"grep -q 'did not shut down cleanly' out.txt && ! grep -q 'overlay cpu-oc1 applied' out.txt && [ \"\$(env_get rsos_cpuoc)\" = failed ] && started a pending"
+boot
+check "failed stays: skipped" "grep -q 'CPU speed 1 skipped' out.txt && ! grep -q 'overlay cpu-oc' out.txt && started a pending"
+printf 'rsos_cpuspeed 2\nrsos_cpuoc\nrsos_cpuverified\n' | env_set -s -
+boot
+check "the menu sets level 2: overlay cpu-oc2 applied" \
+	"grep -q 'rsos: overlay cpu-oc2 applied' out.txt && [ \"\$(env_get rsos_cpuoc)\" = trial ] && started a pending"
+printf 'rsos_cpuspeed\nrsos_cpuoc\nrsos_cpuverified\n' | env_set -s -
+boot
+check "back to normal: no overlay, nothing set" "! grep -q 'overlay cpu-oc' out.txt && [ -z \"\$(env_get rsos_cpuoc)\" ] && started a pending"
 
 echo "PASS=$pass FAIL=$fail"
 [ $fail -eq 0 ]

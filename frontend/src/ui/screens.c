@@ -51,6 +51,7 @@ enum {
 	ID_GSCALE = 410, ID_GCPU, ID_GSEARCH, ID_GHIDE, ID_GDELETE, ID_GPLAYTIME, ID_GRENAME,
 	ID_WSCAN = 420, ID_WOTHER, ID_WNONE, ID_WNET0 = 430,
 	ID_GCOVER = 470, ID_COVERKIND, ID_COVERPICK,
+	ID_SPEED = 480, ID_CPUSPEED, ID_CPUINFO,
 };
 
 enum { JOB_WIFI = 1, JOB_ETH, JOB_BT, JOB_WSCAN = 10 };
@@ -1797,6 +1798,27 @@ static const char *const g_gauge_labels[] = { N_("Automatic"), N_("Voltage"), N_
 /* TRANSLATORS: Settings > Power > Memory speed: the DRAM clock (normal 384 MHz,
  * +12 % = 432 MHz, +25 % = 480 MHz) */
 static const char *const g_mem_labels[] = { N_("Normal"), N_("Faster (+12 %)"), N_("Fastest (+25 %)") };
+/* TRANSLATORS: Settings > Power > CPU speed: 960 MHz, 1008 MHz (+5 %), 1056 MHz (+10 %) */
+static const char *const g_cpu_labels[] = { N_("Normal"), N_("Faster (+5 %)"), N_("Fastest (+10 %)") };
+/* TRANSLATORS: Settings > Power > Speed: memory and CPU together */
+static const char *const g_speed_labels[] = { N_("Normal"), N_("Faster"), N_("Fastest") };
+
+/* Speed shows "Custom" when Memory speed and CPU speed differ */
+static void speed_sync(struct menu *m)
+{
+	struct menu_item *s = menu_find(m, ID_SPEED), *mem = menu_find(m, ID_MEMSPEED), *cpu = menu_find(m, ID_CPUSPEED);
+
+	if (!s)
+		return;
+	if (mem && cpu && mem->val != cpu->val) {
+		s->val = mem->val < cpu->val ? mem->val : cpu->val;
+		/* TRANSLATORS: Settings > Power > Speed: memory and CPU speeds were set apart */
+		strlcpy_(s->value, C_("speed", "Custom"), sizeof(s->value));
+	} else {
+		s->val = mem ? mem->val : cpu ? cpu->val : 0;
+		strlcpy_(s->value, _(g_speed_labels[s->val]), sizeof(s->value));
+	}
+}
 
 static void mem_restart(struct ui *ui, int choice, void *user)
 {
@@ -1845,6 +1867,50 @@ static void power_item(struct ui *ui, struct menu *m, struct menu_item *it, int 
 	case ID_GAUGE:
 		power_setting(ui, "battery_gauge", g_gauge_vals[it->val]);
 		break;
+	case ID_SPEED: {
+		/* TRANSLATORS: dialog buttons, uppercase, short */
+		const char *const buttons[] = { _("RESTART NOW"), _("LATER"), NULL };
+		struct menu_item *mem = menu_find(m, ID_MEMSPEED), *cpu = menu_find(m, ID_CPUSPEED);
+
+		if ((mem && memspeed_set(it->val) < 0) || (cpu && cpuspeed_set(it->val) < 0)) {
+			message_open(ui, _("The setting could not be saved."));
+			break;
+		}
+		if (mem) {
+			mem->val = it->val;
+			strlcpy_(mem->value, _(g_mem_labels[it->val]), sizeof(mem->value));
+		}
+		if (cpu) {
+			cpu->val = it->val;
+			strlcpy_(cpu->value, _(g_cpu_labels[it->val]), sizeof(cpu->value));
+		}
+		speed_sync(m);
+		dialog_open(ui, it->val ?
+			    /* TRANSLATORS: Settings > Power > Speed, a faster level chosen */
+			    _("The next start tries the faster memory and CPU speeds. A quick test checks each "
+			      "one; the CPU speed is kept only while the console is turned off normally. If it "
+			      "freezes, hold the power button to turn it off: it then starts at the normal speed "
+			      "by itself.") :
+			    _("Restart required: the change applies at the next start."), buttons, mem_restart, NULL);
+		break;
+	}
+	case ID_CPUSPEED: {
+		/* TRANSLATORS: dialog buttons, uppercase, short */
+		const char *const buttons[] = { _("RESTART NOW"), _("LATER"), NULL };
+
+		if (cpuspeed_set(it->val) < 0) {
+			message_open(ui, _("The setting could not be saved."));
+			break;
+		}
+		speed_sync(m);
+		dialog_open(ui, it->val ?
+			    /* TRANSLATORS: Settings > Power > CPU speed, a faster level chosen */
+			    _("The next start tries the faster CPU speed, and a quick test checks it. It is kept "
+			      "while the console is turned off normally. If it freezes, hold the power button to "
+			      "turn it off: it then starts at the normal speed by itself.") :
+			    _("Restart required: the change applies at the next start."), buttons, mem_restart, NULL);
+		break;
+	}
 	case ID_MEMSPEED: {
 		/* TRANSLATORS: dialog buttons, uppercase, short */
 		const char *const buttons[] = { _("RESTART NOW"), _("LATER"), NULL };
@@ -1853,6 +1919,7 @@ static void power_item(struct ui *ui, struct menu *m, struct menu_item *it, int 
 			message_open(ui, _("The setting could not be saved."));
 			break;
 		}
+		speed_sync(m);
 		dialog_open(ui, it->val ?
 			    /* TRANSLATORS: Settings > Power > Memory speed, a faster level chosen */
 			    _("The next start tries the faster memory speed. After 30 seconds without a problem, "
@@ -1888,28 +1955,54 @@ static void open_power(struct ui *ui)
 	it = menu_add(m, MI_CHOICE, ID_GAUGE, _("Battery gauge"));
 	set_choices(it, g_gauge_labels, 3, index_of(g_gauge_vals, 3,
 		    settings_get(ui->settings, "battery_gauge", "auto")));
-	/* The RetroStone2's DRAM clock (U-Boot's SPL, the AXP209 register) */
-	if (memspeed_available()) {
-		bool failed;
-		int mhz, lvl = memspeed_get(&failed, &mhz);
+	/* The RetroStone2's DRAM clock (U-Boot's SPL, the AXP209 register) and
+	 * CPU clock (boot.cmd's cpu-oc overlays) */
+	if (memspeed_available() || cpuspeed_available()) {
+		bool mfailed = false, cfailed = false, mem = memspeed_available(), cpu = cpuspeed_available();
+		int mmhz = 0, cmhz = 0, mlvl = mem ? memspeed_get(&mfailed, &mmhz) : 0;
+		int clvl = cpu ? cpuspeed_get(&cfailed, &cmhz) : 0;
 
 		/* TRANSLATORS: Settings > Power section header */
 		menu_add(m, MI_HEADER, 0, _("Performance"));
-		/* the state first: the choice is the last row (always in view) */
-		if (failed) {
+		/* the state first: the choices are the last rows (always in view) */
+		if (mem && mfailed) {
 			/* TRANSLATORS: Settings > Power: the faster memory did not work on this unit */
-			it = menu_add(m, MI_INFO, ID_MEMINFO, _("Last faster try failed"));
-			/* TRANSLATORS: value: the console went back to the normal memory speed */
+			it = menu_add(m, MI_INFO, ID_MEMINFO, _("Last faster memory try failed"));
+			/* TRANSLATORS: value: the console went back to the normal speed */
 			strlcpy_(it->value, _("normal speed"), sizeof(it->value));
 			it->disabled = true;
-		} else if (mhz > 0) {
+		} else if (mem && mmhz > 0) {
 			it = menu_add(m, MI_INFO, ID_MEMINFO, _("Memory clock now"));
-			snprintf(it->value, sizeof(it->value), "%d MHz", mhz);
+			snprintf(it->value, sizeof(it->value), "%d MHz", mmhz);
 			it->disabled = true;
 		}
-		/* TRANSLATORS: Settings > Power: the DRAM clock */
-		it = menu_add(m, MI_CHOICE, ID_MEMSPEED, _("Memory speed"));
-		set_choices(it, g_mem_labels, 3, lvl < 0 ? 0 : lvl);
+		if (cpu && cfailed) {
+			/* TRANSLATORS: Settings > Power: the faster CPU froze or failed its test on this unit */
+			it = menu_add(m, MI_INFO, ID_CPUINFO, _("Last faster CPU try failed"));
+			strlcpy_(it->value, _("normal speed"), sizeof(it->value));
+			it->disabled = true;
+		} else if (cpu && cmhz > 0) {
+			/* TRANSLATORS: Settings > Power: the CPU's top clock in this start */
+			it = menu_add(m, MI_INFO, ID_CPUINFO, _("CPU clock now"));
+			snprintf(it->value, sizeof(it->value), _("up to %d MHz"), cmhz);
+			it->disabled = true;
+		}
+		if (mem && cpu) {
+			/* TRANSLATORS: Settings > Power: memory and CPU speed together */
+			it = menu_add(m, MI_CHOICE, ID_SPEED, _("Speed"));
+			set_choices(it, g_speed_labels, 3, 0);
+		}
+		if (mem) {
+			/* TRANSLATORS: Settings > Power: the DRAM clock */
+			it = menu_add(m, MI_CHOICE, ID_MEMSPEED, _("Memory speed"));
+			set_choices(it, g_mem_labels, 3, mlvl < 0 ? 0 : mlvl);
+		}
+		if (cpu) {
+			/* TRANSLATORS: Settings > Power: the processor's clock */
+			it = menu_add(m, MI_CHOICE, ID_CPUSPEED, _("CPU speed"));
+			set_choices(it, g_cpu_labels, 3, clvl < 0 ? 0 : clvl);
+		}
+		speed_sync(m);
 	}
 	m->on_item = power_item;
 	menu_open(ui, m);

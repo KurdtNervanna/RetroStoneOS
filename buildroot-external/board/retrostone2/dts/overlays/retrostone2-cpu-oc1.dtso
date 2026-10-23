@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * RetroStone2: CPU speed "Faster" (Settings > Power > CPU speed): a 1008 MHz
+ * step at 1.45 V on top of the A20 table of sun7i-a20.dtsi (960 MHz at
+ * 1.4 V), the step Allwinner's own A20 kernels had. The CPU supply (AXP209
+ * DCDC2) may go to 1.45 V. The thermal trip of sun7i-a20.dtsi (75 C) still
+ * slows it down.
+ *
+ * boot.cmd applies it as a trial (rsos_cpuspeed=1, rsos_cpuoc): a start that
+ * does not end with an orderly shutdown falls back to the normal speed
+ * (/usr/bin/rsos-cpuspeed).
+ */
+
+/dts-v1/;
+/plugin/;
+
+&cpu0 {
+	operating-points =
+		/* kHz	  uV */
+		<1008000 1450000>,
+		<960000	1400000>,
+		<912000	1400000>,
+		<864000	1300000>,
+		<720000	1200000>,
+		<528000	1100000>,
+		<312000	1000000>,
+		<144000	1000000>;
+};
+
+&cpu1 {
+	operating-points =
+		<1008000 1450000>,
+		<960000	1400000>,
+		<912000	1400000>,
+		<864000	1300000>,
+		<720000	1200000>,
+		<528000	1100000>,
+		<312000	1000000>,
+		<144000	1000000>;
+};
+
+&reg_dcdc2 {
+	regulator-max-microvolt = <1450000>;
+};
