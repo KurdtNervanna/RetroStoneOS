@@ -20,6 +20,18 @@ so HDMI should work with the normal `config.txt` (a Pi 3 needed `vc4-fkms-v3d`; 
 bug), and the **Adafruit PiGRRL 2** is supported, untested, through a block at the end of `config.txt`. On a
 **keyboard**, Esc in a game opens the in-game menu and Tab+Space leaves the game.
 
+**RetroStone2 Pro storage** (contributed by KurdtNervanna): **Settings > Storage** turns on the Pro's 16 GB internal
+eMMC and an M.2 SATA SSD (both stay off by default, so every RetroStone2 starts as fast as before), copies
+RetroStoneOS to the eMMC (the microSD then stays in the slot as a small "starter card": the A20 cannot start this
+eMMC by itself), prepares a drive for games and moves games between drives; the games of every drive show in the
+lists. **It needs a card freshly flashed with 0.1.4**: an update over the air keeps the old boot loader, which
+cannot start the eMMC. Settings > Storage and System information show the model (RetroStone2 or RetroStone2 Pro).
+Also new: **Settings > Game lists > Download game covers** (box art from the libretro thumbnail server, WiFi needed)
+and **Group multi-disc games** (one entry per multi-disc game, for the systems whose emulator takes `.m3u`
+playlists); **Rename this game** in a game's options; **Settings > Power > Memory speed** (RetroStone2,
+**experimental**): a faster memory clock (+12 % or +25 %), tried at the next start and kept only after a memory
+test passes; a start that fails goes back to the normal speed by itself.
+
 Game source: [RetroStone VC c900b9839c15](https://github.com/PaddleStroke/RetroStoneVC/tree/c900b9839c15bfc7c75c05fe91ffb6e86c57b89e).
 
 ## Downloads
