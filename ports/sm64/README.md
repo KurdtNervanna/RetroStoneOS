@@ -45,7 +45,7 @@ the `roms` folder already there), or use the menu's USB import. In the menu: **N
 | L1, L2, Z | Z |
 | R1 | R |
 | X / Y / C / R2 | C-up / C-left / C-right / C-down |
-| D-pad, or the analog stick (Pro) | the stick |
+| Analog stick (Pro), or the D-pad | the stick |
 
 **Select + Start** held for a second goes back to the menu. A USB pad works too (SDL; A = A, X = B, the
 shoulders = Z/R, the right stick = C buttons).
@@ -64,6 +64,8 @@ own (each star); quitting or the power key never loses a saved star.
 
 ## Status
 
-Built and checked on the PC (an ARM program linked against the image's SDL2, EGL, GLES2 and ALSA); not yet run on a
-RetroStone2. The speed on the A20 (2 x Cortex-A7, Mali-400 MP2) is unknown: report it, with
-`rsos/logs/boot<N>/game.log` from the SD card if something goes wrong.
+**Works on a RetroStone2 Pro** (build 17): full speed, it looks great. The analog stick moves Mario on the Pro;
+the D-pad moves him whenever the stick is centred or not fitted. If the stick did nothing, rebuild with the
+current `build-sm64.sh` (the first version of `controller_rsos.c` missed the stick's device) and copy the new
+`sm64/sm64.us` onto the card. If something goes wrong, the game's messages are in
+`rsos/logs/boot<N>/game.log` on the SD card.

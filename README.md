@@ -8,6 +8,12 @@ RetrOrangePi stack (Armbian + RetroPie + RetroArch + EmulationStation) with one 
 Linux, a single menu/emulation program written in C, and libretro emulator cores. There's no desktop, no X11 and no
 layer cake, and every setting lives in one menu.
 
+> **This fork** ([KurdtNervanna/RetroStoneOS](https://github.com/KurdtNervanna/RetroStoneOS), branch `pro-storage`)
+> adds **Native games**: N64 PC ports such as **Super Mario 64** running natively on the RetroStone2's GPU, at full
+> speed. You build them on your PC from your own ROM: **[how to get native ports](ports/README.md)**. Its
+> [Releases](https://github.com/KurdtNervanna/RetroStoneOS/releases) update over the air (Settings > System
+> update). The official RetroStoneOS is [PaddleStroke/RetroStoneOS](https://github.com/PaddleStroke/RetroStoneOS).
+
 <p align="center">
   <img src="docs/ui-previews/rsos-dark-v2-system-snes.png" width="32%" alt="System carousel">
   <img src="docs/ui-previews/rsos-dark-gamelist.png" width="32%" alt="Game list">
