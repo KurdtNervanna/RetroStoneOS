@@ -23,7 +23,8 @@
  *       clears REG04-0C; exit status 1 (nothing printed) if they hold no
  *       plausible record.
  *   rsos-axpstamp raw
- *       REG04-0F in hex, unchanged (rcS, before "show" clears them).
+ *       REG04-0F in hex, unchanged ("rsos-storage report": the breadcrumbs
+ *       in REG0E-0F, which "show" never clears).
  *
  * Memory speed (Settings > Power > Memory speed, the RetroStone2): REG0D =
  * <state> << 4 | <level>, level 1 = 432 MHz, 2 = 480 MHz (0 or anything else:

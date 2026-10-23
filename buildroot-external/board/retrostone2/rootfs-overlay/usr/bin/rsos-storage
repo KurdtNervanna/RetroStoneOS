@@ -26,8 +26,12 @@
 #   rsos-storage refresh           mount the game libraries of the disks that
 #                                  are not the system disk (/run/rsos/media/
 #                                  <emmc|sd|m2>), unmount the ones that left
-#   rsos-storage boot              once per boot, from rcS after the menu is up
+#   rsos-storage boot              once per boot, from rcS after the menu is up,
+#                                  when the eMMC or SATA controller is enabled
+#                                  or the system is not on the microSD
 #   rsos-storage eject <emmc|sd|m2>
+#   rsos-storage report            eMMC diagnostics (by hand, for support):
+#                                  rsos/logs/emmc-report.txt on the system disk
 #
 # Boot order of the A20 boot ROM: microSD (mmc0), NAND (none), eMMC (mmc2),
 # SPI, USB (FEL). A microSD that carries a boot loader (eGON.BT0 at 8 KiB)
@@ -52,7 +56,8 @@
 # Progress, for the menu: "<percent> <step>" in /run/rsos/storage-progress
 # (steps: prepare system verify data games bootloader done; "error <reason>"
 # when it stops: notsd noemmc toosmall nospace busy layout write verify
-# format mount copy bootloader nosd notemmc notrsos), also on stdout. Every
+# format mount copy bootloader nosd notemmc notrsos notstarter
+# oldbootloader), also on stdout. Every
 # step goes to the kernel log too ("rsos-storage: ..."), hence to
 # RETROSTONE/rsos/logs/boot<N>/dmesg.txt.
 
@@ -232,6 +237,14 @@ drop_caches() {
 	echo 3 > /proc/sys/vm/drop_caches 2> /dev/null
 }
 
+# The boot state lock (/run/rsos/bootenv.lock), shared with rsos-boot-ok
+# and the updater: every write of the U-Boot environment takes it (held
+# until this script exits).
+bootenv_lock() {
+	exec 8> "$RUN/bootenv.lock"
+	flock -w 30 8
+}
+
 # ------------------------------------------------------------ libraries
 # A library: <disk>'s game partition mounted on $MEDIA/<name>, listed in
 # $LIBS ("<name> <mount point>") when it has a roms/ folder.
@@ -355,6 +368,7 @@ status() {
 
 # ------------------------------------------------------------- redetect
 redetect() {
+	bootenv_lock || { echo "rsos-storage: the boot state is busy" >&2; exit 1; }
 	fw_setenv rsos_model || exit 1
 	msg "rsos_model cleared: the model is probed again at the next start"
 	status > /dev/null
@@ -363,6 +377,7 @@ redetect() {
 # -------------------------------------------------------------- overlay
 overlay() { # <emmc|sata> <on|off>
 	case "$1" in emmc|sata) ;; *) echo "rsos-storage: unknown overlay $1" >&2; exit 2 ;; esac
+	bootenv_lock || { echo "rsos-storage: the boot state is busy" >&2; exit 1; }
 	_new=
 	for _o in $(overlays); do
 		[ "$_o" = "$1" ] || _new="$_new $_o"
@@ -603,6 +618,16 @@ sd_starter() {
 	_size=$(wc -c < "$BOOTLOADER")
 	dd if="$EMMC" bs=1024 skip=8 count=$(( (_size + 1023) / 1024 )) 2> /dev/null | head -c "$_size" |
 		cmp -s - "$BOOTLOADER" || fail notrsos "the eMMC's system is not this one: install again first"
+	# The card's own U-Boot starts the eMMC's system: only this system's
+	# (MMC_SUNXI_SLOT_EXTRA, the eMMC as mmc 1) with its bootcmd (the
+	# fallback to mmc 1 when the card has no boot.scr) can. A card flashed
+	# with an older RetroStoneOS and updated since keeps its old U-Boot and
+	# environment: without this check it would no longer start at all.
+	dd if="$SD" bs=1024 skip=8 count=$(( (_size + 1023) / 1024 )) 2> /dev/null | head -c "$_size" |
+		cmp -s - "$BOOTLOADER" || fail oldbootloader "the microSD's boot loader is older than this system: flash a new card first"
+	fw_printenv -n bootcmd 2> /dev/null | grep -q rsos_sysdev ||
+		fail oldbootloader "the microSD's U-Boot environment has an old bootcmd: flash a new card first"
+	bootenv_lock || fail busy "the boot state is busy"
 	# the eMMC holds one system, in slot A (the installer's)
 	printf 'rsos_slot a\nrsos_ok 1\nrsos_tries 0\nrsos_fails 0\nrsos_rounds 0\nrsos_bad\nrsos_fallback\n' > "$RUN/starter-env"
 	fw_setenv -s "$RUN/starter-env" || fail write "cannot write the boot state"
@@ -637,6 +662,18 @@ sd_full() {
 	esac
 	[ "$(sectors "$_root")" -eq $ROOT_SIZE ] || fail layout "$_root is not $ROOT_SIZE sectors"
 
+	# Power-cut safe: the card's U-Boot starts a system on the card as soon
+	# as it finds a boot.scr there, so the card's slots must not hold a file
+	# system before the copy is complete and verified. The old file systems
+	# that sd-starter left behind lose their superblock (first 4 KiB) before
+	# their entries come back, the copy writes the first 4 KiB of slot A
+	# last, after everything else, and the boot state comes after that. A
+	# power cut at any point before leaves a starter card (the eMMC starts).
+	dd if=/dev/zero of="$SD" bs=512 seek=$ROOT_A_START count=8 conv=fsync 2> /dev/null ||
+		fail write "cannot write $SD"
+	dd if=/dev/zero of="$SD" bs=512 seek=$ROOT_B_START count=8192 conv=fsync 2> /dev/null ||
+		fail write "cannot write $SD"
+
 	# 1. The two system entries back (the card's RETROSTONE partition stays
 	# mounted: no re-read, the kernel is told about the two new ones)
 	printf 'start=%s, size=%s, type=83, bootable\n' $ROOT_A_START $ROOT_SIZE |
@@ -648,10 +685,14 @@ sd_full() {
 	msg "the microSD's system partitions are back in its partition table"
 	progress 3 system
 
-	# 2. The running system to the card's slot A, then read back
+	# 2. The running system to the card's slot A, then read back: chunk 0
+	# (16 MiB) without its first 4 KiB (the superblock), chunks 1..N, then
+	# all of it is verified; the superblock comes in step 4
 	_dst=$(part "$SD" 2)
 	_chunks=$((ROOT_SIZE / 32768))
-	_i=0
+	dd if="$_root" of="$_dst" bs=4096 count=4095 skip=1 seek=1 conv=fsync 2> /dev/null ||
+		fail write "cannot write $_dst (chunk 0)"
+	_i=1
 	while [ $_i -lt $_chunks ]; do
 		dd if="$_root" of="$_dst" bs=1M count=16 skip=$((_i * 16)) seek=$((_i * 16)) conv=fsync 2> /dev/null ||
 			fail write "cannot write $_dst (chunk $_i)"
@@ -660,7 +701,10 @@ sd_full() {
 	done
 	dd if=/dev/zero of="$(part "$SD" 3)" bs=1M count=4 conv=fsync 2> /dev/null
 	drop_caches
-	_i=0
+	_a=$(dd if="$_root" bs=4096 count=4095 skip=1 2> /dev/null | sha256sum)
+	_b=$(dd if="$_dst" bs=4096 count=4095 skip=1 2> /dev/null | sha256sum)
+	[ "$_a" = "$_b" ] || fail verify "$_dst differs from $_root (chunk 0)"
+	_i=1
 	while [ $_i -lt $_chunks ]; do
 		_a=$(dd if="$_root" bs=1M count=16 skip=$((_i * 16)) 2> /dev/null | sha256sum)
 		_b=$(dd if="$_dst" bs=1M count=16 skip=$((_i * 16)) 2> /dev/null | sha256sum)
@@ -668,7 +712,7 @@ sd_full() {
 		_i=$((_i + 1))
 		progress $((50 + _i * 30 / _chunks)) verify
 	done
-	msg "system copied from $_root to $_dst and verified"
+	msg "system copied from $_root to $_dst and verified (but its superblock)"
 
 	# 3. Settings, saves, BIOS files, themes: the eMMC's (in use) to the card
 	progress 82 data
@@ -691,7 +735,18 @@ sd_full() {
 	rm -rf "$_m/rsos/cache"
 	sync
 
-	# 4. The card's boot state: its own slot A
+	# 4. Last: slot A's first 4 KiB (from now on the card's U-Boot finds its
+	# boot.scr), read back; then the card's boot state: its own slot A
+	progress 95 system
+	dd if="$_root" of="$_dst" bs=4096 count=1 conv=fsync 2> /dev/null || fail write "cannot write $_dst (superblock)"
+	drop_caches
+	_a=$(dd if="$_root" bs=4096 count=1 2> /dev/null | sha256sum)
+	_b=$(dd if="$_dst" bs=4096 count=1 2> /dev/null | sha256sum)
+	if [ "$_a" != "$_b" ]; then
+		dd if=/dev/zero of="$_dst" bs=4096 count=1 conv=fsync 2> /dev/null
+		fail verify "$_dst differs from $_root (superblock)"
+	fi
+	bootenv_lock || fail busy "the boot state is busy"
 	printf 'rsos_slot a\nrsos_ok 1\nrsos_tries 0\nrsos_fails 0\nrsos_rounds 0\nrsos_bad\nrsos_fallback\n' > "$RUN/full-env"
 	fw_setenv -s "$RUN/full-env" || fail write "cannot write the boot state"
 	rm -f "$RUN/full-env"
@@ -736,10 +791,11 @@ format_disk() { # <sd|m2>
 }
 
 # --------------------------------------------------------------- report
-# rsos/logs/emmc-report.txt on the system disk, at every start while the eMMC
-# is visible: what is on the eMMC, whether U-Boot ever ran from it (it saves
-# its environment there at its first start), the eMMC registers that decide
-# how it answers at power-on, and the logs a start from it left on its data
+# rsos/logs/emmc-report.txt on the system disk, by hand ("rsos-storage
+# report", for support; never at boot) while the eMMC is visible: what is
+# on the eMMC, whether U-Boot ever ran from it (it saves its environment
+# there at its first start), the eMMC registers that decide how it answers
+# at power-on, and the logs a start from it left on its data
 # partition (copied to rsos/logs/emmc/). Read-only on the eMMC.
 EXT_CSD_FIELDS="162:RST_n_FUNCTION 177:BOOT_BUS_CONDITIONS 178:BOOT_CONFIG_PROT 179:PARTITION_CONFIG 183:BUS_WIDTH 185:HS_TIMING 192:EXT_CSD_REV 226:BOOT_SIZE_MULT"
 
@@ -748,8 +804,9 @@ ext_csd_byte() { # <hex string> <byte>
 }
 
 report() {
-	[ "$EMMC" != "$BOOT_DISK" ] && present "$EMMC" || return 0
-	[ -d "$DATA/rsos/logs" ] || return 0
+	[ "$EMMC" != "$BOOT_DISK" ] && present "$EMMC" ||
+		{ echo "rsos-storage: no eMMC visible besides the system disk (Settings > Storage > Internal eMMC)" >&2; return 1; }
+	[ -d "$DATA/rsos/logs" ] || { echo "rsos-storage: no $DATA/rsos/logs" >&2; return 1; }
 	_r=$DATA/rsos/logs/emmc-report.txt
 	{
 		echo "eMMC report, $(date '+%F %T' 2> /dev/null), system on $BOOT_DISK"
@@ -802,8 +859,8 @@ report() {
 		else
 			echo "  (not readable: $(ls -d /sys/kernel/debug/mmc* 2> /dev/null | tr '\n' ' '))"
 		fi
-		echo "--- AXP209 data registers at this start (REG04-0F)"
-		_a=$(cat "$RUN/axp-data" 2> /dev/null)
+		echo "--- AXP209 data registers now (REG04-0F; the breadcrumbs REG0E-0F stay until the next start from the eMMC)"
+		_a=$(/usr/libexec/rsos/axpstamp raw 2> /dev/null)
 		echo "  ${_a:-(not read)}"
 		case "$_a" in
 		*" 5a e2") echo "  => the last start from the eMMC reached U-Boot proper (the SPL loaded it)" ;;
@@ -831,6 +888,7 @@ report() {
 	} > "$_r.tmp" 2>&1
 	mv -f "$_r.tmp" "$_r"
 	sync
+	echo "$_r"
 }
 
 # ----------------------------------------------------------------- boot
@@ -838,9 +896,10 @@ boot() {
 	# first start from the eMMC: the overlays the microSD had (M.2 SATA)
 	if [ "$BOOT_DISK" = "$EMMC" ] && [ -f "$DATA/rsos/pending-overlays" ]; then
 		read -r _ov < "$DATA/rsos/pending-overlays"
-		if [ -n "$_ov" ] && fw_setenv rsos_overlays "$_ov"; then
+		if [ -n "$_ov" ] && bootenv_lock && fw_setenv rsos_overlays "$_ov"; then
 			msg "rsos_overlays=\"$_ov\" carried over from the microSD (applies at the next start)"
 		fi
+		exec 8>&-
 		rm -f "$DATA/rsos/pending-overlays"
 	fi
 	# the SATA link comes up a moment after the driver (rcS loads it)
@@ -852,7 +911,6 @@ boot() {
 		done
 	fi
 	refresh > /dev/null
-	report
 }
 
 # ----------------------------------------------------------------- main
@@ -868,12 +926,12 @@ overlay)
 redetect)
 	redetect
 	;;
-install|sd-games|sd-starter|sd-full|format|refresh|boot|eject)
+install|sd-games|sd-starter|sd-full|format|refresh|boot|eject|report)
 	# one at a time: the quick ones wait their turn, a task waits a moment
 	# for one of them (a refresh at boot) but not for another task
 	exec 9> "$LOCK"
 	case "$cmd" in
-	refresh|boot|eject) flock 9 ;;
+	refresh|boot|eject|report) flock 9 ;;
 	*) flock -w 30 9 ;;
 	esac || fail busy "another rsos-storage runs"
 	case "$cmd" in
@@ -884,6 +942,7 @@ install|sd-games|sd-starter|sd-full|format|refresh|boot|eject)
 	format) format_disk "$@" ;;
 	refresh) refresh ;;
 	boot) boot ;;
+	report) report ;;
 	eject)
 		case "$1" in emmc|sd|m2) lib_umount "$1"; write_libs; status > /dev/null ;; esac
 		;;

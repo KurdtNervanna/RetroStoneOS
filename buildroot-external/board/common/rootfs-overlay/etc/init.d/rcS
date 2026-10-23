@@ -43,9 +43,10 @@ read -r CMDLINE < /proc/cmdline
 export RSOS_DISK RSOS_BOARD_DATA_PARTITION RSOS_BOARD_FIRSTBOOT_TRACE_KIB
 # /dev/rsos-disk: the disk with U-Boot's environment, for /etc/fw_env.config:
 # the one U-Boot started from (rsos.envdev=mmcblk<N> from boot.scr), else the
-# system disk. They differ on a RetroStone2 Pro started by its starter card
-# (the system on the eMMC, U-Boot and its environment on the microSD).
-_rsos_env=$RSOS_DISK
+# system disk (the microSD when board.sh found none). They differ on a
+# RetroStone2 Pro started by its starter card (the system on the eMMC,
+# U-Boot and its environment on the microSD).
+_rsos_env=${RSOS_DISK:-/dev/mmcblk0}
 case " $CMDLINE " in
 *" rsos.envdev=mmcblk"[0-9]" "*)
 	_rsos_env=${CMDLINE##*rsos.envdev=}
@@ -129,9 +130,6 @@ ts "governor"
 # Only on a board with that PMIC (board.ini: boot_reason = axp209).
 [ "$RSOS_BOARD_BOOT_REASON" = axp209 ] && [ -x /usr/bin/rsos-bootreason ] &&
 	/usr/bin/rsos-bootreason -w /run/rsos/bootreason
-# The AXP209's data registers as they are now, before the boot logger clears
-# them (the RetroStone2 Pro's eMMC boot breadcrumbs, rsos-storage's report)
-[ -x /usr/libexec/rsos/axpstamp ] && /usr/libexec/rsos/axpstamp raw > /run/rsos/axp-data 2> /dev/null
 ts "bootreason"
 
 # --- User data partition (exFAT) on /data. Created on the first boot.
