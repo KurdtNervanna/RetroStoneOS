@@ -131,6 +131,11 @@
 	 * Face buttons, D-pad, START/SELECT. All switch to GND with an external
 	 * 10k pull-up (active low). Every pin here is PH0-PH21, which have an
 	 * external interrupt (EINTn) on the A20, so they are interrupt driven.
+	 * GPIO_PULL_UP also turns on the A20's internal pull-up on every button
+	 * (here, on the shoulders and on the brightness keys), as the production
+	 * RetrOrangePi script did (gpio.pullup): a missing or cracked external
+	 * resistor leaves a floating input that reads as a held button (issue
+	 * #10). With the 10k fitted it changes nothing.
 	 *
 	 * Codes follow Documentation/input/gamepad.rst, which is positional:
 	 * the Nintendo-style labels A (right) and B (bottom) map to BTN_EAST and
@@ -145,74 +150,74 @@
 		button-a {
 			label = "A";
 			linux,code = <BTN_EAST>;
-			gpios = <&pio 7 0 GPIO_ACTIVE_LOW>;	/* PH0, K2 */
+			gpios = <&pio 7 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH0, K2 */
 		};
 
 		button-b {
 			label = "B";
 			linux,code = <BTN_SOUTH>;
-			gpios = <&pio 7 11 GPIO_ACTIVE_LOW>;	/* PH11, K4 */
+			gpios = <&pio 7 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH11, K4 */
 		};
 
 		button-x {
 			label = "X";
 			linux,code = <BTN_NORTH>;
-			gpios = <&pio 7 12 GPIO_ACTIVE_LOW>;	/* PH12, K1 */
+			gpios = <&pio 7 12 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH12, K1 */
 		};
 
 		button-y {
 			label = "Y";
 			linux,code = <BTN_WEST>;
-			gpios = <&pio 7 20 GPIO_ACTIVE_LOW>;	/* PH20, K3 */
+			gpios = <&pio 7 20 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH20, K3 */
 		};
 
 		/* Optional buttons (pads SELECT3/SELECT4 on the PCB) */
 		button-c {
 			label = "C";
 			linux,code = <BTN_C>;
-			gpios = <&pio 7 3 GPIO_ACTIVE_LOW>;	/* PH3, K5 */
+			gpios = <&pio 7 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH3, K5 */
 		};
 
 		button-z {
 			label = "Z";
 			linux,code = <BTN_Z>;
-			gpios = <&pio 7 13 GPIO_ACTIVE_LOW>;	/* PH13, K6 */
+			gpios = <&pio 7 13 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH13, K6 */
 		};
 
 		button-start {
 			label = "Start";
 			linux,code = <BTN_START>;
-			gpios = <&pio 7 14 GPIO_ACTIVE_LOW>;	/* PH14 */
+			gpios = <&pio 7 14 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH14 */
 		};
 
 		button-select {
 			label = "Select";
 			linux,code = <BTN_SELECT>;
-			gpios = <&pio 7 15 GPIO_ACTIVE_LOW>;	/* PH15 */
+			gpios = <&pio 7 15 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH15 */
 		};
 
 		button-dpad-up {
 			label = "D-pad Up";
 			linux,code = <BTN_DPAD_UP>;
-			gpios = <&pio 7 19 GPIO_ACTIVE_LOW>;	/* PH19 */
+			gpios = <&pio 7 19 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH19 */
 		};
 
 		button-dpad-down {
 			label = "D-pad Down";
 			linux,code = <BTN_DPAD_DOWN>;
-			gpios = <&pio 7 7 GPIO_ACTIVE_LOW>;	/* PH7 */
+			gpios = <&pio 7 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH7 */
 		};
 
 		button-dpad-left {
 			label = "D-pad Left";
 			linux,code = <BTN_DPAD_LEFT>;
-			gpios = <&pio 7 4 GPIO_ACTIVE_LOW>;	/* PH4 */
+			gpios = <&pio 7 4 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH4 */
 		};
 
 		button-dpad-right {
 			label = "D-pad Right";
 			linux,code = <BTN_DPAD_RIGHT>;
-			gpios = <&pio 7 16 GPIO_ACTIVE_LOW>;	/* PH16 */
+			gpios = <&pio 7 16 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH16 */
 		};
 	};
 
@@ -228,25 +233,25 @@
 		button-l1 {
 			label = "L1";
 			linux,code = <BTN_TL>;
-			gpios = <&pio 7 23 GPIO_ACTIVE_LOW>;	/* PH23 */
+			gpios = <&pio 7 23 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH23 */
 		};
 
 		button-r1 {
 			label = "R1";
 			linux,code = <BTN_TR>;
-			gpios = <&pio 7 22 GPIO_ACTIVE_LOW>;	/* PH22 */
+			gpios = <&pio 7 22 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH22 */
 		};
 
 		button-l2 {
 			label = "L2";
 			linux,code = <BTN_TL2>;
-			gpios = <&pio 7 27 GPIO_ACTIVE_LOW>;	/* PH27 */
+			gpios = <&pio 7 27 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH27 */
 		};
 
 		button-r2 {
 			label = "R2";
 			linux,code = <BTN_TR2>;
-			gpios = <&pio 7 26 GPIO_ACTIVE_LOW>;	/* PH26 */
+			gpios = <&pio 7 26 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PH26 */
 		};
 	};
 
@@ -265,13 +270,13 @@
 		key-brightness-up {
 			label = "Brightness Up";
 			linux,code = <KEY_BRIGHTNESSUP>;
-			gpios = <&pio 2 18 GPIO_ACTIVE_LOW>;	/* PC18, U$32 */
+			gpios = <&pio 2 18 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PC18, U$32 */
 		};
 
 		key-brightness-down {
 			label = "Brightness Down";
 			linux,code = <KEY_BRIGHTNESSDOWN>;
-			gpios = <&pio 2 22 GPIO_ACTIVE_LOW>;	/* PC22, U$31 */
+			gpios = <&pio 2 22 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;	/* PC22, U$31 */
 		};
 	};
 

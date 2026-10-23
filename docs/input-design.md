@@ -91,7 +91,12 @@ Additional handling:
 - **Sticks**: sticks go to the RetroPad analog axes. In menus the left stick also navigates.
 - **Hotplug**: inotify on `/dev/input` (devtmpfs creates the nodes, so no udev is needed). Pads can be plugged in or unplugged
   at any time, including mid-game. On unplug, the port gets a "disconnected" state, the game pauses if it was P1, and a toast is shown.
-- **Keyboards** are for the UI only (arrows, Enter, Esc) and for debugging.
+- **Keyboards** drive the menus and are not a player in games (they get no port). Their fixed mapping
+  (`map_keyboard()` in `src/input/input.c`): arrows = D-pad, Enter (and keypad Enter) = A, Esc and Backspace = B,
+  X = X, Y = Y, Page Up / Page Down = L / R, Home / End = L2 / R2, Tab = Select, Space = Start. In a game (issue #6)
+  a keyboard can still leave it: **Esc opens the in-game menu** (in the menus Esc stays B), and **Tab works as the
+  hotkey button** of section 4 (Tab+Space exits, Tab+X menu, Tab+Page Down / Page Up save / load a state...),
+  from any keyboard whatever the player order. Test: `make check-input` (`keyboard_in_game`).
 - **Rumble** (done, batch 2): the libretro rumble interface (`retro_set_rumble_state`) is forwarded to an evdev
   FF_RUMBLE effect on pads that support it (`input_rumble()` in `src/input/input.c`). The pad's node is opened
   read-write (read-only fallback: no rumble); `EV_FF` + `FF_RUMBLE` in its capabilities marks it. One effect per pad,
@@ -101,6 +106,19 @@ Additional handling:
   Setting: Settings > Controls > "Controller vibration" (key `rumble`, default on; the game reads it at launch).
   The built-in pad (gpio-keys) has no motor. Test: `make check-rumble` (`tests/test_rumble.c`: a uinput pad with
   FF_RUMBLE, its upload/play/stop requests checked; SKIP without /dev/uinput).
+- **Held buttons** (issue #10, buttons acting as if held):
+  - While a key is down, its device's kernel key state (`EVIOCGKEY`) is re-read once a second. A release that
+    never arrived is applied and logged (`... released without an event: state corrected`). A key the kernel
+    itself reports down for 30 s is logged once (`... held for 30 s (the kernel reports it down)`), which points
+    to the button or its wiring rather than to software. The lines are in `frontend.log` (menu) and `game.log`.
+  - Buttons still held when the in-game menu or the game switcher hands the pad back to the game (the A on
+    "Resume", the B or Start that closed it) reach the core only after a release, like a hotkey's buttons.
+  - The built-in stick counts as fitted only once both axes read near the centre (the middle half of the range),
+    logged as `input: analog stick detected (x .., y ..)`. Floating inputs on a unit without the stick that
+    wander into the range near an edge no longer hold a direction.
+  - The button GPIOs also get the SoC's internal pull-ups in the device trees (RetroStone1 and 2), as the
+    production RetrOrangePi script did.
+  - Test: `make check-input` (`tests/test_input.c`).
 
 ## 3. Player assignment
 - **Default (`p1 = auto`): the controller that launched the game is player 1.** The UI remembers which device made the

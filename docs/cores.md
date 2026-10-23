@@ -90,8 +90,8 @@ Recommended layout: `/data/roms/<folder>`. The frontend maps a folder to a syste
 | `atarilynx` | Atari Lynx | handy | |
 | `ngp` | Neo Geo Pocket | mednafen_ngp | |
 | `ngpc` | Neo Geo Pocket Color | mednafen_ngp | |
-| `wonderswan` | WonderSwan | mednafen_wswan | |
-| `wonderswancolor` | WonderSwan Color | mednafen_wswan | |
+| `wonderswan` (or `wswan`) | WonderSwan | mednafen_wswan | |
+| `wonderswancolor` (or `wswanc`) | WonderSwan Color | mednafen_wswan | |
 | `coleco` | ColecoVision | gearcoleco | smsplus, bluemsx |
 | `msx` | MSX / MSX2 / MSX2+ / turbo R | bluemsx | |
 | `neocd` | Neo Geo CD (`.cue`/`.chd`) | geolith (experimental) | |

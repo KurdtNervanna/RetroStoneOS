@@ -237,6 +237,12 @@ static void test_sysmap(void)
 		{ "cpc", "amstradcpc" }, { "Commodore 64", "c64" }, { "pico-8", "pico8" },
 		{ "pico", "pico" }, { "pokemonmini", "pokemini" }, { "prboom", "doom" },
 		{ "SuperGrafx (SGFX)", "supergrafx" }, { "scummvm", "scummvm" }, { "nxengine", "cavestory" },
+		/* second batch of cores (missing before 0.1.4: "not supported") */
+		{ "wonderswan", "wonderswan" }, { "wswan", "wonderswan" }, { "wswanc", "wonderswancolor" },
+		{ "WonderSwan Color", "wonderswancolor" }, { "ngp", "ngp" }, { "ngpc", "ngpc" },
+		{ "Neo Geo Pocket Color (NGPC)", "ngpc" }, { "lynx", "atarilynx" }, { "atari7800", "atari7800" },
+		{ "colecovision", "coleco" }, { "msx2", "msx" }, { "neogeocd", "neocd" },
+		{ "pce-cd", "pcenginecd" }, { "tg-cd", "pcenginecd" }, { "pcenginecd", "pcenginecd" },
 	};
 
 	for (size_t i = 0; i < sizeof(t) / sizeof(t[0]); i++) {

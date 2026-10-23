@@ -31,7 +31,8 @@ partition to the whole card.
 
 Apart from the RetroStone handhelds (the RetroStone1 has its built-in buttons and its composite-fed screen, see its
 notes), every board here is an **HDMI box**: `internal_display = none`, no battery, no built-in pad
-(`builtin_pad_prefix` empty), a power key only if some input device reports `KEY_POWER` (the Pi 5 power button
+(`builtin_pad_prefix` empty; the Pi 2/3 profiles name the optional PiGRRL 2 screen and buttons instead, which
+changes nothing without them), a power key only if some input device reports `KEY_POWER` (the Pi 5 power button
 does). The sound follows the display, so it goes to the HDMI card; the analog jacks (Orange Pi PC, Orange Pi 5)
 are in the kernel but not used by the frontend yet.
 
@@ -146,7 +147,16 @@ UART without the menu.
 - The CPU class is the RetroStone2's: the cores are the same `arm-a7` builds (`platform=rpi2` and friends), which
   also run on the Pi 3's Cortex-A53 in 32-bit mode.
 - Display and GPU: vc4 (`dtoverlay=vc4-kms-v3d`); HDMI audio through the `vc4-hdmi` card and alsa-lib's `hdmi`
-  PCM (`audio_hdmi_pcm = hdmi`). The 3.5 mm jack is off.
+  PCM (`audio_hdmi_pcm = hdmi`). The 3.5 mm jack is off (`dtparam=audio=on` turns it on; a board hook then
+  loads `snd-bcm2835`).
+- **HDMI needs `i2c-bcm2835` built in** (issue #6): the vc4 HDMI encoder of the Pi 0-3 reads the EDID over the
+  `i2c2` controller (`ddc = <&i2c2>`). Up to 0.1.3 it was a module that nothing loaded (no udev), so vc4 HDMI
+  deferred forever, no DRM device appeared and the screen stayed black; only `dtoverlay=vc4-fkms-v3d` (the
+  firmware drives HDMI) gave a picture, without HDMI sound. Now `CONFIG_I2C_BCM2835=y`, full KMS stays the
+  default, and `vc4-fkms-v3d` remains a documented fallback in `config.txt` for a display that stays black.
+- **Adafruit PiGRRL 2** (Pi 2 or 3 with a 2.8" PiTFT and GPIO buttons): a commented block at the end of
+  `config.txt`, see [boards/pigrrl2.md](boards/pigrrl2.md). `board.ini` has `internal_display = spi` and
+  `builtin_pad_prefix = PiGRRL` for it, which change nothing on a Pi without that screen and those buttons.
 - Serial console on GPIO 14/15, `ttyAMA0`, 115200 (on a Pi 3 / Zero 2 W, `miniuart-bt` moves Bluetooth to the
   mini UART so that the console is the PL011 on every model).
 - Ethernet (USB SMSC95xx / LAN78xx) built in; WiFi/Bluetooth (Pi 3 / Zero 2 W only) as modules for `rsos-net`.
@@ -160,6 +170,8 @@ UART without the menu.
 - `BR2_cortex_a53`: the cores use their `rpi3_64` platforms (cores.md, "Architectures").
 - WiFi firmware for the BCM43430 (3B), CYW43455 (3B+) and BCM43436/43430B0 (Zero 2 W) from
   `brcmfmac_sdio-firmware-rpi`. Console on `ttyAMA0` (GPIO 14/15, `miniuart-bt`).
+- Display, HDMI DDC (`CONFIG_I2C_BCM2835=y`, issue #6), the `vc4-fkms-v3d` fallback and the PiGRRL 2 block of
+  `config.txt`: as the 32-bit image above.
 - The Zero 2 W has 512 MB of RAM and a mini-HDMI port; the vc4 CMA area comes out of that RAM.
 - Root file system slots: **768 MiB** (about 445 MiB used: the 64-bit Raspberry Pi kernel brings about 100 MiB of
   modules, and 512 MiB left too little room for more cores). The Raspberry Pi genimage template takes the slot
@@ -182,6 +194,8 @@ The reference port, unchanged in its layout (porting.md, section 6). Review note
   the next cores land.
 - Everything else (vc4 + v3d built in, GENET, `bcm2835_wdt`, `audio_hdmi_pcm = hdmi`, `vc4-hdmi.conf` in the
   image) checked out.
+- HDMI DDC: the Pi 4 HDMI encoders read the EDID over their own I2C controllers (`i2c-brcmstb`), a module in
+  `bcm2711_defconfig`: built in now (`CONFIG_I2C_BRCMSTB=y`), the Pi 4 form of the black screen of issue #6.
 
 ### Raspberry Pi 5 / 500
 
@@ -194,6 +208,7 @@ The reference port, unchanged in its layout (porting.md, section 6). Review note
   (`pwr_button`, `gpio-keys` built in): the frontend uses it as its power key.
 - `BR2_cortex_a76`: the cores use their generic aarch64 build.
 - Root file system slots: 768 MiB (about 445 MiB used), as the Pi 3.
+- HDMI DDC: `i2c-brcmstb` built in (`CONFIG_I2C_BRCMSTB=y`), as on the Pi 4 (issue #6).
 
 ### Orange Pi PC / PC Plus and Orange Pi One / Lite (Allwinner H3)
 
