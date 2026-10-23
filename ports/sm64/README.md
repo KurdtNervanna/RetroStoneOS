@@ -38,16 +38,29 @@ the `roms` folder already there), or use the menu's USB import. In the menu: **N
 
 ## Controls
 
-| RetroStone2 | N64 |
-|---|---|
-| A / B | A / B |
-| Start | Start |
-| L1, L2, Z | Z |
-| R1 | R |
-| X / Y / C / R2 | C-up / C-left / C-right / C-down |
-| Analog stick (Pro), or the D-pad | the stick |
+The buttons are **the same as the N64 emulator** (parallel_n64), so Mario plays the same natively and emulated,
+and the N64 button settings are global: Mario follows the remap you make for N64 in the emulator's in-game menu
+(`rsos/remaps/n64.ini` on the card; `n64-cz.ini` when "C/Z buttons fitted" is on) and the N64 core option
+**Independent C-button Controls**.
 
-**Select + Start** held for a second goes back to the menu. A USB pad works too (SDL; A = A, X = B, the
+| RetroStone2 | N64 (default) | N64 (Independent C-button Controls on) |
+|---|---|---|
+| B (bottom) | A | A |
+| Y (left) | B | B |
+| L2 | Z | Z |
+| L1 / R1 | L / R | C-left / C-right |
+| A (right) / X (top) | (with R2: C-right / C-up) | C-down / C-up |
+| R2 | hold: B, Y, A, X become C-down, C-left, C-right, C-up | R |
+| Select | | L |
+| Start | Start | Start |
+| Analog stick (Pro), or the D-pad | the stick | the stick |
+
+For Super Mario 64, **Independent C-button Controls** is the comfortable one (L1/R1 turn the camera, R2 is R):
+in any N64 game, open the in-game menu, Core options, turn it on and choose **Save for all games**; both the
+emulator and native Mario use it from then on. ("Save for this game" keeps it to that one ROM only.) Mario reads
+these settings when it starts.
+
+**Select + Start** held for a second goes back to the menu. A USB pad works too (SDL: bottom = A, left = B, the
 shoulders = Z/R, the right stick = C buttons).
 
 Saves (`sm64_save_file.bin`) and settings (`sm64config.txt`) stay in `roms/native/sm64/`. The game saves on its
