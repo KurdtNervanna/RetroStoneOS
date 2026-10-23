@@ -56,10 +56,9 @@
 # Progress, for the menu: "<percent> <step>" in /run/rsos/storage-progress
 # (steps: prepare system verify data games bootloader done; "error <reason>"
 # when it stops: notsd noemmc toosmall nospace busy layout write verify
-# format mount copy bootloader nosd notemmc notrsos notstarter
-# oldbootloader), also on stdout. Every
-# step goes to the kernel log too ("rsos-storage: ..."), hence to
-# RETROSTONE/rsos/logs/boot<N>/dmesg.txt.
+# format mount copy bootloader nosd notemmc notrsos notstarter oldbootloader),
+# also on stdout. Every step goes to the kernel log too ("rsos-storage: ..."),
+# hence to RETROSTONE/rsos/logs/boot<N>/dmesg.txt.
 
 PATH=/usr/bin:/usr/sbin:/bin:/sbin
 export PATH
@@ -573,7 +572,7 @@ install() {
 		cmp -s - "$BOOTLOADER" || fail bootloader "the boot loader on $EMMC does not read back"
 	sync
 	msg "install finished: the console can start from $EMMC"
-	progress 100 done
+	progress 100 "done"
 	refresh > /dev/null
 }
 
@@ -597,7 +596,7 @@ sd_games() {
 	reread "$SD"
 	sync
 	msg "the microSD is a games card now (its RETROSTONE partition is kept)"
-	progress 100 done
+	progress 100 "done"
 	refresh > /dev/null
 }
 
@@ -637,7 +636,7 @@ sd_starter() {
 	sfdisk --quiet --no-reread --delete "$SD" 2 3 > /dev/null 2>&1 || fail write "cannot change the partition table of $SD"
 	sync
 	msg "the microSD is a starter card now: at the next start its boot loader starts the system on the eMMC"
-	progress 100 done
+	progress 100 "done"
 }
 
 # Back from a starter card: the running system (on the eMMC) is copied to the
@@ -752,7 +751,7 @@ sd_full() {
 	rm -f "$RUN/full-env"
 	sync
 	msg "the microSD holds a full system again: at the next start the console runs from it"
-	progress 100 done
+	progress 100 "done"
 }
 
 # Never erase or strip the card the console starts from (its U-Boot)
@@ -786,7 +785,7 @@ format_disk() { # <sd|m2>
 	[ -f "$DATA/README.txt" ] && cp "$DATA/README.txt" "$MEDIA/$1/README.txt"
 	sync
 	msg "$_d formatted as a game disk"
-	progress 100 done
+	progress 100 "done"
 	refresh > /dev/null
 }
 
@@ -836,7 +835,7 @@ report() {
 			[ "$(dd if="$_d" bs=1 skip=131076 count=8 2> /dev/null)" = "eGON.BT0" ] && _at="$_at 128KiB"
 			_nz=$(dd if="$_d" bs=4096 count=64 2> /dev/null | od -An -tx1 | tr -d ' \n0' | wc -c)
 			echo "hardware partition $_b: boot loader at:${_at:- none}; first 256 KiB $([ "$_nz" -gt 0 ] && echo "has data" || echo "all zero")"
-			[ -n "$_at" ] && dd if="$_d" bs=1 skip=$(case "$_at" in " 0"*) echo 0 ;; *8KiB*) echo 8192 ;; *) echo 131072 ;; esac) count=64 2> /dev/null | od -An -c | head -4
+			[ -n "$_at" ] && dd if="$_d" bs=1 skip="$(case "$_at" in " 0"*) echo 0 ;; *8KiB*) echo 8192 ;; *) echo 131072 ;; esac)" count=64 2> /dev/null | od -An -c | head -4
 		done
 		echo "--- partition table"
 		sfdisk --dump "$EMMC" 2>&1
