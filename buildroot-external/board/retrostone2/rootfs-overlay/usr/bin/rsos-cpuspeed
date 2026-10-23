@@ -1,0 +1,97 @@
+#!/bin/sh
+# rsos-cpuspeed: the RetroStone2's CPU clock (Settings > Power > CPU speed).
+#
+#   rsos-cpuspeed get        "<level> <state> <MHz>": the level asked for (0
+#                            normal 960 MHz, 1 = 1008 MHz, 2 = 1056 MHz), its
+#                            state (none, pending: applies at the next start,
+#                            on: this start runs it, failed: a start with it
+#                            did not end cleanly, normal speed until it is set
+#                            again) and the top clock this start allows
+#   rsos-cpuspeed set <0|1|2>  the level of the next start (clears a failure)
+#   rsos-cpuspeed verify     rsos-boot-ok, once the start is stable: the first
+#                            start at a new level runs rsos-cputest; a mismatch
+#                            marks it failed and restarts at the normal speed
+#   rsos-cpuspeed shutdown   rcK: an orderly shutdown or restart ends the trial
+#
+# In the U-Boot environment (board/retrostone2/boot.cmd): rsos_cpuspeed (the
+# level; boot.cmd applies the overlay cpu-oc<level>), rsos_cpuoc (trial: set
+# by U-Boot at every start with the overlay, cleared by "shutdown"; a start
+# that finds it still set skips the overlay and sets failed) and
+# rsos_cpuverified (the level rsos-cputest passed at).
+
+PATH=/usr/bin:/usr/sbin:/bin:/sbin
+export PATH
+
+FREQ=/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq
+CPUTEST=/usr/libexec/rsos/cputest
+RUN=${RSOS_RUN:-/run/rsos}
+
+env_get() {
+	fw_printenv -n "$1" 2> /dev/null
+}
+
+msg() {
+	echo "rsos-cpuspeed: $*" > /dev/kmsg 2> /dev/null
+	echo "rsos-cpuspeed: $*" >&2
+}
+
+level() {
+	case "$(env_get rsos_cpuspeed)" in
+	1) echo 1 ;;
+	2) echo 2 ;;
+	*) echo 0 ;;
+	esac
+}
+
+top_mhz() {
+	_k=
+	[ -r "$FREQ" ] && read -r _k < "$FREQ"
+	echo $((${_k:-0} / 1000))
+}
+
+case "$1" in
+get)
+	_l=$(level)
+	_s=$(env_get rsos_cpuoc)
+	_m=$(top_mhz)
+	if [ "$_l" = 0 ]; then
+		_st=none
+	elif [ "$_s" = failed ]; then
+		_st=failed
+	elif [ "$_m" -gt 960 ]; then
+		_st=on
+	else
+		_st=pending
+	fi
+	echo "$_l $_st $_m"
+	;;
+set)
+	case "$2" in 0) _v= ;; 1 | 2) _v=$2 ;; *) echo "usage: rsos-cpuspeed set 0|1|2" >&2; exit 2 ;; esac
+	printf 'rsos_cpuspeed %s\nrsos_cpuoc\nrsos_cpuverified\n' "$_v" | fw_setenv -s - || exit 1
+	msg "level ${_v:-0} for the next start"
+	;;
+verify)
+	_l=$(level)
+	[ "$_l" != 0 ] && [ "$(env_get rsos_cpuoc)" = trial ] && [ "$(top_mhz)" -gt 960 ] || exit 0
+	[ "$(env_get rsos_cpuverified)" = "$_l" ] && exit 0
+	[ -x "$CPUTEST" ] || exit 0
+	if "$CPUTEST" 20 > "$RUN/cputest.txt" 2>&1; then
+		fw_setenv rsos_cpuverified "$_l"
+		msg "level $_l ($(top_mhz) MHz): CPU check passed ($(cat "$RUN/cputest.txt"))"
+		exit 0
+	fi
+	fw_setenv rsos_cpuoc failed
+	msg "level $_l: CPU check FAILED ($(cat "$RUN/cputest.txt")): back to the normal speed, restarting"
+	sync
+	reboot
+	exit 1
+	;;
+shutdown)
+	[ "$(env_get rsos_cpuoc)" = trial ] || exit 0
+	fw_setenv rsos_cpuoc
+	;;
+*)
+	sed -n '2,/^$/s/^# \{0,1\}//p' "$0" >&2
+	exit 2
+	;;
+esac

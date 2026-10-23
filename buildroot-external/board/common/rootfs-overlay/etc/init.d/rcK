@@ -173,6 +173,13 @@ if [ "$_bs" = pending ] && [ -x /usr/bin/rsos-boot-ok ]; then
 	timeout 5 /usr/bin/rsos-boot-ok refund
 	ts "boot try given back"
 fi
+# The RetroStone2's faster CPU (Settings > Power > CPU speed): an orderly
+# shutdown ends this start's trial (a start that never gets here, a freeze or
+# the power button held, makes the next one run at the normal speed).
+if [ -x /usr/bin/rsos-cpuspeed ]; then
+	timeout 5 /usr/bin/rsos-cpuspeed shutdown
+	ts "CPU speed trial ended"
+fi
 
 # --- 3. No RTC backup cell: save the clock (docs/power.md).
 [ -x /usr/bin/rsos-clock ] && timeout 5 /usr/bin/rsos-clock save

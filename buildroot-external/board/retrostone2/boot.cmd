@@ -80,6 +80,8 @@
 #                   sets rsos_lowvolt=failed (skipped until
 #                   "fw_setenv rsos_lowvolt")
 #   rsos_model      pro|regular, probed at the first start (see below)
+#   rsos_cpuspeed   1|2: the overlay cpu-oc1/cpu-oc2 as a trial (rsos_cpuoc,
+#                   see below)
 #   rsos_extraargs  appended to the kernel command line (e.g. "initcall_debug")
 #   rsos_verbose    1: U-Boot prints on the UART (silent otherwise, see bootcmd)
 #
@@ -304,6 +306,27 @@ if test ${l_lowvolt} = 1; then
 	else
 		setenv rsos_lowvolt trial
 		l_save=1
+	fi
+fi
+
+# CPU speed (Settings > Power > CPU speed, /usr/bin/rsos-cpuspeed):
+# rsos_cpuspeed 1 or 2 adds the overlay cpu-oc1 (1008 MHz) or cpu-oc2
+# (1056 MHz). Every start with it is a trial (rsos_cpuoc=trial) that only an
+# orderly shutdown ends (rcK: rsos-cpuspeed shutdown): a start that finds
+# "trial" still set (the last one froze, lost power or was turned off with
+# the power button) skips it and sets rsos_cpuoc=failed, which stays until
+# the menu sets a level again.
+if test "${rsos_cpuspeed}" = 1 || test "${rsos_cpuspeed}" = 2; then
+	if test "${rsos_cpuoc}" = "trial"; then
+		echo "rsos: the last start with CPU speed ${rsos_cpuspeed} did not shut down cleanly: normal speed"
+		setenv rsos_cpuoc failed
+		l_save=1
+	elif test "${rsos_cpuoc}" = "failed"; then
+		echo "rsos: CPU speed ${rsos_cpuspeed} skipped (rsos_cpuoc=failed)"
+	else
+		setenv rsos_cpuoc trial
+		l_save=1
+		l_ovs="${l_ovs} cpu-oc${rsos_cpuspeed}"
 	fi
 fi
 

@@ -219,4 +219,7 @@ if [ -n "$fe" ] && ! kill -0 "$fe" 2> /dev/null; then
 	exit 1
 fi
 dram_trial
+# the RetroStone2's faster CPU (Settings > Power > CPU speed): a check at the
+# first start of a new level (it restarts at the normal speed if it fails)
+[ -x /usr/bin/rsos-cpuspeed ] && /usr/bin/rsos-cpuspeed verify
 confirm

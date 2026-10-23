@@ -144,6 +144,30 @@ AXP209 data register REG0D, which the PMIC keeps while the battery is in:
 
 The shutdown timestamps (`axpstamp save/show`) moved to REG04-0C to leave REG0D-0F alone.
 
+## CPU speed (Settings > Power > CPU speed) and Speed
+
+The A20 table (`sun7i-a20.dtsi`) tops out at 960 MHz / 1.4 V. **Faster** adds 1008 MHz at 1.45 V (the step of
+Allwinner's own A20 kernels; overlay `cpu-oc1`), **Fastest** 1056 MHz at 1.5 V (beyond the A20's tables, not every
+chip takes it; `cpu-oc2`); each overlay replaces the OPP table and raises the CPU supply's (DCDC2) maximum. The
+thermal trip (75 °C, passive) still slows the CPU down. Almost every core here is CPU-bound (only the N64 cores
+draw with the GPU), which is why the GPU (Mali-400 at 384 MHz, its supply shared with the rest of the SoC) is
+left alone.
+
+The level is `rsos_cpuspeed` in the U-Boot environment (`rsos-cpuspeed set`); boot.cmd applies the overlay as a
+**trial** that only an orderly shutdown ends:
+
+* every start with it sets `rsos_cpuoc=trial`; rcK (`rsos-cpuspeed shutdown`) clears it;
+* a start that finds "trial" still set (a freeze, a crash, a power cut, the power button held) skips the overlay
+  and sets "failed": normal speed until the menu sets a level again (the menu says "Last faster CPU try failed").
+  A CPU fails under load, mid-game, rather than at boot: hence the shutdown, not the boot confirmation;
+* the first start at a new level runs `rsos-cputest` (both cores, the same integer/float work over and over for
+  20 s at full load, every result compared) once `rsos-boot-ok` sees a stable start; a mismatch marks it failed
+  and restarts at the normal speed (`rsos_cpuverified` remembers the level that passed).
+
+**Speed** sets Memory speed and CPU speed together (Normal; Faster = 432 MHz memory + 1008 MHz CPU; Fastest = 480 +
+1056) and shows "Custom" when they differ. Each keeps its own fallback: a CPU that fails goes back to 960 MHz and
+leaves the memory speed as it is. `boot-ab-qemu-test.sh` case 16 covers the boot.cmd side.
+
 ## Hardware test checklist
 
 1. Flash the image, boot, Settings > Storage: **Model** says RetroStone2 Pro, and **Internal eMMC** and **M.2
