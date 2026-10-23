@@ -266,30 +266,30 @@ msgstr ""
 msgid "No GPU found (lima)"
 msgstr ""
 
-#: src/host/launch.c:322
+#: src/host/launch.c:427
 msgid "The game was stopped"
 msgstr ""
 
 #. TRANSLATORS: shown by the menu after a crash; %s is the
 #. signal name in English ("Segmentation fault")
-#: src/host/launch.c:327
+#: src/host/launch.c:432
 #, c-format
 msgid "The emulator crashed (%s). Game saves up to a few seconds ago are kept."
 msgstr ""
 
-#: src/host/launch.c:343
+#: src/host/launch.c:448
 msgid "Could not start the game"
 msgstr ""
 
-#: src/host/launch.c:356
+#: src/host/launch.c:461
 msgid "The emulator stopped responding. Game saves up to a few seconds ago are kept."
 msgstr ""
 
-#: src/host/launch.c:360
+#: src/host/launch.c:465
 msgid "Cannot start the game process"
 msgstr ""
 
-#: src/host/launch.c:365
+#: src/host/launch.c:470
 #, c-format
 msgid "The emulator failed (code %d)"
 msgstr ""
@@ -746,68 +746,79 @@ msgctxt "strftime"
 msgid "%Y-%m-%d %H:%M"
 msgstr ""
 
-#: src/main.c:1195
+#: src/main.c:1198
 msgid "The screen refused this refresh rate"
 msgstr ""
 
-#: src/main.c:2327
-msgid "No emulator is installed for this game."
-msgstr ""
-
-#: src/main.c:2334
-msgid "This game cannot start (missing BIOS?)."
+#: src/main.c:2388
+msgid "This game cannot start: its launch script is missing."
 msgstr ""
 
 #. TRANSLATORS: %s is a system error message (in English)
-#: src/main.c:2514
+#: src/main.c:2450 src/main.c:2679
 #, c-format
 msgid "Cannot start the game process (%s)."
 msgstr ""
 
+#. TRANSLATORS: a native game (no emulator) ended with an
+#. error; %d is its exit code
+#: src/main.c:2460
+#, c-format
+msgid "The game ended with an error (%d). Its messages are in rsos/logs on the SD card."
+msgstr ""
+
+#: src/main.c:2492
+msgid "No emulator is installed for this game."
+msgstr ""
+
+#: src/main.c:2499
+msgid "This game cannot start (missing BIOS?)."
+msgstr ""
+
 #. TRANSLATORS: the automatic power-off (no input for a while)
 #. was stopped because the game's state could not be saved
-#: src/main.c:2529
+#: src/main.c:2694
 msgid "Automatic power-off cancelled: the game could not be saved."
 msgstr ""
 
-#: src/main.c:2541 src/ui/ui.c:585
+#: src/main.c:2706 src/ui/ui.c:585
 msgid "The game could not be started."
 msgstr ""
 
 #. TRANSLATORS: boot message: the SD card's data partition (games, saves)
-#: src/main.c:2626
+#: src/main.c:2791
 msgid "The data partition could not be restored. Your games and saves may need to be copied again."
 msgstr ""
 
-#: src/main.c:2630
+#: src/main.c:2795
 msgid "The data partition was unreadable and was reformatted."
 msgstr ""
 
-#: src/main.c:2633
+#: src/main.c:2798
 msgid "The data partition has errors: saving may fail. Back up your saves."
 msgstr ""
 
 #. TRANSLATORS: boot toast: the SD card's data partition is mounted read-only
 #. (its first-boot setup finishes at the next start)
-#: src/main.c:2641
+#: src/main.c:2806
 msgid "Storage is read-only until the console restarts"
 msgstr ""
 
-#: src/main.c:2646
+#: src/main.c:2811
 msgid "The last update didn't start; the previous version was restored."
 msgstr ""
 
-#: src/main.c:2652
+#: src/main.c:2817
 msgid "The SD card was checked after an unexpected power loss"
 msgstr ""
 
 #. TRANSLATORS: boot screen under the logo (first start, or after an update)
-#: src/main.c:2924
+#: src/main.c:3089
 msgid "Preparing the SD card, please wait..."
 msgstr ""
 
 #. TRANSLATORS: boot screen under the logo, after the power was cut
-#: src/main.c:2926
+#: src/main.c:3091
 msgid "Checking the SD card, please wait..."
 msgstr ""
 
@@ -3201,6 +3212,11 @@ msgstr ""
 #: src/ui/systems.c:69 src/ui/transfer_ui.c:74
 msgctxt "system"
 msgid "Cave Story"
+msgstr ""
+
+#: src/ui/systems.c:72
+msgctxt "system"
+msgid "Native games"
 msgstr ""
 
 #: src/ui/transfer_ui.c:35
