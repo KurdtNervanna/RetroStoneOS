@@ -1,0 +1,179 @@
+#!/bin/sh
+# rsos-bt: the Bluetooth devices of Settings > Network > Bluetooth devices
+# (the frontend runs it as a helper; Bluetooth itself is switched on and off
+# by rsos-net). It drives bluetoothctl (BlueZ 5) non-interactively.
+#
+#   rsos-bt list FILE     write the devices BlueZ knows to FILE (replaced
+#                         atomically), one per line: "MAC<TAB>state<TAB>name",
+#                         state = connected, paired or found (seen by the
+#                         scan, with a name: nameless ones are left out)
+#   rsos-bt scan on|off   start discovery in the background (it stops by
+#                         itself after RSOS_BT_SCAN_S seconds, default 300) /
+#                         stop it
+#   rsos-bt pair MAC      stop the scan, pair (Just Works, no PIN), trust,
+#                         connect
+#   rsos-bt connect MAC   connect a paired device
+#   rsos-bt disconnect MAC
+#   rsos-bt forget MAC    remove the pairing (and the device)
+#
+# Exit status 0 on success; otherwise one short English line on stdout/stderr
+# (the frontend logs it; the player sees a translated message).
+#
+# Trusted + paired devices reconnect by themselves: a Bluetooth LE pad (HID
+# over GATT) is put on the controller's auto-connect list by bluetoothd, and
+# a classic HID pad pages the console when it is switched on (bluetoothd
+# accepts it because it is bonded and trusted).
+
+RUN_DIR=${RSOS_BT_RUN:-/run/rsos-bt}
+SCAN_S=${RSOS_BT_SCAN_S:-300}
+DAEMON_PID=${RSOS_BT_DAEMON_PID:-/run/rsos-net/bluetoothd.pid}
+PATH=${RSOS_BT_PATH:-/usr/bin:/usr/sbin:/bin:/sbin}
+export PATH
+
+ESC=$(printf '\033')
+
+die() {
+	echo "rsos-bt: $*"
+	exit 1
+}
+
+# bluetoothctl output without colour codes and carriage returns
+btctl() {
+	bluetoothctl "$@" < /dev/null 2>&1 | sed "s/$ESC\[[0-9;]*m//g; s/\r//g"
+}
+
+valid_mac() {
+	echo "$1" | grep -qx '[0-9A-Fa-f][0-9A-Fa-f]\(:[0-9A-Fa-f][0-9A-Fa-f]\)\{5\}'
+}
+
+# has MAC Property: "Property: yes" in bluetoothctl info
+has() {
+	btctl info "$1" | grep -q "^[[:space:]]*$2: yes"
+}
+
+# "Device MAC name" lines -> "MAC name"
+devices() {
+	btctl devices "$@" | sed -n 's/^Device \([0-9A-Fa-f:]\{17\}\) *\(.*\)$/\1 \2/p'
+}
+
+# bluetoothd, started by rsos-net bt on
+bt_running() {
+	[ -f "$DAEMON_PID" ] && kill -0 "$(cat "$DAEMON_PID")" 2> /dev/null
+}
+
+list() {
+	out=$1
+	[ -n "$out" ] || die "usage: rsos-bt list FILE"
+	tab=$(printf '\t')
+	if bt_running; then
+		paired=$(devices Paired | cut -d' ' -f1)
+		conn=$(devices Connected | cut -d' ' -f1)
+		devices | while read -r mac name; do
+			name=$(echo "$name" | tr -d '\t')
+			if echo "$conn" | grep -qix "$mac"; then
+				st=connected
+			elif echo "$paired" | grep -qix "$mac"; then
+				st=paired
+			else
+				# BlueZ names a device without a name after its address
+				# (AA-BB-CC-DD-EE-FF): nothing the player can recognise
+				[ -z "$name" ] && continue
+				[ "$(echo "$name" | tr '-' ':' | tr 'a-f' 'A-F')" = \
+					"$(echo "$mac" | tr 'a-f' 'A-F')" ] && continue
+				st=found
+			fi
+			printf '%s%s%s%s%s\n' "$mac" "$tab" "$st" "$tab" "$name"
+		done > "$out.tmp"
+	else
+		: > "$out.tmp"
+	fi
+	mv -f "$out.tmp" "$out" || die "cannot write $out"
+	bt_running || die "Bluetooth is off"
+}
+
+scan_off() {
+	if [ -f "$RUN_DIR/scan.pid" ]; then
+		kill "$(cat "$RUN_DIR/scan.pid")" 2> /dev/null
+		rm -f "$RUN_DIR/scan.pid"
+	fi
+	return 0
+}
+
+scan_on() {
+	bt_running || die "Bluetooth is off"
+	mkdir -p "$RUN_DIR" || die "cannot create $RUN_DIR"
+	if [ -f "$RUN_DIR/scan.pid" ] && kill -0 "$(cat "$RUN_DIR/scan.pid")" 2> /dev/null; then
+		return 0
+	fi
+	# Discovery belongs to the bluetoothctl that asked for it: it stops when
+	# that process exits (killed by "scan off", or after SCAN_S seconds).
+	bluetoothctl --timeout "$SCAN_S" scan on < /dev/null > /dev/null 2>&1 &
+	echo $! > "$RUN_DIR/scan.pid"
+}
+
+# connect_wait MAC: connect, then up to 5 s for "Connected: yes" (a classic
+# pad can also connect by itself right after pairing)
+connect_wait() {
+	has "$1" Connected && return 0
+	msg=$(btctl --timeout 20 connect "$1" | grep -i 'fail\|error\|not available' | tail -n 1)
+	i=0
+	while [ $i -lt 10 ]; do
+		has "$1" Connected && return 0
+		usleep 500000 2> /dev/null || sleep 1
+		i=$((i + 1))
+	done
+	die "not connected${msg:+: $msg}"
+}
+
+pair() {
+	bt_running || die "Bluetooth is off"
+	scan_off
+	if ! has "$1" Paired; then
+		# NoInputNoOutput: Just Works pairing, no PIN to type (pads have none)
+		msg=$(btctl --agent NoInputNoOutput --timeout 30 pair "$1" |
+			grep -i 'fail\|error\|not available' | tail -n 1)
+		has "$1" Paired || die "pairing failed${msg:+: $msg}"
+	fi
+	btctl trust "$1" > /dev/null
+	has "$1" Trusted || die "cannot trust $1"
+	connect_wait "$1"
+}
+
+cmd=$1
+case "$cmd" in
+list) list "$2"; exit $? ;;
+scan)
+	case "$2" in
+	on) scan_on ;;
+	off) scan_off ;;
+	*) die "usage: rsos-bt scan on|off" ;;
+	esac
+	exit $?
+	;;
+pair | connect | disconnect | forget) ;;
+*)
+	echo "usage: rsos-bt {list FILE|scan on|off|pair|connect|disconnect|forget MAC}" >&2
+	exit 2
+	;;
+esac
+
+mac=$2
+valid_mac "$mac" || die "not a Bluetooth address: $mac"
+case "$cmd" in
+pair) pair "$mac" ;;
+connect)
+	bt_running || die "Bluetooth is off"
+	scan_off
+	connect_wait "$mac"
+	;;
+disconnect)
+	btctl disconnect "$mac" > /dev/null
+	has "$mac" Connected && die "still connected"
+	exit 0
+	;;
+forget)
+	btctl remove "$mac" > /dev/null
+	devices Paired | grep -qi "^$mac " && die "cannot remove $mac"
+	exit 0
+	;;
+esac

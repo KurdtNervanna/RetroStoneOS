@@ -336,6 +336,30 @@ check-ui: $(UIPREVIEW)
 			a wait:1500 expect:osk:WiFi_network_name|q x wait:300 expect:osk:WiFi_network_name|q_ \
 			select wait:300 expect:menu:Network|WiFi_network down a wait:1500 expect:osk:WiFi_password| \
 			select wait:300 expect:menu:Network|WiFi_password"
+	@echo "check-ui: Bluetooth devices (tests/fake-rsos-bt.sh): only while Bluetooth is on; pair a found"
+	@echo "          pad, disconnect and forget a paired one, a failed pairing; the scan stops on close"
+	rm -rf $(UI_CHECK_DIR)/bt && printf 'bt=0\n' > $(UI_CHECK_DIR)/data/rsos/settings.ini
+	FAKE_BT_DIR=$(UI_CHECK_DIR)/bt $(UIPREVIEW) --root $(UI_CHECK_DIR) --quiet --bt-helper $(CURDIR)/tests/fake-rsos-bt.sh \
+		--keys "start down down a expect:menu:Network|WiFi down down down down down expect:menu:Network|WiFi"
+	printf 'bt=1\n' > $(UI_CHECK_DIR)/data/rsos/settings.ini
+	FAKE_BT_DIR=$(UI_CHECK_DIR)/bt $(UIPREVIEW) --root $(UI_CHECK_DIR) --quiet --bt-helper $(CURDIR)/tests/fake-rsos-bt.sh \
+		--keys "start down down a down down down down down expect:menu:Network|Bluetooth_devices \
+			a sleep:500 wait:1600 sleep:300 expect:menu:Bluetooth_devices|8BitDo_SN30_Pro \
+			down expect:|Stadia5RHM-1a2b a sleep:1500 expect:toast=Stadia5RHM-1a2b_connected \
+			a wait:300 expect:dialog:Stadia5RHM-1a2b|DISCONNECT a sleep:500 \
+			up a wait:300 expect:dialog:8BitDo_SN30_Pro|CONNECT right down expect:dialog:8BitDo_SN30_Pro|FORGET a sleep:500 \
+			expect:toast=8BitDo_SN30_Pro_forgotten b sleep:500 expect:menu:Network"
+	grep -qx 'pair F0:13:C3:00:00:02' $(UI_CHECK_DIR)/bt/calls.log
+	grep -qx 'disconnect F0:13:C3:00:00:02' $(UI_CHECK_DIR)/bt/calls.log
+	grep -qx 'forget E4:17:D8:00:00:01' $(UI_CHECK_DIR)/bt/calls.log
+	test "$$(tail -n 1 $(UI_CHECK_DIR)/bt/calls.log)" = "scan off"
+	rm -rf $(UI_CHECK_DIR)/bt
+	FAKE_BT_DIR=$(UI_CHECK_DIR)/bt FAKE_BT_FAIL=pair $(UIPREVIEW) --root $(UI_CHECK_DIR) --quiet \
+		--bt-helper $(CURDIR)/tests/fake-rsos-bt.sh \
+		--keys "start down down a down down down down down a sleep:500 wait:1600 sleep:300 down down \
+			expect:|Wireless_Controller a sleep:1500 expect:dialog:Could_not_pair a wait:300 \
+			expect:menu:Bluetooth_devices|Wireless_Controller b sleep:500"
+	rm -rf $(UI_CHECK_DIR)/bt $(UI_CHECK_DIR)/data/rsos/settings.ini
 	@echo "check-ui: game options act on their game after Favorite re-sorts the list (review F-H4)"
 	rm -rf $(UI_CHECK_DIR)-games && mkdir -p $(UI_CHECK_DIR)-games/data/roms/nes \
 		$(UI_CHECK_DIR)-games/data/rsos $(UI_CHECK_DIR)-games/usr/share/rsos/cores
