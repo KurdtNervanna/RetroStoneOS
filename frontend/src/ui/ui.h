@@ -281,6 +281,10 @@ struct ui_config {
 	 * share is on; missing / NULL / "": the item is hidden. The string must
 	 * outlive the UI. */
 	const char *smb_helper;      /* "/usr/bin/rsos-smb" */
+	/* the Bluetooth devices screen (pair, connect, forget: bt_ui.c), under
+	 * the Bluetooth switch while Bluetooth is on; missing / NULL / "": no
+	 * such item. The string must outlive the UI. */
+	const char *bt_helper;       /* "/usr/bin/rsos-bt" */
 	/* formats an unreadable /data after the player confirmed it on the
 	 * storage screen (ui_data_problem): run with --format-confirmed. The
 	 * string must outlive the UI. */
