@@ -55,8 +55,9 @@ image)
 	exfat_ok() { grep -qw exfat /proc/filesystems; }
 	exfat_ok || $SUDO modprobe exfat 2>/dev/null || true
 	if ! exfat_ok && [ "${GITHUB_ACTIONS:-}" = true ]; then
-		$SUDO apt-get install -y -q --no-install-recommends "linux-modules-extra-$(uname -r)" &&
+		if $SUDO apt-get install -y -q --no-install-recommends "linux-modules-extra-$(uname -r)"; then
 			$SUDO modprobe exfat || true
+		fi
 	fi
 	exfat_ok || echo "run-tests: the host kernel $(uname -r) has no exFAT driver: data-partition-test.sh cannot run"
 	;;
