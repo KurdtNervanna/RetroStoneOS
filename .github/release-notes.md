@@ -11,7 +11,14 @@ Puffin Plunge, Raccoon Recycler, Radish Rascals, Seal Shove, Snail Switch, Snowb
 Unicorn Hop. Bomber Mole, Goat Gorge, Lemur Leap, Prickle Patch and Puffin Plunge are one-player games; the 33 others
 support up to four players.
 
-**New in RetroStoneOS 0.1.4**: Import from USB and the network upload page recognise every system's folder: the
+**New in RetroStoneOS 0.1.5**: **Bluetooth controllers**: Settings > Network > **Bluetooth devices** (with
+Bluetooth on) pairs, connects and forgets pads; paired pads reconnect by themselves (issue #13). **Buttons stuck
+held down on the RetroStone2** (issue #10): the face buttons and the D-pad are now read every 5 ms like the
+shoulder buttons; with interrupts, a release could be lost in the kernel, leaving the button held until its next
+press. **Adafruit PiGRRL 2** (issue #6): up/down, L/Select and R/Start were swapped, and the boot logo now fits the
+320x240 screen.
+
+**In RetroStoneOS 0.1.4**: Import from USB and the network upload page recognise every system's folder: the
 WonderSwan, Neo Geo Pocket, Atari 7800, Lynx, ColecoVision, MSX, PC Engine CD and Neo Geo CD folders were reported
 as "not supported", and imported PC Engine CD games went to the HuCard list where they never showed. The Batocera
 folder names `wswan` and `wswanc` work on the card too. **Settings > Game lists > Refresh game lists** now rescans
