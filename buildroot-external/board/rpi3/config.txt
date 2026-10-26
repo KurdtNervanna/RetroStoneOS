@@ -40,7 +40,7 @@ dtparam=audio=off
 # above and remove the "#" in front of the three lines below. Not tested on
 # a PiGRRL 2 yet: if the picture is upside down use rotate=270; if it shows
 # garbage lower the speed to 32000000. The button GPIOs can be changed
-# (dtoverlay=pigrrl2-buttons,up=26,down=16,...: see the docs; by default
+# (dtoverlay=pigrrl2-buttons,a=15,b=14,...: see the docs; by default
 # A/B are on GPIO 14/15, the serial console's pins).
 #dtoverlay=pitft28-resistive,drm,rotate=90,speed=62500000
 #dtoverlay=pigrrl2-buttons

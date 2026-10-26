@@ -5,9 +5,9 @@ PiTFT (ILI9341 display on SPI, STMPE610 resistive touch), 12 buttons on the Pi's
 amplifier on the Pi's analog audio. RetroStoneOS runs on it with the normal Raspberry Pi image and a few lines in
 `config.txt`: there is no separate PiGRRL 2 image.
 
-**Status: not tested on a PiGRRL 2 yet** (issue #6). The display and buttons parts build and the overlays apply to
-the Pi 2/3 device trees, but nobody has run them on the hardware. The button GPIO numbers are an assumption (see
-below). Reports are welcome.
+**Status: first test on a PiGRRL 2 done** (issue #6, 0.1.4 on a Pi 3): the PiTFT picture and the sound work. Up/down,
+L/Select and R/Start were swapped; 0.1.5 fixes them (the table below), and shrinks the boot logo to fit the
+320x240 screen (0.1.4 showed only its middle). The PiTFT side buttons are not mapped. Reports are welcome.
 
 ## Setup
 
@@ -46,29 +46,29 @@ To go back to HDMI, undo the two edits.
 
 ## Buttons
 
-Defaults of `pigrrl2-buttons`, BCM GPIO numbers. **Not verified on a PiGRRL 2:** they are recalled from Adafruit's
-`retrogame` configuration for the PiGRRL 2 (`configs/retrogame.cfg.pigrrl2` in Adafruit-Retrogame). Each button
+Defaults of `pigrrl2-buttons`, BCM GPIO numbers, as a PiGRRL 2 tester reported them (issue #6; 0.1.4 had up/down,
+L/Select and R/Start swapped). Each button
 connects its GPIO to ground (active low, internal pull-up).
 
 | Button | GPIO | Parameter | Linux code |
 |---|---|---|---|
-| D-pad up | 26 | `up` | `BTN_DPAD_UP` |
-| D-pad down | 16 | `down` | `BTN_DPAD_DOWN` |
+| D-pad up | 16 | `up` | `BTN_DPAD_UP` |
+| D-pad down | 26 | `down` | `BTN_DPAD_DOWN` |
 | D-pad left | 4 | `left` | `BTN_DPAD_LEFT` |
 | D-pad right | 19 | `right` | `BTN_DPAD_RIGHT` |
 | A | 14 | `a` | `BTN_EAST` |
 | B | 15 | `b` | `BTN_SOUTH` |
 | X | 20 | `x` | `BTN_NORTH` |
 | Y | 18 | `y` | `BTN_WEST` |
-| L | 5 | `l` | `BTN_TL` |
-| R | 6 | `r` | `BTN_TR` |
-| Select | 12 | `select` | `BTN_SELECT` |
-| Start | 13 | `start` | `BTN_START` |
+| L | 12 | `l` | `BTN_TL` |
+| R | 13 | `r` | `BTN_TR` |
+| Select | 5 | `select` | `BTN_SELECT` |
+| Start | 6 | `start` | `BTN_START` |
 
 If a button does the wrong thing, give it its real GPIO, for example:
 
 ```
-dtoverlay=pigrrl2-buttons,up=16,down=26
+dtoverlay=pigrrl2-buttons,a=15,b=14
 ```
 
 GPIO 14/15 are also the serial console (`ttyAMA0`); with the buttons there, the console is not usable. The
