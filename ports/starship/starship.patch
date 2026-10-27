@@ -1,0 +1,48 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 2b872a44..d40eaf78 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -114,7 +114,7 @@ add_compile_definitions(
+ )
+ 
+ # Find necessary libraries
+-if (UNIX AND NOT APPLE)
++if (UNIX AND NOT APPLE AND NOT USE_GLES2)
+ find_package(OpenGL REQUIRED)
+ endif()
+ 
+diff --git a/port/shaders/opengl/default.shader.fs b/port/shaders/opengl/default.shader.fs
+index 404caae6..f9b5dd43 100644
+--- a/port/shaders/opengl/default.shader.fs
++++ b/port/shaders/opengl/default.shader.fs
+@@ -53,14 +53,18 @@ uniform int texture_filtering[2];
+ 
+ float random(in vec3 value) {
+     float random = dot(sin(value), vec3(12.9898, 78.233, 37.719));
++@if(gles2)
++    return fract(sin(random) * 43758.5453);
++@else
+     return fract(sin(random) * 143758.5453);
++@end
+ }
+ 
+ vec4 fromLinear(vec4 linearRGB){
+     bvec3 cutoff = lessThan(linearRGB.rgb, vec3(0.0031308));
+     vec3 higher = vec3(1.055)*pow(linearRGB.rgb, vec3(1.0/2.4)) - vec3(0.055);
+     vec3 lower = linearRGB.rgb * vec3(12.92);
+-    return vec4(mix(higher, lower, cutoff), linearRGB.a);
++    return vec4(mix(higher, lower, vec3(cutoff)), linearRGB.a);
+ }
+ 
+ vec4 filter3point(in sampler2D tex, in vec2 texCoord, in vec2 texSize) {
+@@ -106,7 +110,9 @@ void main() {
+             vec4 texVal@{i} = hookTexture2D(@{i}, uTex@{i}, vTexCoordAdj@{i}, texSize@{i});
+ 
+             @if(o_masks[i])
+-                @if(opengles) 
++                @if(gles2)
++                    vec2 maskSize@{i} = texSize@{i};
++                @elseif(opengles)
+                     vec2 maskSize@{i} = vec2(textureSize(uTexMask@{i}, 0));
+                 @else 
+                     vec2 maskSize@{i} = textureSize(uTexMask@{i}, 0);
