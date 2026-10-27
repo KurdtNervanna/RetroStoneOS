@@ -17,8 +17,8 @@ data comes from **your own ROM** on your PC (Star Fox 64 US 1.1, `.z64`, SHA-1
 | Cross-build for the RetroStone2 (32-bit ARM) | **builds** (Starship `3322643f`, libultraship `eaaf9d0`, Torch `cd92cc0`) |
 | Game data from the ROM (`sf64.o2r`) and the port archive (`starship.o2r`) | **built** on a PC |
 | Libraries in the OS (Ogg/Vorbis, libzip, tinyxml2, spdlog, fmt) | in the configs, from RetroStoneOS build 18 |
-| The built-in controls | to do: they are three devices, and libultraship reads SDL game controllers |
-| Build script for the SD card folder | to do |
+| The built-in controls | `rsos-gamepad` (OS build 18): the three devices as one standard SDL gamepad, started by the launch script |
+| Build script for the SD card folder | `build-starship.sh` |
 | Run on a RetroStone2 | not yet |
 
 Starship's libultraship still uses **SDL2** (only libultraship's newest code moved to SDL3), so no SDL3 is needed.
@@ -37,18 +37,22 @@ Starship's libultraship still uses **SDL2** (only libultraship's newest code mov
   reads (reported as "far"). Starship uses neither; only libultraship's debug window does.
 * A shader that fails to compile now prints the compiler's message and the shader before aborting.
 
-## Building (for now, by hand)
+## Build
 
 ```sh
-git clone --recurse-submodules https://github.com/HarbourMasters/Starship && cd Starship
-git checkout 3322643f && git submodule update --init --recursive
-git apply <fork>/ports/starship/starship.patch
-git -C libultraship apply <fork>/ports/starship/libultraship-gles2.patch
-cmake -S . -B build-gles2 -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_OPENGLES=ON -DUSE_GLES2=ON \
-  -DCMAKE_TOOLCHAIN_FILE=~/rsos/output/host/share/buildroot/toolchainfile.cmake
-cmake --build build-gles2 --target Starship
-cp <your rom> baserom.z64
-cmake --build build-gles2 --target ExtractAssets GeneratePortO2R
+ports/starship/build-starship.sh ~/"Star Fox 64 (U) (V1.1).z64" ~/my-ports
 ```
 
-A `build-starship.sh` like `ports/sm64/build-sm64.sh` will replace these steps.
+It clones Starship at the fixed commit into `~/rsos/starship-work`, applies `starship.patch` and
+`libultraship-gles2.patch`, checks that the ROM is one Starship supports, builds the game for the console
+(`USE_GLES2`, the RetroStoneOS cross compiler), builds Torch for the PC and makes `sf64.o2r` from the ROM and
+`starship.o2r`, then writes:
+
+```
+~/my-ports/roms/native/Star Fox 64.sh
+~/my-ports/roms/native/starship/   Starship, sf64.o2r, starship.o2r, gamecontrollerdb.txt
+```
+
+Copy the `roms` folder onto the SD card's **RETROSTONE** partition; in the menu: **Native games > Star Fox 64**.
+Settings and saves stay in `roms/native/starship/` (`SHIP_HOME`). **Hold Select + Start** for a second to quit.
+The console needs RetroStoneOS **0.1.4.18 (build 18)** or newer: the libraries and `rsos-gamepad`.

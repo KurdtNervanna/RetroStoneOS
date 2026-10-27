@@ -30,6 +30,7 @@ your own SD card. Keep it to yourself: never upload it, share it or put it in a 
 | Game | Folder | Port | Status on the RetroStone2 |
 |---|---|---|---|
 | Super Mario 64 | [sm64](sm64/README.md) | [sm64-port](https://github.com/sm64-port/sm64-port) | **Works**: full speed, built-in controls, analog stick (Pro) or D-pad |
+| Star Fox 64 | [starship](starship/README.md) | [Starship](https://github.com/HarbourMasters/Starship) + a GLES2 libultraship | **Work in progress**: builds for the RetroStone2, not run yet |
 
 ## Other N64 PC ports: can they run here?
 
@@ -39,19 +40,18 @@ Cortex-A7 cores at 960-1056 MHz. That decides which ports can work:
 | Port family | Games | GPU it needs | Here |
 |---|---|---|---|
 | sm64-port's renderer (Fast3D, GLSL 1.10 / ES 1.00) | Super Mario 64 (sm64-port, sm64ex) | OpenGL 2.1 / **ES 2.0** | **Yes** (Super Mario 64 works) |
-| [libultraship](https://github.com/Kenix3/libultraship) (HarbourMasters) | Star Fox 64 ([Starship](https://github.com/HarbourMasters/Starship)), Ocarina of Time ([Ship of Harkinian](https://github.com/HarbourMasters/Shipwright)), Majora's Mask ([2Ship2Harkinian](https://github.com/HarbourMasters/2ship2harkinian)), Mario Kart 64 ([SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart)), [Ghostship](https://github.com/HarbourMasters/Ghostship), Banjo-Kazooie ([Lighthouse](https://github.com/HarbourMasters/Lighthouse)), Paper Mario ([PaperBoat](https://github.com/HarbourMasters/PaperBoat)) | OpenGL 3.0 (GLSL 1.30) or **ES 3.0**, and SDL3 | **Not as they are**: they need a GLES2 renderer and SDL3 (see below) |
+| [libultraship](https://github.com/Kenix3/libultraship) (HarbourMasters) | Star Fox 64 ([Starship](https://github.com/HarbourMasters/Starship)), Ocarina of Time ([Ship of Harkinian](https://github.com/HarbourMasters/Shipwright)), Majora's Mask ([2Ship2Harkinian](https://github.com/HarbourMasters/2ship2harkinian)), Mario Kart 64 ([SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart)), [Ghostship](https://github.com/HarbourMasters/Ghostship), Banjo-Kazooie ([Lighthouse](https://github.com/HarbourMasters/Lighthouse)), Paper Mario ([PaperBoat](https://github.com/HarbourMasters/PaperBoat)) | OpenGL 3.0 (GLSL 1.30) or **ES 3.0**, and SDL3 | **In progress**: this fork adds a GLES2 mode to libultraship (Star Fox 64 first); the newest libultraship also moved to SDL3 |
 | [Perfect Dark port](https://github.com/fgsfdsfgs/perfect_dark) | Perfect Dark | OpenGL 3.0 / ES 3.0 | Not as it is (the same GLES2 work) |
 | N64 Recompiled (RT64) | Zelda 64 Recomp, Banjo: Recompiled, DK64, Star Fox 64 Recomp, ... | Vulkan / Direct3D 12 | **No**: the Mali-400 has neither |
 
 ### The way to Star Fox 64, Zelda and the other libultraship ports
 
-libultraship's OpenGL renderer has three shader variants: desktop GL 4.1, desktop GLSL 1.30 and **GLES 3.0**. A
-**GLES 2.0 variant** (GLSL ES 1.00, as sm64-port uses) is the missing piece: the shaders use a few GLSL 1.30
-features (`textureSize()`, `in`/`out`, `texture()`) that have GLES2 equivalents (a size uniform, `attribute`/
-`varying`, `texture2D()`). SDL3 would be added to RetroStoneOS next to SDL2. Then each game needs its own memory
-and speed check: **Star Fox 64 (Starship)** is the best first candidate (a lighter game, and its assets are
-already well understood here); Ocarina of Time and Majora's Mask are much heavier for 1 GB of RAM and two
-Cortex-A7 cores. Work in progress: nothing to build yet.
+libultraship's OpenGL renderer has shader variants for desktop GL and **GLES 3.0**; this fork adds a **GLES 2.0**
+mode (`USE_GLES2`, [starship/libultraship-gles2.patch](starship/libultraship-gles2.patch)): GLSL ES 1.00 shaders,
+GLES2 framebuffers and depth buffers, no multisampling. **Star Fox 64 (Starship)** is first: it builds for the
+RetroStone2 and its data comes from your ROM ([starship/README.md](starship/README.md)). Its libultraship still uses
+SDL2, so no SDL3 is needed for it. Ocarina of Time and Majora's Mask are much heavier for 1 GB of RAM and two
+Cortex-A7 cores, and the newest libultraship moved to SDL3: they come after Star Fox 64 runs.
 
 ## Making a new port
 

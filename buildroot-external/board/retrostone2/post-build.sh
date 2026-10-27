@@ -52,6 +52,10 @@ mkdir -p "$TARGET/usr/libexec/rsos"
 # /usr/libexec/rsos/cputest: the quick CPU check of the faster CPU trial
 # (Settings > Power > CPU speed; rsos-cpuspeed verify, tools/rsos-cputest.c).
 "$CC" -O2 -s -Wall -Wextra -Werror -pthread -o "$TARGET/usr/libexec/rsos/cputest" 	"$BOARD_DIR/tools/rsos-cputest.c"
+# /usr/bin/rsos-gamepad: the built-in controls as one standard gamepad for
+# native games that read SDL game controllers (docs/native-games.md,
+# tools/rsos-gamepad.c; needs CONFIG_INPUT_UINPUT)
+"$CC" -O2 -s -Wall -Wextra -Werror -o "$TARGET/usr/bin/rsos-gamepad" "$BOARD_DIR/tools/rsos-gamepad.c"
 
 # --- The boot loader, for "Install to internal storage" on the Pro
 # (rsos-storage install writes it at 8 KiB on the eMMC): the image's own
