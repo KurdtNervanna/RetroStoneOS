@@ -77,6 +77,21 @@ index cfac1e8..529d7e1 100644
  
  ASFLAGS := -I include -I $(BUILD_DIR) $(foreach d,$(DEFINES),--defsym $(d))
  
+diff --git a/src/game/memory.c b/src/game/memory.c
+index 36ceff3..9b91338 100644
+--- a/src/game/memory.c
++++ b/src/game/memory.c
+@@ -518,7 +518,9 @@ void alloc_only_pool_clear(struct AllocOnlyPool *pool) {
+ 
+ void *alloc_only_pool_alloc(struct AllocOnlyPool *pool, s32 size) {
+     u8 *addr;
+-    u32 s = size;
++    /* every block 8-byte aligned, like the block header above: on 32-bit
++     * ARM a float store to a misaligned address is a fatal SIGBUS */
++    u32 s = ALIGN8(size);
+     if (pool->lastBlockSize - pool->lastBlockNextPos < s) {
+         struct AllocOnlyPoolBlock *block;
+         u32 nextSize = pool->lastBlockSize * 2;
 diff --git a/src/pc/audio/audio_pulse.h b/src/pc/audio/audio_pulse.h
 index c4d7e4b..7fbae7a 100644
 --- a/src/pc/audio/audio_pulse.h
