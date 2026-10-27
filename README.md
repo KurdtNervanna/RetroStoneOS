@@ -10,7 +10,8 @@ layer cake, and every setting lives in one menu.
 
 > **This fork** ([KurdtNervanna/RetroStoneOS](https://github.com/KurdtNervanna/RetroStoneOS), branch `pro-storage`)
 > adds **Native games**: N64 PC ports such as **Super Mario 64** running natively on the RetroStone2's GPU, at full
-> speed. You build them on your PC from your own ROM: **[how to get native ports](ports/README.md)**. Its
+> speed (**Star Fox 64** is in progress: it builds, but hasn't run on the console yet). You build them on your PC
+> from your own ROM: **[how to get native ports](ports/README.md)**. Its
 > [Releases](https://github.com/KurdtNervanna/RetroStoneOS/releases) update over the air (Settings > System
 > update). The official RetroStoneOS is [PaddleStroke/RetroStoneOS](https://github.com/PaddleStroke/RetroStoneOS).
 
