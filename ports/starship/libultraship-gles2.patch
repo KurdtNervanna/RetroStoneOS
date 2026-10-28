@@ -38,6 +38,34 @@ index db92a29a..1675a88e 100644
          $<$<BOOL:${GFX_DEBUG_DISASSEMBLER}>:GFX_DEBUG_DISASSEMBLER>
      )
  endif()
+diff --git a/src/debug/CrashHandler.cpp b/src/debug/CrashHandler.cpp
+index 5f2256ac..df5179a7 100644
+--- a/src/debug/CrashHandler.cpp
++++ b/src/debug/CrashHandler.cpp
+@@ -2,6 +2,9 @@
+ #include "utils/StringHelper.h"
+ #include "CrashHandler.h"
+ #include "Context.h"
++#ifndef _WIN32
++#include <unistd.h> // _exit
++#endif
+ 
+ #ifdef _WIN32
+ #include <windows.h>
+@@ -199,11 +202,11 @@ static void ErrorHandler(int sig, siginfo_t* sigInfo, void* data) {
+ 
+     Context::GetInstance()->GetLogger()->flush();
+     spdlog::shutdown();
+-    exit(1);
++    _exit(128 + sig);
+ }
+ 
+ static void ShutdownHandler(int sig, siginfo_t* sigInfo, void* data) {
+-    exit(1);
++    _exit(128 + sig);
+ }
+ 
+ #elif _WIN32
 diff --git a/src/graphic/Fast3D/backends/gfx_opengl.cpp b/src/graphic/Fast3D/backends/gfx_opengl.cpp
 index 097e2e86..4074598d 100644
 --- a/src/graphic/Fast3D/backends/gfx_opengl.cpp

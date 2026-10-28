@@ -74,6 +74,54 @@ index bc0ccb1f..865a912c 100644
  
      auto defaultMappings = std::make_shared<Ship::ControllerDefaultMappings>(
          // KeyboardKeyToButtonMappings - use built-in LUS defaults
+diff --git a/src/port/interpolation/FrameInterpolation.cpp b/src/port/interpolation/FrameInterpolation.cpp
+index 8d6c31ce..e0d55170 100644
+--- a/src/port/interpolation/FrameInterpolation.cpp
++++ b/src/port/interpolation/FrameInterpolation.cpp
+@@ -164,6 +164,7 @@ struct Recording {
+ };
+ 
+ bool is_recording;
++bool frame_recording; // StartRecord turned recording on for this frame
+ vector<Path*> current_path;
+ uint32_t camera_epoch;
+ uint32_t previous_camera_epoch;
+@@ -416,7 +417,7 @@ bool camera_interpolation = true;
+ 
+ void FrameInterpolation_ShouldInterpolateFrame(bool shouldInterpolate) {
+     // camera_interpolation = shouldInterpolate;
+-    is_recording = shouldInterpolate;
++    is_recording = shouldInterpolate && frame_recording;
+ }
+ 
+ void FrameInterpolation_StartRecord(void) {
+@@ -424,6 +425,7 @@ void FrameInterpolation_StartRecord(void) {
+     current_recording = {};
+     current_path.clear();
+     current_path.push_back(&current_recording.root_path);
++    frame_recording = false;
+     if (!camera_interpolation) {
+         // default to interpolating
+         camera_interpolation = true;
+@@ -432,6 +434,7 @@ void FrameInterpolation_StartRecord(void) {
+     }
+     if (GameEngine::GetInterpolationFPS() != 20) {
+         is_recording = true;
++        frame_recording = true;
+     }
+ }
+ 
+@@ -456,7 +459,9 @@ void FrameInterpolation_RecordCloseChild(void) {
+     if (has_inv_actor_mtx && current_path.size() == inv_actor_mtx_path_index) {
+         has_inv_actor_mtx = false;
+     }
+-    current_path.pop_back();
++    if (current_path.size() > 1) {
++        current_path.pop_back();
++    }
+ }
+ 
+ void FrameInterpolation_DontInterpolateCamera(void) {
 diff --git a/src/port/ui/ImguiUI.cpp b/src/port/ui/ImguiUI.cpp
 index 5874ac2a..c4af2d96 100644
 --- a/src/port/ui/ImguiUI.cpp
