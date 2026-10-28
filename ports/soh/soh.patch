@@ -40,3 +40,18 @@ index 303a977d..aebbe568 100644
              int32x4_t addVecLo = vaddq_s32(outX7fffLoVec, inGainLoVec);
              int32x4_t addVecHi = vaddq_s32(outX7fffHiVec, inGainHiVec);
              addVecHi = vaddq_s32(addVecHi, x4000Vec);
+diff --git a/soh/src/code/audio_load.c b/soh/src/code/audio_load.c
+index d7de0389..00814510 100644
+--- a/soh/src/code/audio_load.c
++++ b/soh/src/code/audio_load.c
+@@ -1252,8 +1252,8 @@ void AudioLoad_Init(void* heap, size_t heapSize) {
+     gAudioContext.resetTimer = 0;
+ 
+     memset(&gAudioContext, 0, sizeof(gAudioContext));
+-    memset(gAudioContext.seqToPlay, 0, 8);
+-    memset(gAudioContext.seqReplaced, 0, 8);
++    memset(gAudioContext.seqToPlay, 0, sizeof(gAudioContext.seqToPlay));
++    memset(gAudioContext.seqReplaced, 0, sizeof(gAudioContext.seqReplaced));
+ 
+     switch (osTvType) {
+         case OS_TV_PAL:
