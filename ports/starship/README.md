@@ -19,7 +19,7 @@ data comes from **your own ROM** on your PC (Star Fox 64 US 1.1, `.z64`, SHA-1
 | Libraries in the OS (Ogg/Vorbis, libzip, tinyxml2, spdlog, fmt) | in the configs, from RetroStoneOS build 18 |
 | The built-in controls | `rsos-gamepad` (OS build 18): the three devices as one standard SDL gamepad, started by the launch script |
 | Build script for the SD card folder | `build-starship.sh` |
-| Run on a RetroStone2 | not yet |
+| Run on a RetroStone2 | **runs** (RetroStone2 Pro, OS build 18); speed being tuned |
 
 Starship's libultraship still uses **SDL2** (only libultraship's newest code moved to SDL3), so no SDL3 is needed.
 
@@ -36,6 +36,16 @@ Starship's libultraship still uses **SDL2** (only libultraship's newest code mov
 * **What GLES2 cannot do**: framebuffer blits (copies go through `glCopyTexSubImage2D`, unscaled only) and depth
   reads (reported as "far"). Starship uses neither; only libultraship's debug window does.
 * A shader that fails to compile now prints the compiler's message and the shader before aborting.
+
+## Other fixes in the patches
+
+* **First start** (GLES2 builds): the cheap settings once, still changeable in the menu: the game's own frame
+  rate (no interpolated frames), 320x240 rendering, bilinear filtering, no MSAA, no "press F1" hint.
+* **Crash with frame interpolation off** ("Original", 20 FPS): the game turned recording back on in the middle
+  of a frame and crashed in `FrameInterpolation_RecordMatrixPop`; recording now only resumes in a frame that
+  started it.
+* **Crash handler**: `_exit()` instead of `exit()` in the signal handlers, so a crash or a quit ends the game at
+  once (exit status 128 + signal) instead of hanging on a frozen picture.
 
 ## Build
 
