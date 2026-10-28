@@ -44,6 +44,7 @@ Starship's libultraship still uses **SDL2** (only libultraship's newest code mov
 * **Crash with frame interpolation off** ("Original", 20 FPS): the game turned recording back on in the middle
   of a frame and crashed in `FrameInterpolation_RecordMatrixPop`; recording now only resumes in a frame that
   started it.
+* **Handheld controls**: Select + Start quits at once; Start skips any level intro (`gSkipAnyIntro`).
 * **Crash handler**: `_exit()` instead of `exit()` in the signal handlers, so a crash or a quit ends the game at
   once (exit status 128 + signal) instead of hanging on a frozen picture.
 
@@ -64,5 +65,7 @@ It clones Starship at the fixed commit into `~/rsos/starship-work`, applies `sta
 ```
 
 Copy the `roms` folder onto the SD card's **RETROSTONE** partition; in the menu: **Native games > Star Fox 64**.
-Settings and saves stay in `roms/native/starship/` (`SHIP_HOME`). **Hold Select + Start** for a second to quit.
+Settings and saves stay in `roms/native/starship/` (`SHIP_HOME`). **Select + Start** quits at once, as in the
+emulators. **Start** skips a level's opening scene, also on a planet not cleared yet (the N64 game allows it only
+after a clear; the `gSkipAnyIntro` setting at 0 in `starship.cfg.json` brings that back).
 The console needs RetroStoneOS **0.1.4.18 (build 18)** or newer: the libraries and `rsos-gamepad`.

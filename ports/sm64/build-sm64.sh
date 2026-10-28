@@ -64,4 +64,4 @@ install -m 0644 "$here/Super Mario 64.sh" "$out/roms/native/Super Mario 64.sh"
 echo
 echo "Done: $out/roms"
 echo "Copy that \"roms\" folder onto the SD card's RETROSTONE partition, then in the menu:"
-echo "Native games > Super Mario 64. Hold Select + Start for a second to quit."
+echo "Native games > Super Mario 64. Select + Start quits."

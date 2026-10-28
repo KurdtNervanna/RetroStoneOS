@@ -52,11 +52,33 @@ index 404caae6..f9b5dd43 100644
                      vec2 maskSize@{i} = vec2(textureSize(uTexMask@{i}, 0));
                  @else 
                      vec2 maskSize@{i} = textureSize(uTexMask@{i}, 0);
+diff --git a/src/engine/fox_play.c b/src/engine/fox_play.c
+index c11c9dd6..d0e192a5 100644
+--- a/src/engine/fox_play.c
++++ b/src/engine/fox_play.c
+@@ -7172,7 +7172,8 @@ void Play_Main(void) {
+ 
+             if ((gControllerPress[gMainController].button & START_BUTTON) &&
+                 (gPlayer[0].state == PLAYERSTATE_LEVEL_INTRO) &&
+-                gSaveFile.save.data.planet[sSaveSlotFromLevel[gCurrentLevel]].normalClear) {
++                (gSaveFile.save.data.planet[sSaveSlotFromLevel[gCurrentLevel]].normalClear ||
++                 CVarGetInteger("gSkipAnyIntro", 1))) {
+                 Audio_ClearVoice();
+                 Audio_SetEnvSfxReverb(0);
+                 Play_ClearObjectData();
 diff --git a/src/port/Engine.cpp b/src/port/Engine.cpp
-index bc0ccb1f..865a912c 100644
+index bc0ccb1f..a2323027 100644
 --- a/src/port/Engine.cpp
 +++ b/src/port/Engine.cpp
-@@ -128,6 +128,17 @@ GameEngine::GameEngine() {
+@@ -1,4 +1,7 @@
+ #include "Engine.h"
++#ifdef USE_GLES2
++#include <unistd.h> // _exit
++#endif
+ #include "ui/ImguiUI.h"
+ #include "StringHelper.h"
+ 
+@@ -128,6 +131,17 @@ GameEngine::GameEngine() {
      this->context->InitConfiguration();    // without this line InitConsoleVariables fails at Config::Reload()
      this->context->InitConsoleVariables(); // without this line the controldeck constructor failes in
                                             // ShipDeviceIndexMappingManager::UpdateControllerNamesFromConfig()
@@ -74,6 +96,34 @@ index bc0ccb1f..865a912c 100644
  
      auto defaultMappings = std::make_shared<Ship::ControllerDefaultMappings>(
          // KeyboardKeyToButtonMappings - use built-in LUS defaults
+@@ -318,6 +332,27 @@ void GameEngine::Destroy() {
+ 
+ void GameEngine::StartFrame() const {
+     using Ship::KbScancode;
++#ifdef USE_GLES2
++    {
++        static bool startWasDown;
++        bool back = false, start = false;
++
++        for (int i = 0; i < SDL_NumJoysticks(); i++) {
++            SDL_GameController* pad = SDL_GameControllerFromInstanceID(SDL_JoystickGetDeviceInstanceID(i));
++
++            if (pad != nullptr) {
++                back |= SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_BACK) != 0;
++                start |= SDL_GameControllerGetButton(pad, SDL_CONTROLLER_BUTTON_START) != 0;
++            }
++        }
++        if (back && start && !startWasDown) {
++            SPDLOG_INFO("Select+Start: quitting");
++            this->context->GetLogger()->flush();
++            _exit(0);
++        }
++        startWasDown = start;
++    }
++#endif
+     const int32_t dwScancode = this->context->GetWindow()->GetLastScancode();
+     this->context->GetWindow()->SetLastScancode(-1);
+ 
 diff --git a/src/port/interpolation/FrameInterpolation.cpp b/src/port/interpolation/FrameInterpolation.cpp
 index 8d6c31ce..e0d55170 100644
 --- a/src/port/interpolation/FrameInterpolation.cpp

@@ -60,7 +60,8 @@ in any N64 game, open the in-game menu, Core options, turn it on and choose **Sa
 emulator and native Mario use it from then on. ("Save for this game" keeps it to that one ROM only.) Mario reads
 these settings when it starts.
 
-**Select + Start** held for a second goes back to the menu. A USB pad works too (SDL: bottom = A, left = B, the
+**Select + Start** goes back to the menu at once, as in the emulators (the save file is written whenever the game
+saves). A USB pad works too (SDL: bottom = A, left = B, the
 shoulders = Z/R, the right stick = C buttons).
 
 Saves (`sm64_save_file.bin`) and settings (`sm64config.txt`) stay in `roms/native/sm64/`. The game saves on its

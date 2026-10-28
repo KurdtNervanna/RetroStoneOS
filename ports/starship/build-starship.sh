@@ -73,4 +73,4 @@ install -m 0644 "$here/Star Fox 64.sh" "$out/roms/native/Star Fox 64.sh"
 echo
 echo "Done: $out/roms"
 echo "Copy that \"roms\" folder onto the SD card's RETROSTONE partition, then in the menu:"
-echo "Native games > Star Fox 64. Hold Select + Start for a second to quit."
+echo "Native games > Star Fox 64. Select + Start quits."

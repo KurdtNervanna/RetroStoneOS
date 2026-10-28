@@ -328,6 +328,20 @@ static void controller_rsos_read(OSContPad *pad) {
         }
     }
 
+    /* Select + Start quits at once, as in the console's emulators (the
+     * physical buttons, whatever the remap). The save file is written as
+     * soon as the game saves, so nothing is lost. */
+    {
+        static bool start_was;
+        bool start = keys[BTN_START];
+
+        if (keys[BTN_SELECT] && start && !start_was) {
+            fprintf(stderr, "controller_rsos: Select+Start: quitting\n");
+            _exit(0);
+        }
+        start_was = start;
+    }
+
     /* physical -> RetroPad -> the N64 remap */
     for (size_t i = 0; i < sizeof(builtin_keys) / sizeof(builtin_keys[0]); i++) {
         unsigned char to = remap[builtin_keys[i].rp];

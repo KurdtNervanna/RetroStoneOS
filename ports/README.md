@@ -23,7 +23,8 @@ your own SD card. Keep it to yourself: never upload it, share it or put it in a 
    ```
 4. **Copy** the `roms` folder from the output (`~/my-ports/roms`) onto the SD card's **RETROSTONE** partition
    (it merges with the `roms` folder there). From WSL, Windows sees it at `\\wsl$\Ubuntu\home\<you>\my-ports`.
-5. In the menu: **Native games** > the game. **Hold Select + Start** for a second to go back to the menu.
+5. In the menu: **Native games** > the game. **Select + Start** goes back to the menu (Super Mario 64 and Star Fox 64 quit at once,
+   as the emulators do; any other native game when both are held for a second).
 
 ## Available ports
 
