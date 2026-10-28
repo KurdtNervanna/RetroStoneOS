@@ -770,6 +770,38 @@ It is unmounted by `bt off` and by `rcK` at shutdown. The ext4 journal means a
 power cut loses at most the last pairing. Without `/data` a tmpfs is used for
 the session.
 
+**Bluetooth controllers** (Settings > Network > **Bluetooth devices**, shown
+while Bluetooth is on): the paired devices (connected or not) and, while the
+screen is open, the named devices found nearby. A on a found device pairs it
+(Just Works, no PIN), trusts it and connects it; A on a paired one offers
+connect (or disconnect) and forget. The frontend runs `/usr/bin/rsos-bt` as a
+helper (it never blocks the menu), which drives `bluetoothctl`
+non-interactively:
+
+```
+rsos-bt list FILE                          # MAC<TAB>connected|paired|found<TAB>name
+rsos-bt scan on|off                        # background discovery while the screen is open
+rsos-bt pair|connect|disconnect|forget MAC
+```
+
+Paired devices are **trusted**, so they come back by themselves: bluetoothd
+puts bonded classic devices on the controller's accept list (page scan for
+them only: a classic HID pad pages the console when it is switched on) and
+Bluetooth LE pads (HID over GATT, e.g. the Stadia controller in Bluetooth
+mode) on its auto-connect list, whenever Bluetooth comes on (also at boot,
+`rsos-net apply`). `/etc/bluetooth/main.conf` (rootfs overlay):
+`AutoEnable = true`, `JustWorksRepairing = always` (a pad paired elsewhere
+since pairs again without a prompt; the console has no agent to ask). The
+input plugin's defaults are kept: `UserspaceHID=true` (classic HID goes
+through `uhid` too, `CONFIG_UHID=y`; no `hidp` needed) and
+`ClassicBondedOnly=true` (only bonded pads may connect). The pad then shows
+up as an ordinary `/dev/input/event*` device and the frontend's hotplug takes
+it like a USB pad. Tests: `board/common/tests/bt-test.sh` (rsos-bt against a
+stub `bluetoothctl`) and `make check-ui` (the screen with
+`frontend/tests/fake-rsos-bt.sh`). TODO(hw): pairing and reconnecting a
+classic pad and an LE pad (the Stadia controller) on the RetroStone2's
+BCM20710.
+
 **SMB share `\\RETROSTONE`**: `ksmbd.ko` (module, `CONFIG_SMB_SERVER=m`) and
 ksmbd-tools are in the image but **never started at boot** and **not wired
 yet**: nothing starts them (neither `rsos-net` nor the frontend, which will

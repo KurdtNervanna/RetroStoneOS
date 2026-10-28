@@ -566,7 +566,14 @@ void webshare_open(struct ui *ui);
  * transfer: available (the helper is installed), start (with the transfer's
  * PIN), stop; the helper's end comes back as a job (UI_JOB_SMB*). */
 enum { UI_JOB_SMB = 40, UI_JOB_SMB_STOP = 41, UI_JOB_STORAGE = 42, UI_JOB_STORAGE_TASK = 43,
-       UI_JOB_COVERPICK = 44 };
+       UI_JOB_COVERPICK = 44, UI_JOB_BT_LIST = 45, UI_JOB_BT_SCAN = 46, UI_JOB_BT_ACT = 47 };
+
+/* bt_ui.c - Settings > Network > Bluetooth devices (ui->cfg.bt_helper,
+ * rsos-bt): pair, connect and forget controllers. */
+bool bt_devices_available(const struct ui *ui);   /* the helper is installed */
+void bt_devices_open(struct ui *ui);
+/* true when it was one of its jobs (UI_JOB_BT_*) */
+bool bt_job_done(struct ui *ui, const struct hw_job_result *r);
 
 /* storage.c - the RetroStone2 Pro's storage (ui->cfg.storage_helper):
  * Settings > Storage items, the eMMC install and the other disk tasks, the

@@ -48,6 +48,8 @@ CONFIG_HID_SMARTJOYPLUS=y
 CONFIG_SMARTJOYPLUS_FF=y
 CONFIG_HID_STEAM=y
 CONFIG_HID_EMS_FF=y
+# Stadia controller rumble (USB and Bluetooth; its buttons work with hid-generic)
+CONFIG_HID_GOOGLE_STADIA_FF=y
 
 # --- Audio: ALSA (the board's codec / HDMI audio in its own fragment)
 CONFIG_SOUND=y

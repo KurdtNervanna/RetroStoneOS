@@ -1021,6 +1021,7 @@ int main(int argc, char **argv)
 	cfg.net_helper = "/bin/false";
 	cfg.update_helper = "";          /* --update-helper: Settings > System update */
 	cfg.smb_helper = "";             /* --smb-helper: the Windows file share */
+	cfg.bt_helper = "";              /* --bt-helper: Settings > Network > Bluetooth devices */
 	cfg.storage_helper = "";         /* --storage-helper: the Pro's storage (RSOS_RUN for its files) */
 	cfg.boot_env = "";
 	roms[0] = data[0] = cache[0] = themes_user[0] = cores[0] = 0;
@@ -1084,6 +1085,8 @@ int main(int argc, char **argv)
 			cfg.update_helper = v;    /* e.g. tests/fake-rsos-update.sh */
 		else if (OPT("--smb-helper"))
 			cfg.smb_helper = v;       /* Settings > Network > Windows file share */
+		else if (OPT("--bt-helper"))
+			cfg.bt_helper = v;        /* e.g. tests/fake-rsos-bt.sh */
 		else if (OPT("--storage-helper"))
 			cfg.storage_helper = v;   /* Settings > Storage, the Pro's disks */
 		else if (OPT("--net-helper"))

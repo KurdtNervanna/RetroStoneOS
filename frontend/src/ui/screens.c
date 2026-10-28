@@ -29,7 +29,7 @@ enum {
 	ID_DATETIME,
 	ID_BRIGHT = 10, ID_HDMI, ID_SCALE, ID_LISTVIEW, ID_GAMEBATT, ID_GAMEBATTPOS, ID_LCDHZ,
 	ID_BTNTEST = 20, ID_PADCFG, ID_P1, ID_CZ, ID_PORT0,
-	ID_WIFI = 30, ID_SSID, ID_PSK, ID_ETH, ID_BT, ID_NETSTATUS,
+	ID_WIFI = 30, ID_SSID, ID_PSK, ID_ETH, ID_BT, ID_NETSTATUS, ID_BTDEVS,
 	ID_THEME0 = 40,
 	ID_FAVFIRST = 70, ID_COLLECTIONS, ID_REFRESH, ID_COVERS, ID_DISCS,
 	ID_EMMC = 75, ID_SATA, ID_IMPORT, ID_EJECT, ID_USBPROMPT, ID_FREE, ID_EXPORT, ID_SAVESBK,
@@ -788,6 +788,14 @@ static const char *const g_idle_vals[] = { "10", "30", "60", "0" };
 static const char *const g_idle_labels[] = { N_("10 min"), N_("30 min"), N_("1 hour"), N_("Never") };
 static void hostname_done(struct ui *ui, const char *text, bool ok, void *user);
 static void net_job(struct ui *ui, int which, bool on);
+static void net_items(struct ui *ui, struct menu *m);
+
+/* "Bluetooth devices" is there while Bluetooth is on (and not switching) */
+static bool net_bt_devices(struct ui *ui)
+{
+	return !ui->net_busy[2] && settings_get_bool(ui->settings, "bt", false) &&
+	       bt_devices_available(ui);
+}
 
 static void net_refresh(struct ui *ui, struct menu *m)
 {
@@ -796,6 +804,24 @@ static void net_refresh(struct ui *ui, struct menu *m)
 	struct menu_item *it;
 
 	settings_reload(ui->settings);
+	if (net_bt_devices(ui) != (menu_find(m, ID_BTDEVS) != NULL)) {
+		int id = m->cursor >= 0 && m->cursor < m->n ? m->items[m->cursor].id : 0;
+		bool on[3];
+
+		/* a switch that is switching keeps what the player chose */
+		for (int i = 0; i < 3; i++)
+			on[i] = (it = menu_find(m, ids[i])) && it->on;
+		net_items(ui, m);
+		for (int i = 0; i < 3; i++)
+			if ((it = menu_find(m, ids[i])))
+				it->on = on[i];
+		m->cursor = MIN(m->cursor, MAX(m->n - 1, 0));
+		for (int i = 0; id && i < m->n; i++)
+			if (m->items[i].id == id)
+				m->cursor = i;
+		m->top = MIN(m->top, m->cursor);
+		ui->dirty = true;
+	}
 	for (int i = 0; i < 3; i++) {
 		it = menu_find(m, ids[i]);
 		if (!it)
@@ -1155,6 +1181,10 @@ static void net_item(struct ui *ui, struct menu *m, struct menu_item *it, int di
 	case ID_BT:
 		net_job(ui, it->id == ID_WIFI ? 0 : it->id == ID_ETH ? 1 : 2, it->on);
 		break;
+	case ID_BTDEVS:
+		if (dir == 0)
+			bt_devices_open(ui);
+		return;
 	case ID_SSID:
 		if (dir == 0)
 			wifi_list_open(ui);
@@ -1215,16 +1245,19 @@ static void hostname_done(struct ui *ui, const char *text, bool ok, void *user)
 	ui_toastf(ui, _("Console name: %s (next transfer)"), h);
 }
 
-static void open_network(struct ui *ui)
+static void net_items(struct ui *ui, struct menu *m)
 {
-	struct menu *m = menu_new(ui, _("Network"), K_NET);
-
+	m->n = 0;
 	/* TRANSLATORS: the wireless network ("Wi-Fi" in French, "WLAN" in German) */
 	menu_add(m, MI_TOGGLE, ID_WIFI, _("WiFi"));
 	menu_add(m, MI_ACTION, ID_SSID, _("WiFi network"));
 	menu_add(m, MI_ACTION, ID_PSK, _("WiFi password"));
 	menu_add(m, MI_TOGGLE, ID_ETH, "Ethernet");
 	menu_add(m, MI_TOGGLE, ID_BT, "Bluetooth");
+	if (net_bt_devices(ui))
+		/* TRANSLATORS: Settings > Network, under the Bluetooth switch: pair
+		 * and connect Bluetooth controllers */
+		menu_add(m, MI_SUBMENU, ID_BTDEVS, _("Bluetooth devices"));
 	if (ui->cfg.transfer) {
 		struct menu_item *it;
 
@@ -1247,6 +1280,13 @@ static void open_network(struct ui *ui)
 			it->on = settings_get_bool(ui->settings, "smb", false);
 		}
 	}
+}
+
+static void open_network(struct ui *ui)
+{
+	struct menu *m = menu_new(ui, _("Network"), K_NET);
+
+	net_items(ui, m);
 	m->on_item = net_item;
 	m->on_refresh = net_refresh;
 	m->refresh_every = 1000;
@@ -1269,6 +1309,8 @@ void screens_job_done(struct ui *ui, const struct hw_job_result *r)
 		wifi_scan_done(ui, r);
 		return;
 	}
+	if (bt_job_done(ui, r))
+		return;
 	if (r->tag >= JOB_WIFI && r->tag <= JOB_BT) {
 		int i = r->tag - JOB_WIFI;
 		static const char *const names[3] = { "WiFi", "Ethernet", "Bluetooth" };

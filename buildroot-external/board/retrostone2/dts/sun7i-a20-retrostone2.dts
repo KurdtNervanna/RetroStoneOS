@@ -129,8 +129,13 @@
 
 	/*
 	 * Face buttons, D-pad, START/SELECT. All switch to GND with an external
-	 * 10k pull-up (active low). Every pin here is PH0-PH21, which have an
-	 * external interrupt (EINTn) on the A20, so they are interrupt driven.
+	 * 10k pull-up (active low). PH0-PH21 have an external interrupt (EINTn)
+	 * on the A20, but the buttons are polled like the shoulders: to read a
+	 * pin muxed as EINT, sunxi_pinctrl_gpio_get() switches it to a plain
+	 * input for the read (irq_read_needs_mux), and an edge in that window is
+	 * lost. A release that bounced into it left the button held, in the
+	 * kernel too, until its next press (issue #10: D-pad and Y stuck after
+	 * rocking the pad). Polling every 5 ms reads the pins directly.
 	 * GPIO_PULL_UP also turns on the A20's internal pull-up on every button
 	 * (here, on the shoulders and on the brightness keys), as the production
 	 * RetrOrangePi script did (gpio.pullup): a missing or cracked external
@@ -144,8 +149,9 @@
 	 * TODO(hw): confirm the physical A/B/X/Y positions on the case.
 	 */
 	gpio-keys {
-		compatible = "gpio-keys";
+		compatible = "gpio-keys-polled";
 		label = "RetroStone2 Buttons";
+		poll-interval = <5>;
 
 		button-a {
 			label = "A";

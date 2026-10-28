@@ -46,8 +46,9 @@ void splash_free(struct splash *s);
 
 /*
  * Draws the frame centred in a dw x dh XRGB8888 surface (stride in
- * pixels), cropped if the surface is smaller, the rest filled with the
- * background. 0, or -EINVAL if the data is corrupt (the surface is then
+ * pixels), the rest filled with the background. A surface smaller than the
+ * frame gets the whole frame shrunk by an integer factor (block mean).
+ * 0, -ENOMEM, or -EINVAL if the data is corrupt (the surface is then
  * partly drawn).
  */
 int splash_draw(const struct splash *s, uint32_t *dst, int dw, int dh, int stride_px);

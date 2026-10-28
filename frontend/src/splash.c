@@ -85,7 +85,7 @@ static void fill(uint32_t *d, uint32_t c, int n)
 		d[i] = c;
 }
 
-int splash_draw(const struct splash *s, uint32_t *dst, int dw, int dh, int stride_px)
+static int draw_frame(const struct splash *s, uint32_t *dst, int dw, int dh, int stride_px)
 {
 	const uint8_t *p, *end;
 	const uint8_t *pal;
@@ -188,5 +188,55 @@ int splash_draw(const struct splash *s, uint32_t *dst, int dw, int dh, int strid
 		prev = t;
 	}
 	free(line);
+	return ret;
+}
+
+int splash_draw(const struct splash *s, uint32_t *dst, int dw, int dh, int stride_px)
+{
+	uint32_t *frame;
+	int w, h, k, sw, sh, ox, oy, ret;
+
+	if (!s->data || !dst || dw <= 0 || dh <= 0 || stride_px < dw)
+		return -EINVAL;
+	w = s->width;
+	h = s->height;
+	if (w <= dw && h <= dh)
+		return draw_frame(s, dst, dw, dh, stride_px);
+
+	/* A smaller screen (the PiGRRL 2's 320x240 PiTFT, issue #6): the whole
+	 * frame shrunk by the smallest integer factor that fits, each pixel the
+	 * mean of a k x k block, centred on the background. */
+	k = (w + dw - 1) / dw;
+	if ((h + dh - 1) / dh > k)
+		k = (h + dh - 1) / dh;
+	sw = w / k;
+	sh = h / k;
+	frame = malloc((size_t)w * h * 4);
+	if (!frame)
+		return -ENOMEM;
+	ret = draw_frame(s, frame, w, h, w);
+	ox = (dw - sw) / 2;
+	oy = (dh - sh) / 2;
+	for (int y = 0; y < dh; y++)
+		fill(dst + (size_t)y * stride_px, s->bg, dw);
+	for (int y = 0; y < sh; y++) {
+		uint32_t *row = dst + (size_t)(oy + y) * stride_px + ox;
+
+		for (int x = 0; x < sw; x++) {
+			unsigned r = 0, g = 0, b = 0, n = (unsigned)(k * k);
+
+			for (int j = 0; j < k; j++) {
+				const uint32_t *p = frame + (size_t)(y * k + j) * w + x * k;
+
+				for (int i = 0; i < k; i++) {
+					r += p[i] >> 16 & 0xff;
+					g += p[i] >> 8 & 0xff;
+					b += p[i] & 0xff;
+				}
+			}
+			row[x] = (r / n) << 16 | (g / n) << 8 | b / n;
+		}
+	}
+	free(frame);
 	return ret;
 }
