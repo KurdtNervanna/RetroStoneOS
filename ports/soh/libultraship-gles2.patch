@@ -67,13 +67,16 @@ index 237a502..8c939c0 100644
              ImGui_ImplOpenGL3_Init("#version 300 es");
  #else
 diff --git a/src/fast/backends/gfx_opengl.cpp b/src/fast/backends/gfx_opengl.cpp
-index ad9b1dd..ad58251 100644
+index ad9b1dd..a038abf 100644
 --- a/src/fast/backends/gfx_opengl.cpp
 +++ b/src/fast/backends/gfx_opengl.cpp
-@@ -27,6 +27,49 @@
+@@ -27,6 +27,52 @@
  #include "fast/interpreter.h"
  #include "ship/config/ConsoleVariable.h"
  
++// a texture was bound outside SelectTexture(): its cache no longer says what is bound
++#define FORGET_TEXTURE_BINDINGS() do { mLastActiveTexture = -1; for (GLuint& bound : mLastBoundTextures) bound = (GLuint)-1; } while (0)
++
 +#include <cstring>
 +
 +#ifdef USE_GLES2
@@ -120,7 +123,7 @@ index ad9b1dd..ad58251 100644
  namespace Fast {
  int GfxRenderingAPIOGL::GetMaxTextureSize() {
      GLint max_texture_size;
-@@ -285,13 +328,23 @@ std::string GfxRenderingAPIOGL::BuildFsShader(const CCFeatures& cc_features) {
+@@ -285,13 +331,23 @@ std::string GfxRenderingAPIOGL::BuildFsShader(const CCFeatures& cc_features) {
          { "attr", "in" },
          { "opengles", false },
          { "core_opengl", true },
@@ -144,7 +147,7 @@ index ad9b1dd..ad58251 100644
          { "texture", "texture" },
          { "vOutColor", "vOutColor" },
  #else
-@@ -299,6 +352,7 @@ std::string GfxRenderingAPIOGL::BuildFsShader(const CCFeatures& cc_features) {
+@@ -299,6 +355,7 @@ std::string GfxRenderingAPIOGL::BuildFsShader(const CCFeatures& cc_features) {
          { "attr", "varying" },
          { "opengles", false },
          { "core_opengl", false },
@@ -152,7 +155,7 @@ index ad9b1dd..ad58251 100644
          { "texture", "texture2D" },
          { "vOutColor", "gl_FragColor" },
  #endif
-@@ -356,6 +410,11 @@ static std::string BuildVsShader(const CCFeatures& cc_features) {
+@@ -356,6 +413,11 @@ static std::string BuildVsShader(const CCFeatures& cc_features) {
                                       { "attr", "in" },
                                       { "out", "out" },
                                       { "opengles", false }
@@ -164,7 +167,7 @@ index ad9b1dd..ad58251 100644
  #elif defined(USE_OPENGLES)
                                       { "GLSL_VERSION", "#version 300 es" },
                                       { "attr", "in" },
-@@ -420,9 +479,8 @@ ShaderProgram* GfxRenderingAPIOGL::CreateAndLoadNewShader(uint64_t shader_id0, u
+@@ -420,9 +482,8 @@ ShaderProgram* GfxRenderingAPIOGL::CreateAndLoadNewShader(uint64_t shader_id0, u
          GLint max_length = 0;
          glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &max_length);
          char error_log[1024];
@@ -176,7 +179,7 @@ index ad9b1dd..ad58251 100644
          abort();
      }
  
-@@ -434,9 +492,8 @@ ShaderProgram* GfxRenderingAPIOGL::CreateAndLoadNewShader(uint64_t shader_id0, u
+@@ -434,9 +495,8 @@ ShaderProgram* GfxRenderingAPIOGL::CreateAndLoadNewShader(uint64_t shader_id0, u
          GLint max_length = 0;
          glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &max_length);
          char error_log[1024];
@@ -188,7 +191,7 @@ index ad9b1dd..ad58251 100644
          abort();
      }
  
-@@ -583,7 +640,9 @@ void GfxRenderingAPIOGL::UploadTexture(const uint8_t* rgba32_buf, uint32_t width
+@@ -583,7 +643,9 @@ void GfxRenderingAPIOGL::UploadTexture(const uint8_t* rgba32_buf, uint32_t width
      textures[mCurrentTextureIds[mCurrentTile]].height = height;
  }
  
@@ -199,7 +202,7 @@ index ad9b1dd..ad58251 100644
  #define GL_MIRROR_CLAMP_TO_EDGE 0x8743
  #endif
  
-@@ -715,7 +774,16 @@ void GfxRenderingAPIOGL::Init() {
+@@ -715,7 +777,16 @@ void GfxRenderingAPIOGL::Init() {
      glGenBuffers(1, &mOpenglVbo);
      glBindBuffer(GL_ARRAY_BUFFER, mOpenglVbo);
  
@@ -217,7 +220,7 @@ index ad9b1dd..ad58251 100644
      glGenVertexArrays(1, &mOpenglVao);
      glBindVertexArray(mOpenglVao);
  #endif
-@@ -730,17 +798,21 @@ void GfxRenderingAPIOGL::Init() {
+@@ -730,17 +801,21 @@ void GfxRenderingAPIOGL::Init() {
  
      glGenRenderbuffers(1, &mPixelDepthRb);
      glBindRenderbuffer(GL_RENDERBUFFER, mPixelDepthRb);
@@ -241,7 +244,7 @@ index ad9b1dd..ad58251 100644
  }
  
  void GfxRenderingAPIOGL::OnResize() {
-@@ -764,6 +836,10 @@ int GfxRenderingAPIOGL::CreateFramebuffer() {
+@@ -764,7 +839,12 @@ int GfxRenderingAPIOGL::CreateFramebuffer() {
      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -250,9 +253,11 @@ index ad9b1dd..ad58251 100644
 +    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 +#endif
      glBindTexture(GL_TEXTURE_2D, 0);
++    FORGET_TEXTURE_BINDINGS();
  
      GLuint clrbufMsaa;
-@@ -772,7 +848,7 @@ int GfxRenderingAPIOGL::CreateFramebuffer() {
+     glGenRenderbuffers(1, &clrbufMsaa);
+@@ -772,7 +852,7 @@ int GfxRenderingAPIOGL::CreateFramebuffer() {
      GLuint rbo;
      glGenRenderbuffers(1, &rbo);
      glBindRenderbuffer(GL_RENDERBUFFER, rbo);
@@ -261,7 +266,15 @@ index ad9b1dd..ad58251 100644
      glBindRenderbuffer(GL_RENDERBUFFER, 0);
  
      GLuint fbo;
-@@ -819,7 +895,7 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
+@@ -806,6 +886,7 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
+                 glBindTexture(GL_TEXTURE_2D, fb.clrbuf);
+                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+                 glBindTexture(GL_TEXTURE_2D, 0);
++                FORGET_TEXTURE_BINDINGS();
+                 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb.clrbuf, 0);
+             } else {
+                 glBindRenderbuffer(GL_RENDERBUFFER, fb.clrbufMsaa);
+@@ -819,7 +900,7 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
              (fb.width != width || fb.height != height || fb.msaa_level != msaa_level || !fb.has_depth_buffer)) {
              glBindRenderbuffer(GL_RENDERBUFFER, fb.rbo);
              if (msaa_level <= 1) {
@@ -270,7 +283,7 @@ index ad9b1dd..ad58251 100644
              } else {
                  glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa_level, GL_DEPTH24_STENCIL8, width, height);
              }
-@@ -827,9 +903,9 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
+@@ -827,9 +908,9 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
          }
  
          if (!fb.has_depth_buffer && has_depth_buffer) {
@@ -282,7 +295,7 @@ index ad9b1dd..ad58251 100644
          }
      }
  
-@@ -932,6 +1008,34 @@ void GfxRenderingAPIOGL::CopyFramebuffer(int fb_dst_id, int fb_src_id, int srcX0
+@@ -932,6 +1013,35 @@ void GfxRenderingAPIOGL::CopyFramebuffer(int fb_dst_id, int fb_src_id, int srcX0
      FramebufferOGL src = mFrameBuffers[fb_src_id];
      const FramebufferOGL& dst = mFrameBuffers[fb_dst_id];
  
@@ -311,13 +324,14 @@ index ad9b1dd..ad58251 100644
 +    glCopyTexSubImage2D(GL_TEXTURE_2D, 0, dstX0, dstY0, srcX0, srcY0, srcX1 - srcX0, srcY1 - srcY0);
 +    glBindFramebuffer(GL_FRAMEBUFFER, mFrameBuffers[mCurrentFrameBuffer].fbo);
 +    glEnable(GL_SCISSOR_TEST);
++    FORGET_TEXTURE_BINDINGS();
 +    return;
 +#endif
 +
      // Adjust y values for non-inverted source frame buffers because opengl uses bottom left for origin
      if (!src.invertY) {
          int temp = srcY1 - srcY0;
-@@ -1024,6 +1128,14 @@ std::unordered_map<std::pair<float, float>, uint16_t, hash_pair_ff>
+@@ -1024,6 +1134,14 @@ std::unordered_map<std::pair<float, float>, uint16_t, hash_pair_ff>
  GfxRenderingAPIOGL::GetPixelDepth(int fb_id, const std::set<std::pair<float, float>>& coordinates) {
      std::unordered_map<std::pair<float, float>, uint16_t, hash_pair_ff> res;
  
@@ -332,7 +346,7 @@ index ad9b1dd..ad58251 100644
      FramebufferOGL& fb = mFrameBuffers[fb_id];
  
      // When looking up one value and the framebuffer is single-sampled, we can read pixels directly
-@@ -1045,8 +1157,8 @@ GfxRenderingAPIOGL::GetPixelDepth(int fb_id, const std::set<std::pair<float, flo
+@@ -1045,8 +1163,8 @@ GfxRenderingAPIOGL::GetPixelDepth(int fb_id, const std::set<std::pair<float, flo
              glDeleteRenderbuffers(1, &mPixelDepthRb);
              glGenRenderbuffers(1, &mPixelDepthRb);
              glBindRenderbuffer(GL_RENDERBUFFER, mPixelDepthRb);
@@ -396,6 +410,24 @@ index 1fe86aa..ff45672 100644
                          vec2 maskSize@{i} = vec2(textureSize(uTexMask@{i}, 0));
                      @else 
                          vec2 maskSize@{i} = textureSize(uTexMask@{i}, 0);
+diff --git a/src/ship/audio/Audio.cpp b/src/ship/audio/Audio.cpp
+index 8cc5b12..604a30c 100644
+--- a/src/ship/audio/Audio.cpp
++++ b/src/ship/audio/Audio.cpp
+@@ -36,8 +36,11 @@ void Audio::InitAudioPlayer() {
+ 
+     if (mAudioPlayer && !mAudioPlayer->Init()) {
+         // Failed to initialize system audio player.
+-        // Fallback to Null if the native system player does not work.
+-        SetCurrentAudioBackend(AudioBackend::NUL);
++        // Fallback to Null if the native system player does not work: for this run only,
++        // the saved backend stays and the next start tries it again
++        mAudioBackend = AudioBackend::NUL;
++        mAudioPlayer = std::make_shared<NullAudioPlayer>(this->mAudioSettings);
++        mAudioPlayer->Init();
+     }
+ }
+ 
 diff --git a/src/ship/debug/CrashHandler.cpp b/src/ship/debug/CrashHandler.cpp
 index 56abfcb..b15b228 100644
 --- a/src/ship/debug/CrashHandler.cpp
