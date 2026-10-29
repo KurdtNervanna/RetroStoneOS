@@ -33,6 +33,7 @@ share it or put it in a release.
 |---|---|---|---|
 | Super Mario 64 | [sm64](sm64/README.md) | [sm64-port](https://github.com/sm64-port/sm64-port) | **Works**: full speed, built-in controls, analog stick (Pro) or D-pad |
 | Star Fox 64 | [starship](starship/README.md) | [Starship](https://github.com/HarbourMasters/Starship) + a GLES2 libultraship | **Works**: built-in controls, cheaper first-start settings; some slowdown in busy scenes |
+| Mario Kart 64 | [spaghettikart](spaghettikart/README.md) | [SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart) + a GLES2 libultraship | **Builds**; not run on the console yet |
 | The Legend of Zelda: Ocarina of Time | [soh](soh/README.md) | [Ship of Harkinian](https://github.com/HarbourMasters/Shipwright) 9.3.1 + a GLES2 libultraship | **Works**: menus, 3D, sound, saves; a little slowdown in busy places |
 
 ## Other N64 PC ports: can they run here?

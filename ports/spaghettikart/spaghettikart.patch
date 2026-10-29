@@ -1,0 +1,35 @@
+diff --git a/assets/shaders/opengl/default.shader.glsl b/assets/shaders/opengl/default.shader.glsl
+index 5e0f93f..046207d 100644
+--- a/assets/shaders/opengl/default.shader.glsl
++++ b/assets/shaders/opengl/default.shader.glsl
+@@ -130,14 +130,18 @@
+ 
+     float random(in vec3 value) {
+         float random = dot(sin(value), vec3(12.9898, 78.233, 37.719));
++        @if(gles2)
++        return fract(sin(random) * 43758.5453);
++        @else
+         return fract(sin(random) * 143758.5453);
++        @end
+     }
+ 
+     vec4 fromLinear(vec4 linearRGB){
+         bvec3 cutoff = lessThan(linearRGB.rgb, vec3(0.0031308));
+         vec3 higher = vec3(1.055)*pow(linearRGB.rgb, vec3(1.0/2.4)) - vec3(0.055);
+         vec3 lower = linearRGB.rgb * vec3(12.92);
+-        return vec4(mix(higher, lower, cutoff), linearRGB.a);
++        return vec4(mix(higher, lower, vec3(cutoff)), linearRGB.a);
+     }
+ 
+     vec4 filter3point(in sampler2D tex, in vec2 texCoord, in vec2 texSize) {
+@@ -183,7 +187,9 @@
+                 vec4 texVal@{i} = hookTexture2D(@{i}, uTex@{i}, vTexCoordAdj@{i}, texSize@{i});
+ 
+                 @if(o_masks[i])
+-                    @if(opengles)
++                    @if(gles2)
++                        vec2 maskSize@{i} = texSize@{i};
++                    @elseif(opengles)
+                         vec2 maskSize@{i} = vec2(textureSize(uTexMask@{i}, 0));
+                     @else
+                         vec2 maskSize@{i} = textureSize(uTexMask@{i}, 0);
