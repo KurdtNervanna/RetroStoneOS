@@ -76,7 +76,11 @@ sum=$(sha1sum baserom.us.z64 | cut -d' ' -f1)
 # the game for the console. CMAKE_SYSTEM_NAME Linux: Buildroot's toolchain file names it
 # "Buildroot", which skips libultraship's Linux parts. Torch is built for this PC (its own
 # sub-build) and makes mk64.o2r from the ROM and spaghetti.o2r (with the patched shaders).
+# Release flags: Buildroot's toolchain file builds with -O2, and GCC uses NEON for float math on
+# 32-bit ARM only with unsafe math; libultraship's vertex and triangle work is the busiest code.
+fast="-O3 -DNDEBUG -fno-math-errno -funsafe-math-optimizations"
 cmake -S . -B build-gles2 -G Ninja -DCMAKE_BUILD_TYPE=Release -DUSE_OPENGLES=ON -DUSE_GLES2=ON \
+	-DCMAKE_C_FLAGS_RELEASE="$fast" -DCMAKE_CXX_FLAGS_RELEASE="$fast" \
 	-DCMAKE_TOOLCHAIN_FILE="$TOOLCHAIN" -DCMAKE_SYSTEM_NAME=Linux
 cmake --build build-gles2 --target Spaghettify
 cmake --build build-gles2 --target ExtractAssets

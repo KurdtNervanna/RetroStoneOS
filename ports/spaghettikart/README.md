@@ -34,16 +34,17 @@ second to go back to the menu. The console needs a RetroStoneOS with Native game
 
 ## Controls
 
-SpaghettiKart's own defaults, through `rsos-gamepad` (by position), by the labels on the console:
+Through `rsos-gamepad` (by position), by the labels on the console. They are the defaults of a GLES2 build, set
+on the first start and changeable in the game's menu afterwards:
 
 | RetroStone2 | N64 |
 |---|---|
 | B (bottom) | A (accelerate) |
-| Y (left) | B (brake) |
-| L2 | Z (item) |
+| A (right) | B (brake) |
+| Y (left) or L2 | Z (item) |
 | R1 or R2 | R (hop, drift) |
 | L1 | L |
-| X (top) / A (right) | C-left / C-down |
+| X (top) | C-left |
 | Start | Start |
 | Analog stick (Pro), D-pad | steering, the D-pad |
 
@@ -55,12 +56,26 @@ SpaghettiKart's own defaults, through `rsos-gamepad` (by position), by the label
   below `0x10000000` on Linux, which on 32-bit ARM is the heap: the same fix applies. Also backported from newer
   libultraship (`766a6bad`): SIGTERM no longer calls `exit()` inside the signal handler, whose destructors
   deadlocked. The menu quits a native game with SIGTERM, so every quit hung until the menu killed the game; it
-  now quits at once.
-* **`spaghettikart.patch`**: the GLES2 changes in SpaghettiKart's own copy of the shaders (packed into
-  `spaghetti.o2r`).
+  now quits at once. One speed change measured on the console: loading a texture that is already bound no longer
+  ends the draw call (Mario Kart reloads its textures between every few triangles, and on the Mali-400 each draw
+  call costs ~0.1 ms of CPU).
+* **`spaghettikart.patch`**, SpaghettiKart's own code, for GLES2 builds (`USE_GLES2`, now passed to the game too):
+  * the GLES2 changes in its own copy of the shaders (packed into `spaghetti.o2r`);
+  * no screen readback every race frame: it copied the screen to a 320x240 framebuffer and read it back to the
+    CPU (`glReadPixels`, the CPU waits for the GPU) on every track, for the jumbotrons of Luigi Raceway and Wario
+    Stadium. GLES2 cannot make that copy (the screen is flipped), so their screens are black, made and uploaded
+    once instead of six texture uploads a frame;
+  * first start: linear texture filtering (one sample instead of three-point's three);
+  * the controls above;
+  * Toad's Turnpike (an upstream bug): the finish line was placed with `xOrientation`, which is only set when the
+    race is set up, after the track is made. On the first race after starting the game it was 0 and a pole stood
+    in the road; it now uses the mirror mode chosen in the menu, as Wario Stadium does.
+* **`build-spaghettikart.sh`** builds with `-O3 -funsafe-math-optimizations` instead of Buildroot's `-O2`: GCC uses
+  NEON for float math on 32-bit ARM only with unsafe math, and libultraship's vertex and triangle work is the
+  busiest code.
 
 ## Status
 
-**Builds** for the RetroStone2. A desktop build of the same GLES2 code runs the intro, the title screen and the
-attract-mode race correctly; not run on the console yet. Building `mk64.o2r` logs one "Failed to process" per track
-for its last packed display list: an empty end marker that nothing uses.
+**Works** on the RetroStone2: races, menus, sound, saves, quitting to the menu. Mostly 30 fps; busy places are
+CPU-bound by the number of draw calls (measured 190-260 a frame before the draw-call change). Building `mk64.o2r`
+logs one "Failed to process" per track for its last packed display list: an empty end marker that nothing uses.

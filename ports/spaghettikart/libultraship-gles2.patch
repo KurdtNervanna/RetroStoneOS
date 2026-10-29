@@ -442,7 +442,7 @@ index 15c5415..95233a9 100644
  #ifdef _WIN32
      // Use high-resolution mTimer by default on Windows 10 (so that NtSetTimerResolution (...) hacks are not needed)
 diff --git a/src/fast/interpreter.cpp b/src/fast/interpreter.cpp
-index 04dff04..44dd7f7 100644
+index 04dff04..58c9380 100644
 --- a/src/fast/interpreter.cpp
 +++ b/src/fast/interpreter.cpp
 @@ -7,6 +7,11 @@
@@ -531,7 +531,31 @@ index 04dff04..44dd7f7 100644
      // Pre-allocate buckets so the map never rehashes during normal operation.
      // Rehashing invalidates all iterators, including those stored in LRU entries.
      mTextureCache.map.reserve(TEXTURE_CACHE_MAX_SIZE);
-@@ -1886,9 +1951,11 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
+@@ -1242,6 +1307,7 @@ void Interpreter::ImportTexture(int i, int tile, bool importReplacement) {
+         if (fbIt != mFbTextures.end()) {
+             Flush();
+             mRapi->SelectTextureFb(fbIt->second);
++            mRenderingState.mTextures[i] = nullptr;
+             mRdp->textures_changed[i] = false;
+             return;
+         }
+@@ -1285,6 +1351,15 @@ void Interpreter::ImportTexture(int i, int tile, bool importReplacement) {
+         key = { origAddr, {}, fmt, siz, paletteIndex, origSizeBytes };
+     }
+ 
++    // The texture already bound to this slot: the triangles so far can keep going (selected
++    // again in case the backend lost its bindings)
++    if (!importReplacement && mRenderingState.mTextures[i] != nullptr &&
++        mRenderingState.mTextures[i]->first == key) {
++        mRapi->SelectTexture(i, mRenderingState.mTextures[i]->second.texture_id);
++        return;
++    }
++    Flush();
++
+     if (TextureCacheLookup(i, key)) {
+         return;
+     }
+@@ -1886,9 +1961,11 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
      if (use_grayscale) {
          cc_options |= SHADER_OPT(GRAYSCALE);
      }
@@ -543,7 +567,7 @@ index 04dff04..44dd7f7 100644
  
      if (!mShaderStack.empty()) {
          cc_options |= (mShaderStack.top() << SHADER_ID_SHIFT);
-@@ -1916,8 +1983,9 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
+@@ -1916,8 +1993,9 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
      ColorCombiner* comb = LookupOrCreateColorCombiner(key);
  
      uint32_t tm = 0;
@@ -555,7 +579,23 @@ index 04dff04..44dd7f7 100644
  
      for (int i = 0; i < 2; i++) {
          uint32_t tile = mRdp->first_tile_index + i;
-@@ -2044,6 +2112,15 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
+@@ -1930,12 +2008,13 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
+ 
+         if (comb->usedTextures[i]) {
+             if (mRdp->textures_changed[i]) {
+-                Flush();
+-                ImportTexture(i, tile, false);
++                ImportTexture(i, tile, false); // flushes if the texture changes
+                 if (mRdp->loaded_texture[i].masked) {
++                    Flush();
+                     ImportTextureMask(SHADER_FIRST_MASK_TEXTURE + i, tile);
+                 }
+                 if (mRdp->loaded_texture[i].blended) {
++                    Flush();
+                     ImportTexture(SHADER_FIRST_REPLACEMENT_TEXTURE + i, tile, true);
+                 }
+                 mRdp->textures_changed[i] = false;
+@@ -2044,6 +2123,15 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
          }
      }
  
@@ -571,7 +611,7 @@ index 04dff04..44dd7f7 100644
      struct ShaderProgram* prg = comb->prg[tm];
      if (prg == NULL) {
          comb->prg[tm] = prg =
-@@ -2069,6 +2146,11 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
+@@ -2069,6 +2157,11 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
  
      for (int i = 0; i < 3; i++) {
          float z = v_arr[i]->z, w = v_arr[i]->w;
@@ -583,7 +623,7 @@ index 04dff04..44dd7f7 100644
          if (clip_parameters.z_is_from_0_to_1) {
              z = (z + w) / 2.0f;
          }
-@@ -3382,7 +3464,7 @@ bool gfx_mtx_otr_handler_custom_f3dex2(F3DGfx** cmd0) {
+@@ -3382,7 +3475,7 @@ bool gfx_mtx_otr_handler_custom_f3dex2(F3DGfx** cmd0) {
  
      const uint64_t hash = ((uint64_t)cmd->words.w0 << 32) + cmd->words.w1;
      const int32_t* mtx =
@@ -592,7 +632,7 @@ index 04dff04..44dd7f7 100644
  
      if (mtx != NULL) {
          Interpreter* gfx = mInstance.lock().get();
-@@ -3401,7 +3483,7 @@ bool gfx_mtx_otr_handler_custom_f3d(F3DGfx** cmd0) {
+@@ -3401,7 +3494,7 @@ bool gfx_mtx_otr_handler_custom_f3d(F3DGfx** cmd0) {
  
      const uint64_t hash = ((uint64_t)cmd->words.w0 << 32) + cmd->words.w1;
      const int32_t* mtx =
@@ -601,7 +641,7 @@ index 04dff04..44dd7f7 100644
      if (mtx != nullptr) {
          cmd--;
          gfx->GfxSpMatrix(C0(16, 8), mtx);
-@@ -3468,10 +3550,10 @@ bool gfx_movemem_handler_otr(F3DGfx** cmd0) {
+@@ -3468,10 +3561,10 @@ bool gfx_movemem_handler_otr(F3DGfx** cmd0) {
  
      if (ucode_handler_index == ucode_f3dex2) {
          gfx->GfxSpMovememF3dex2(index, offset,
@@ -614,7 +654,7 @@ index 04dff04..44dd7f7 100644
          uintptr_t data = (uintptr_t)&light->Ambient;
          gfx->GfxSpMovememF3d(index, offset, (void*)(data + (hasOffset == 1 ? 0x8 : 0)));
      }
-@@ -3610,7 +3692,7 @@ bool gfx_vtx_hash_handler_custom(F3DGfx** cmd0) {
+@@ -3610,7 +3703,7 @@ bool gfx_vtx_hash_handler_custom(F3DGfx** cmd0) {
          gfx->GfxSpVertex(C0(12, 8), C0(1, 7) - C0(12, 8), (F3DVtx*)offset);
          (*cmd0)++;
      } else {
@@ -623,7 +663,7 @@ index 04dff04..44dd7f7 100644
  
          if (vtx != NULL) {
              vtx = (F3DVtx*)((char*)vtx + offset);
-@@ -3702,7 +3784,7 @@ bool gfx_dl_otr_hash_handler_custom(F3DGfx** cmd0) {
+@@ -3702,7 +3795,7 @@ bool gfx_dl_otr_hash_handler_custom(F3DGfx** cmd0) {
  
          uint64_t hash = ((uint64_t)(*cmd0)->words.w0 << 32) + (*cmd0)->words.w1;
  
@@ -632,7 +672,7 @@ index 04dff04..44dd7f7 100644
  
          if (gfx != 0) {
              g_exec_stack.call(cmd, gfx);
-@@ -3760,7 +3842,7 @@ bool gfx_branch_z_otr_handler_f3dex2(F3DGfx** cmd0) {
+@@ -3760,7 +3853,7 @@ bool gfx_branch_z_otr_handler_f3dex2(F3DGfx** cmd0) {
          (gfx->mRsp->extra_geometry_mode & G_EX_ALWAYS_EXECUTE_BRANCH) != 0) {
          uint64_t hash = ((uint64_t)(*cmd0)->words.w0 << 32) + (*cmd0)->words.w1;
  
@@ -641,7 +681,7 @@ index 04dff04..44dd7f7 100644
  
          if (gfx != 0) {
              (*cmd0) = gfx;
-@@ -3934,6 +4016,35 @@ bool gfx_othermode_h_handler_f3d(F3DGfx** cmd0) {
+@@ -3934,6 +4027,35 @@ bool gfx_othermode_h_handler_f3d(F3DGfx** cmd0) {
      return false;
  }
  
@@ -677,7 +717,7 @@ index 04dff04..44dd7f7 100644
  bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
      Interpreter* gfx = mInstance.lock().get();
      F3DGfx* cmd = *cmd0;
-@@ -3946,11 +4057,12 @@ bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
+@@ -3946,11 +4068,12 @@ bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
      // from the resource, but raw textures would leave them at 0.
      rawTexMetdata.h_byte_scale = 1;
      rawTexMetdata.v_pixel_scale = 1;
@@ -692,7 +732,7 @@ index 04dff04..44dd7f7 100644
  
              if (tex == nullptr) {
                  (*cmd0)++;
-@@ -3965,26 +4077,13 @@ bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
+@@ -3965,26 +4088,13 @@ bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
              rawTexMetdata.v_pixel_scale = tex->VPixelScale;
              rawTexMetdata.type = tex->Type;
              rawTexMetdata.resource = tex;
@@ -710,18 +750,18 @@ index 04dff04..44dd7f7 100644
 -    if (i <= 0x0FFFFFFF &&
 -        !(GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
 -                             reinterpret_cast<LPCSTR>(i), &module))) {
+-        return false;
+-    }
+-#else
+-    if (i <= 0x0FFFFFFF) {
 +    if (!fromResource && !IsValidResolvedAddress(i)) {
          return false;
      }
--#else
--    if (i <= 0x0FFFFFFF) {
--        return false;
--    }
 -#endif
  
      gfx->GfxDpSetTextureImage(C0(21, 3), C0(19, 2), C0(0, 12) + 1, imgData, texFlags, rawTexMetdata, (void*)i);
  
-@@ -4007,8 +4106,7 @@ bool gfx_set_timg_otr_hash_handler_custom(F3DGfx** cmd0) {
+@@ -4007,8 +4117,7 @@ bool gfx_set_timg_otr_hash_handler_custom(F3DGfx** cmd0) {
      }
  
      std::shared_ptr<Fast::Texture> texture = std::static_pointer_cast<Fast::Texture>(

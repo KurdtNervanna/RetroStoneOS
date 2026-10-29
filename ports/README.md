@@ -33,7 +33,7 @@ share it or put it in a release.
 |---|---|---|---|
 | Super Mario 64 | [sm64](sm64/README.md) | [sm64-port](https://github.com/sm64-port/sm64-port) | **Works**: full speed, built-in controls, analog stick (Pro) or D-pad |
 | Star Fox 64 | [starship](starship/README.md) | [Starship](https://github.com/HarbourMasters/Starship) + a GLES2 libultraship | **Works**: built-in controls, cheaper first-start settings; some slowdown in busy scenes |
-| Mario Kart 64 | [spaghettikart](spaghettikart/README.md) | [SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart) + a GLES2 libultraship | **Builds**; not run on the console yet |
+| Mario Kart 64 | [spaghettikart](spaghettikart/README.md) | [SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart) + a GLES2 libultraship | **Works**: races, sound, saves, built-in controls; mostly 30 fps, some slowdown in busy places |
 | The Legend of Zelda: Ocarina of Time | [soh](soh/README.md) | [Ship of Harkinian](https://github.com/HarbourMasters/Shipwright) 9.3.1 + a GLES2 libultraship | **Works**: menus, 3D, sound, saves; a little slowdown in busy places |
 
 ## Other N64 PC ports: can they run here?
@@ -44,7 +44,7 @@ Cortex-A7 cores at 960-1056 MHz. That decides which ports can work:
 | Port family | Games | GPU it needs | Here |
 |---|---|---|---|
 | sm64-port's renderer (Fast3D, GLSL 1.10 / ES 1.00) | Super Mario 64 (sm64-port, sm64ex) | OpenGL 2.1 / **ES 2.0** | **Yes** (Super Mario 64 works) |
-| [libultraship](https://github.com/Kenix3/libultraship) (HarbourMasters) | Star Fox 64 ([Starship](https://github.com/HarbourMasters/Starship)), Ocarina of Time ([Ship of Harkinian](https://github.com/HarbourMasters/Shipwright)), Majora's Mask ([2Ship2Harkinian](https://github.com/HarbourMasters/2ship2harkinian)), Mario Kart 64 ([SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart)), [Ghostship](https://github.com/HarbourMasters/Ghostship), Banjo-Kazooie ([Lighthouse](https://github.com/HarbourMasters/Lighthouse)), Paper Mario ([PaperBoat](https://github.com/HarbourMasters/PaperBoat)) | OpenGL 3.0 (GLSL 1.30) or **ES 3.0** | **Yes with the GLES2 mode** in these patches (Star Fox 64 and Ocarina of Time work); ports on the newest libultraship also need SDL3 |
+| [libultraship](https://github.com/Kenix3/libultraship) (HarbourMasters) | Star Fox 64 ([Starship](https://github.com/HarbourMasters/Starship)), Ocarina of Time ([Ship of Harkinian](https://github.com/HarbourMasters/Shipwright)), Majora's Mask ([2Ship2Harkinian](https://github.com/HarbourMasters/2ship2harkinian)), Mario Kart 64 ([SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart)), [Ghostship](https://github.com/HarbourMasters/Ghostship), Banjo-Kazooie ([Lighthouse](https://github.com/HarbourMasters/Lighthouse)), Paper Mario ([PaperBoat](https://github.com/HarbourMasters/PaperBoat)) | OpenGL 3.0 (GLSL 1.30) or **ES 3.0** | **Yes with the GLES2 mode** in these patches (Star Fox 64, Ocarina of Time and Mario Kart 64 work); ports on the newest libultraship also need SDL3 |
 | [Perfect Dark port](https://github.com/fgsfdsfgs/perfect_dark) | Perfect Dark | OpenGL 3.0 / ES 3.0 | Not as it is (the same GLES2 work) |
 | N64 Recompiled (RT64) | Zelda 64 Recomp, Banjo: Recompiled, DK64, Star Fox 64 Recomp, ... | Vulkan / Direct3D 12 | **No**: the Mali-400 has neither |
 
@@ -53,8 +53,10 @@ Cortex-A7 cores at 960-1056 MHz. That decides which ports can work:
 libultraship's OpenGL renderer has shader variants for desktop GL and **GLES 3.0**; the ports here add a **GLES
 2.0** mode (`USE_GLES2`): GLSL ES 1.00 shaders, GLES2 framebuffers and depth buffers, no multisampling. Each port
 pins its own libultraship, so each has its own copy of the change: [starship/libultraship-gles2.patch](starship/libultraship-gles2.patch)
-(libultraship `eaaf9d0`) and [soh/libultraship-gles2.patch](soh/libultraship-gles2.patch) (libultraship `da6daf1`,
-with fixes for 32-bit ARM and speed work measured on the console). Both libultraship versions still use SDL2.
+(libultraship `eaaf9d0`), [soh/libultraship-gles2.patch](soh/libultraship-gles2.patch) (libultraship `da6daf1`,
+with fixes for 32-bit ARM and speed work measured on the console) and
+[spaghettikart/libultraship-gles2.patch](spaghettikart/libultraship-gles2.patch) (libultraship `60c9bb7`: Ship of
+Harkinian's, plus fewer draw calls). These libultraship versions still use SDL2.
 
 ## Making a new port
 
