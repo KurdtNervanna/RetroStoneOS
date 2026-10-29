@@ -67,7 +67,7 @@ index 237a502..8c939c0 100644
              ImGui_ImplOpenGL3_Init("#version 300 es");
  #else
 diff --git a/src/fast/backends/gfx_opengl.cpp b/src/fast/backends/gfx_opengl.cpp
-index ad9b1dd..4e90eba 100644
+index ad9b1dd..176b576 100644
 --- a/src/fast/backends/gfx_opengl.cpp
 +++ b/src/fast/backends/gfx_opengl.cpp
 @@ -27,6 +27,52 @@
@@ -123,7 +123,27 @@ index ad9b1dd..4e90eba 100644
  namespace Fast {
  int GfxRenderingAPIOGL::GetMaxTextureSize() {
      GLint max_texture_size;
-@@ -285,13 +331,23 @@ std::string GfxRenderingAPIOGL::BuildFsShader(const CCFeatures& cc_features) {
+@@ -42,7 +88,7 @@ GfxClipParameters GfxRenderingAPIOGL::GetClipParameters() {
+     return { false, mFrameBuffers[mCurrentFrameBuffer].invertY };
+ }
+ 
+-static void VertexArraySetAttribs(ShaderProgram* prg) {
++static void VertexArraySetAttribs(ShaderProgram* prg, const float* clientArray = nullptr) {
+     size_t numFloats = prg->numFloats;
+     size_t pos = 0;
+ 
+@@ -50,7 +96,9 @@ static void VertexArraySetAttribs(ShaderProgram* prg) {
+         if (prg->attribLocations[i] >= 0) {
+             glEnableVertexAttribArray(prg->attribLocations[i]);
+             glVertexAttribPointer(prg->attribLocations[i], prg->attribSizes[i], GL_FLOAT, GL_FALSE,
+-                                  numFloats * sizeof(float), (void*)(pos * sizeof(float)));
++                                  numFloats * sizeof(float),
++                                  clientArray != nullptr ? (const void*)(clientArray + pos)
++                                                         : (const void*)(pos * sizeof(float)));
+         }
+         pos += prg->attribSizes[i];
+     }
+@@ -285,13 +333,23 @@ std::string GfxRenderingAPIOGL::BuildFsShader(const CCFeatures& cc_features) {
          { "attr", "in" },
          { "opengles", false },
          { "core_opengl", true },
@@ -147,7 +167,7 @@ index ad9b1dd..4e90eba 100644
          { "texture", "texture" },
          { "vOutColor", "vOutColor" },
  #else
-@@ -299,6 +355,7 @@ std::string GfxRenderingAPIOGL::BuildFsShader(const CCFeatures& cc_features) {
+@@ -299,6 +357,7 @@ std::string GfxRenderingAPIOGL::BuildFsShader(const CCFeatures& cc_features) {
          { "attr", "varying" },
          { "opengles", false },
          { "core_opengl", false },
@@ -155,7 +175,7 @@ index ad9b1dd..4e90eba 100644
          { "texture", "texture2D" },
          { "vOutColor", "gl_FragColor" },
  #endif
-@@ -356,6 +413,11 @@ static std::string BuildVsShader(const CCFeatures& cc_features) {
+@@ -356,6 +415,11 @@ static std::string BuildVsShader(const CCFeatures& cc_features) {
                                       { "attr", "in" },
                                       { "out", "out" },
                                       { "opengles", false }
@@ -167,7 +187,7 @@ index ad9b1dd..4e90eba 100644
  #elif defined(USE_OPENGLES)
                                       { "GLSL_VERSION", "#version 300 es" },
                                       { "attr", "in" },
-@@ -420,9 +482,8 @@ ShaderProgram* GfxRenderingAPIOGL::CreateAndLoadNewShader(uint64_t shader_id0, u
+@@ -420,9 +484,8 @@ ShaderProgram* GfxRenderingAPIOGL::CreateAndLoadNewShader(uint64_t shader_id0, u
          GLint max_length = 0;
          glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &max_length);
          char error_log[1024];
@@ -179,7 +199,7 @@ index ad9b1dd..4e90eba 100644
          abort();
      }
  
-@@ -434,9 +495,8 @@ ShaderProgram* GfxRenderingAPIOGL::CreateAndLoadNewShader(uint64_t shader_id0, u
+@@ -434,9 +497,8 @@ ShaderProgram* GfxRenderingAPIOGL::CreateAndLoadNewShader(uint64_t shader_id0, u
          GLint max_length = 0;
          glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &max_length);
          char error_log[1024];
@@ -191,7 +211,7 @@ index ad9b1dd..4e90eba 100644
          abort();
      }
  
-@@ -559,6 +619,7 @@ GLuint GfxRenderingAPIOGL::NewTexture() {
+@@ -559,6 +621,7 @@ GLuint GfxRenderingAPIOGL::NewTexture() {
  
  void GfxRenderingAPIOGL::DeleteTexture(uint32_t texID) {
      glDeleteTextures(1, &texID);
@@ -199,7 +219,7 @@ index ad9b1dd..4e90eba 100644
  }
  
  void GfxRenderingAPIOGL::SelectTexture(int tile, GLuint texture_id) {
-@@ -583,7 +644,9 @@ void GfxRenderingAPIOGL::UploadTexture(const uint8_t* rgba32_buf, uint32_t width
+@@ -583,7 +646,9 @@ void GfxRenderingAPIOGL::UploadTexture(const uint8_t* rgba32_buf, uint32_t width
      textures[mCurrentTextureIds[mCurrentTile]].height = height;
  }
  
@@ -210,7 +230,20 @@ index ad9b1dd..4e90eba 100644
  #define GL_MIRROR_CLAMP_TO_EDGE 0x8743
  #endif
  
-@@ -715,7 +778,16 @@ void GfxRenderingAPIOGL::Init() {
+@@ -703,7 +768,12 @@ void GfxRenderingAPIOGL::DrawTriangles(float buf_vbo[], size_t buf_vbo_len, size
+     SetPerDrawUniforms();
+ 
+     // printf("flushing %d tris\n", buf_vbo_num_tris);
++#ifdef USE_GLES2
++    glBindBuffer(GL_ARRAY_BUFFER, 0);
++    VertexArraySetAttribs(mCurrentShaderProgram, buf_vbo);
++#else
+     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * buf_vbo_len, buf_vbo, GL_STREAM_DRAW);
++#endif
+     glDrawArrays(GL_TRIANGLES, 0, 3 * buf_vbo_num_tris);
+ }
+ 
+@@ -715,7 +785,16 @@ void GfxRenderingAPIOGL::Init() {
      glGenBuffers(1, &mOpenglVbo);
      glBindBuffer(GL_ARRAY_BUFFER, mOpenglVbo);
  
@@ -228,7 +261,7 @@ index ad9b1dd..4e90eba 100644
      glGenVertexArrays(1, &mOpenglVao);
      glBindVertexArray(mOpenglVao);
  #endif
-@@ -730,17 +802,21 @@ void GfxRenderingAPIOGL::Init() {
+@@ -730,17 +809,21 @@ void GfxRenderingAPIOGL::Init() {
  
      glGenRenderbuffers(1, &mPixelDepthRb);
      glBindRenderbuffer(GL_RENDERBUFFER, mPixelDepthRb);
@@ -252,7 +285,7 @@ index ad9b1dd..4e90eba 100644
  }
  
  void GfxRenderingAPIOGL::OnResize() {
-@@ -764,7 +840,12 @@ int GfxRenderingAPIOGL::CreateFramebuffer() {
+@@ -764,7 +847,12 @@ int GfxRenderingAPIOGL::CreateFramebuffer() {
      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -265,7 +298,7 @@ index ad9b1dd..4e90eba 100644
  
      GLuint clrbufMsaa;
      glGenRenderbuffers(1, &clrbufMsaa);
-@@ -772,7 +853,7 @@ int GfxRenderingAPIOGL::CreateFramebuffer() {
+@@ -772,7 +860,7 @@ int GfxRenderingAPIOGL::CreateFramebuffer() {
      GLuint rbo;
      glGenRenderbuffers(1, &rbo);
      glBindRenderbuffer(GL_RENDERBUFFER, rbo);
@@ -274,7 +307,7 @@ index ad9b1dd..4e90eba 100644
      glBindRenderbuffer(GL_RENDERBUFFER, 0);
  
      GLuint fbo;
-@@ -806,6 +887,7 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
+@@ -806,6 +894,7 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
                  glBindTexture(GL_TEXTURE_2D, fb.clrbuf);
                  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
                  glBindTexture(GL_TEXTURE_2D, 0);
@@ -282,7 +315,7 @@ index ad9b1dd..4e90eba 100644
                  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb.clrbuf, 0);
              } else {
                  glBindRenderbuffer(GL_RENDERBUFFER, fb.clrbufMsaa);
-@@ -819,7 +901,7 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
+@@ -819,7 +908,7 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
              (fb.width != width || fb.height != height || fb.msaa_level != msaa_level || !fb.has_depth_buffer)) {
              glBindRenderbuffer(GL_RENDERBUFFER, fb.rbo);
              if (msaa_level <= 1) {
@@ -291,7 +324,7 @@ index ad9b1dd..4e90eba 100644
              } else {
                  glRenderbufferStorageMultisample(GL_RENDERBUFFER, msaa_level, GL_DEPTH24_STENCIL8, width, height);
              }
-@@ -827,9 +909,9 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
+@@ -827,9 +916,9 @@ void GfxRenderingAPIOGL::UpdateFramebufferParameters(int fb_id, uint32_t width,
          }
  
          if (!fb.has_depth_buffer && has_depth_buffer) {
@@ -303,7 +336,7 @@ index ad9b1dd..4e90eba 100644
          }
      }
  
-@@ -932,6 +1014,35 @@ void GfxRenderingAPIOGL::CopyFramebuffer(int fb_dst_id, int fb_src_id, int srcX0
+@@ -932,6 +1021,35 @@ void GfxRenderingAPIOGL::CopyFramebuffer(int fb_dst_id, int fb_src_id, int srcX0
      FramebufferOGL src = mFrameBuffers[fb_src_id];
      const FramebufferOGL& dst = mFrameBuffers[fb_dst_id];
  
@@ -339,7 +372,7 @@ index ad9b1dd..4e90eba 100644
      // Adjust y values for non-inverted source frame buffers because opengl uses bottom left for origin
      if (!src.invertY) {
          int temp = srcY1 - srcY0;
-@@ -1024,6 +1135,14 @@ std::unordered_map<std::pair<float, float>, uint16_t, hash_pair_ff>
+@@ -1024,6 +1142,14 @@ std::unordered_map<std::pair<float, float>, uint16_t, hash_pair_ff>
  GfxRenderingAPIOGL::GetPixelDepth(int fb_id, const std::set<std::pair<float, float>>& coordinates) {
      std::unordered_map<std::pair<float, float>, uint16_t, hash_pair_ff> res;
  
@@ -354,7 +387,7 @@ index ad9b1dd..4e90eba 100644
      FramebufferOGL& fb = mFrameBuffers[fb_id];
  
      // When looking up one value and the framebuffer is single-sampled, we can read pixels directly
-@@ -1045,8 +1164,8 @@ GfxRenderingAPIOGL::GetPixelDepth(int fb_id, const std::set<std::pair<float, flo
+@@ -1045,8 +1171,8 @@ GfxRenderingAPIOGL::GetPixelDepth(int fb_id, const std::set<std::pair<float, flo
              glDeleteRenderbuffers(1, &mPixelDepthRb);
              glGenRenderbuffers(1, &mPixelDepthRb);
              glBindRenderbuffer(GL_RENDERBUFFER, mPixelDepthRb);
@@ -384,7 +417,7 @@ index 15c5415..95233a9 100644
  #ifdef _WIN32
      // Use high-resolution mTimer by default on Windows 10 (so that NtSetTimerResolution (...) hacks are not needed)
 diff --git a/src/fast/interpreter.cpp b/src/fast/interpreter.cpp
-index 730b6f2..3789f24 100644
+index 730b6f2..675b3f8 100644
 --- a/src/fast/interpreter.cpp
 +++ b/src/fast/interpreter.cpp
 @@ -9,6 +9,8 @@
@@ -396,7 +429,56 @@ index 730b6f2..3789f24 100644
  #endif
  
  #include <any>
-@@ -1942,8 +1944,9 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
+@@ -134,6 +136,28 @@ void GfxSetInstance(std::shared_ptr<Interpreter> gfx) {
+ // N64 prim_depth is 15-bit (0 near, 0x7FFF far).
+ static constexpr float N64_PRIM_DEPTH_MAX = 32767.0f;
+ 
++static std::unordered_map<uint64_t, std::shared_ptr<Ship::IResource>> sHashResourceCache;
++
++static std::shared_ptr<Ship::IResource> CachedResourceByHash(uint64_t hash) {
++    auto it = sHashResourceCache.find(hash);
++    if (it != sHashResourceCache.end()) {
++        return it->second;
++    }
++    auto res = Ship::Context::GetRawInstance()->GetResourceManager()->LoadResource(hash);
++    if (res != nullptr) {
++        if (sHashResourceCache.size() >= 4096) {
++            sHashResourceCache.clear();
++        }
++        sHashResourceCache.emplace(hash, res);
++    }
++    return res;
++}
++
++static void* CachedResourceRawPointer(uint64_t hash) {
++    auto res = CachedResourceByHash(hash);
++    return res != nullptr ? res->GetRawPointer() : nullptr;
++}
++
+ void Interpreter::Flush() {
+     if (mBufVboLen > 0) {
+         mRapi->SetCurrentPrimDepth((float)mRdp->prim_depth / N64_PRIM_DEPTH_MAX);
+@@ -481,6 +505,7 @@ void Interpreter::TextureCacheClear() {
+     mTextureCache.map.clear();
+     mTextureCache.lru.clear();
+     mResolvedResourceCache.clear();
++    sHashResourceCache.clear();
+     // Pre-allocate buckets so the map never rehashes during normal operation.
+     // Rehashing invalidates all iterators, including those stored in LRU entries.
+     mTextureCache.map.reserve(TEXTURE_CACHE_MAX_SIZE);
+@@ -1912,9 +1937,11 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
+     if (use_grayscale) {
+         cc_options |= SHADER_OPT(GRAYSCALE);
+     }
++#ifndef USE_GLES2
+     if (use_prim_depth) {
+         cc_options |= SHADER_OPT(PRIM_DEPTH);
+     }
++#endif
+ 
+     if (!mShaderStack.empty()) {
+         cc_options |= (mShaderStack.top() << SHADER_ID_SHIFT);
+@@ -1942,8 +1969,9 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
      ColorCombiner* comb = LookupOrCreateColorCombiner(key);
  
      uint32_t tm = 0;
@@ -408,7 +490,7 @@ index 730b6f2..3789f24 100644
  
      for (int i = 0; i < 2; i++) {
          uint32_t tile = mRdp->first_tile_index + i;
-@@ -2075,6 +2078,15 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
+@@ -2075,6 +2103,15 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
          }
      }
  
@@ -424,26 +506,95 @@ index 730b6f2..3789f24 100644
      struct ShaderProgram* prg = comb->prg[tm];
      if (prg == NULL) {
          comb->prg[tm] = prg =
-@@ -3990,7 +4002,17 @@ static bool IsValidResolvedAddress(uintptr_t addr) {
+@@ -2100,6 +2137,11 @@ void Interpreter::GfxSpTri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx
+ 
+     for (int i = 0; i < 3; i++) {
+         float z = v_arr[i]->z, w = v_arr[i]->w;
++#ifdef USE_GLES2
++        if (use_prim_depth) {
++            z = ((float)mRdp->prim_depth / N64_PRIM_DEPTH_MAX * 2.0f - 1.0f) * w;
++        }
++#endif
+         if (clip_parameters.z_is_from_0_to_1) {
+             z = (z + w) / 2.0f;
+         }
+@@ -3419,7 +3461,7 @@ bool gfx_mtx_otr_handler_custom_f3dex2(F3DGfx** cmd0) {
+ 
+     const uint64_t hash = ((uint64_t)cmd->words.w0 << 32) + cmd->words.w1;
+     const int32_t* mtx =
+-        (const int32_t*)Ship::Context::GetRawInstance()->GetResourceManager()->GetResourceRawPointer(hash);
++        (const int32_t*)CachedResourceRawPointer(hash);
+ 
+     if (mtx != NULL) {
+         Interpreter* gfx = mInstance.lock().get();
+@@ -3438,7 +3480,7 @@ bool gfx_mtx_otr_handler_custom_f3d(F3DGfx** cmd0) {
+ 
+     const uint64_t hash = ((uint64_t)cmd->words.w0 << 32) + cmd->words.w1;
+     const int32_t* mtx =
+-        (const int32_t*)Ship::Context::GetRawInstance()->GetResourceManager()->GetResourceRawPointer(hash);
++        (const int32_t*)CachedResourceRawPointer(hash);
+     if (mtx != nullptr) {
+         cmd--;
+         gfx->GfxSpMatrix(C0(16, 8), mtx);
+@@ -3505,10 +3547,10 @@ bool gfx_movemem_handler_otr(F3DGfx** cmd0) {
+ 
+     if (ucode_handler_index == ucode_f3dex2) {
+         gfx->GfxSpMovememF3dex2(index, offset,
+-                                Ship::Context::GetRawInstance()->GetResourceManager()->GetResourceRawPointer(hash));
++                                CachedResourceRawPointer(hash));
+     } else {
+         auto light =
+-            (Fast::LightEntry*)Ship::Context::GetRawInstance()->GetResourceManager()->GetResourceRawPointer(hash);
++            (Fast::LightEntry*)CachedResourceRawPointer(hash);
+         uintptr_t data = (uintptr_t)&light->Ambient;
+         gfx->GfxSpMovememF3d(index, offset, (void*)(data + (hasOffset == 1 ? 0x8 : 0)));
+     }
+@@ -3649,7 +3691,7 @@ bool gfx_vtx_hash_handler_custom(F3DGfx** cmd0) {
+         gfx->GfxSpVertex(C0(12, 8), C0(1, 7) - C0(12, 8), (F3DVtx*)offset);
+         (*cmd0)++;
+     } else {
+-        F3DVtx* vtx = (F3DVtx*)Ship::Context::GetRawInstance()->GetResourceManager()->GetResourceRawPointer(hash);
++        F3DVtx* vtx = (F3DVtx*)CachedResourceRawPointer(hash);
+ 
+         if (vtx != NULL) {
+             vtx = (F3DVtx*)((char*)vtx + offset);
+@@ -3741,7 +3783,7 @@ bool gfx_dl_otr_hash_handler_custom(F3DGfx** cmd0) {
+ 
+         uint64_t hash = ((uint64_t)(*cmd0)->words.w0 << 32) + (*cmd0)->words.w1;
+ 
+-        F3DGfx* gfx = (F3DGfx*)Ship::Context::GetRawInstance()->GetResourceManager()->GetResourceRawPointer(hash);
++        F3DGfx* gfx = (F3DGfx*)CachedResourceRawPointer(hash);
+ 
+         if (gfx != 0) {
+             g_exec_stack.call(cmd, gfx);
+@@ -3799,7 +3841,7 @@ bool gfx_branch_z_otr_handler_f3dex2(F3DGfx** cmd0) {
+         (gfx->mRsp->extra_geometry_mode & G_EX_ALWAYS_EXECUTE_BRANCH) != 0) {
+         uint64_t hash = ((uint64_t)(*cmd0)->words.w0 << 32) + (*cmd0)->words.w1;
+ 
+-        F3DGfx* gfx = (F3DGfx*)Ship::Context::GetRawInstance()->GetResourceManager()->GetResourceRawPointer(hash);
++        F3DGfx* gfx = (F3DGfx*)CachedResourceRawPointer(hash);
+ 
+         if (gfx != 0) {
+             (*cmd0) = gfx;
+@@ -3989,9 +4031,17 @@ static bool IsValidResolvedAddress(uintptr_t addr) {
+                               reinterpret_cast<LPCSTR>(addr), &module) != 0;
  #else
      // For non-Windows platforms, check whether the address belongs to a loaded object.
-     Dl_info info;
--    return dladdr(reinterpret_cast<void*>(addr), &info) != 0;
-+    if (dladdr(reinterpret_cast<void*>(addr), &info) != 0) {
-+        return true;
-+    }
 +#if UINTPTR_MAX <= 0xFFFFFFFFu
-+    // 32-bit: the heap and mappings live below 0x10000000 as well; a mapped page is a real address
++    // 32-bit: the heap and mappings live below 0x10000000 as well; a mapped page is a real address.
++    // mincore is one cheap system call (dladdr searched symbol tables: 3% of the CPU time on an A20).
 +    static const uintptr_t pageSize = (uintptr_t)sysconf(_SC_PAGESIZE);
 +    unsigned char resident;
 +    return mincore(reinterpret_cast<void*>(addr & ~(pageSize - 1)), 1, &resident) == 0;
 +#else
-+    return false;
-+#endif
+     Dl_info info;
+     return dladdr(reinterpret_cast<void*>(addr), &info) != 0;
  #endif
++#endif
  }
  
-@@ -4006,6 +4028,7 @@ bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
+ bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
+@@ -4006,6 +4056,7 @@ bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
      // from the resource, but raw textures would leave them at 0.
      rawTexMetdata.h_byte_scale = 1;
      rawTexMetdata.v_pixel_scale = 1;
@@ -451,7 +602,7 @@ index 730b6f2..3789f24 100644
  
      if ((i & 1) != 1) {
          if (gfx_check_image_signature(imgData) == 1) {
-@@ -4025,10 +4048,11 @@ bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
+@@ -4025,10 +4076,11 @@ bool gfx_set_timg_handler_rdp(F3DGfx** cmd0) {
              rawTexMetdata.v_pixel_scale = tex->VPixelScale;
              rawTexMetdata.type = tex->Type;
              rawTexMetdata.resource = tex;
@@ -464,6 +615,16 @@ index 730b6f2..3789f24 100644
          return false;
      }
  
+@@ -4053,8 +4105,7 @@ bool gfx_set_timg_otr_hash_handler_custom(F3DGfx** cmd0) {
+     }
+ 
+     std::shared_ptr<Fast::Texture> texture = std::static_pointer_cast<Fast::Texture>(
+-        Ship::Context::GetRawInstance()->GetResourceManager()->LoadResourceProcess(
+-            Ship::Context::GetRawInstance()->GetResourceManager()->GetArchiveManager()->HashToCString(hash)));
++        CachedResourceByHash(hash));
+     if (texture != nullptr) {
+         texFlags = texture->Flags;
+         rawTexMetadata.width = texture->Width;
 diff --git a/src/fast/shaders/opengl/default.shader.glsl b/src/fast/shaders/opengl/default.shader.glsl
 index 1fe86aa..ff45672 100644
 --- a/src/fast/shaders/opengl/default.shader.glsl
