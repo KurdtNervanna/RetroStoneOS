@@ -20,6 +20,75 @@ index bc2a3d14..44fb4cea 100644
          if (archive.empty()) {
              fprintf(stderr, "failed to extract %s\n", rom.c_str());
              return 1;
+diff --git a/soh/soh/ResourceManagerHelpers.cpp b/soh/soh/ResourceManagerHelpers.cpp
+index 69a482f6..12b24bb6 100644
+--- a/soh/soh/ResourceManagerHelpers.cpp
++++ b/soh/soh/ResourceManagerHelpers.cpp
+@@ -9,6 +9,23 @@
+ 
+ #include "ResourceManagerHelpers.h"
+ #include "OTRGlobals.h"
++#include <mutex>
++#include <string>
++#include <unordered_map>
++
++static bool NoAltAssetFiles() {
++    static const bool none =
++        Ship::Context::GetRawInstance()->GetResourceManager()->GetArchiveManager()->ListFiles("alt/*")->empty();
++    return none;
++}
++
++struct ResolvedByName {
++    std::string path;
++    bool mq;
++    std::shared_ptr<Ship::IResource> res;
++};
++static std::unordered_map<const char*, ResolvedByName> sResolvedByName;
++static std::mutex sResolvedByNameMutex;
+ #include "cvar_prefixes.h"
+ #include "Enhancements/enhancementTypes.h"
+ #include "Enhancements/randomizer/dungeon.h"
+@@ -267,20 +284,37 @@ extern "C" bool ResourceMgr_IsAltAssetsEnabled() {
+ // Unloads a resource if an alternate version exists when alt assets are enabled
+ // The resource is only removed from the internal cache to prevent it from used in the next resource lookup
+ extern "C" void ResourceMgr_UnloadOriginalWhenAltExists(const char* resName) {
+-    if (ResourceMgr_IsAltAssetsEnabled() && ResourceMgr_FileAltExists((char*)resName)) {
++    if (!NoAltAssetFiles() && ResourceMgr_IsAltAssetsEnabled() && ResourceMgr_FileAltExists((char*)resName)) {
+         ResourceMgr_UnloadResource((char*)resName);
+     }
+ }
+ 
+ std::shared_ptr<Ship::IResource> ResourceMgr_GetResourceByNameHandlingMQ(const char* path) {
++    const bool mq = ResourceMgr_IsGameMasterQuest();
++    const bool keep = path != nullptr && NoAltAssetFiles();
++    if (keep) {
++        std::lock_guard<std::mutex> lock(sResolvedByNameMutex);
++        auto it = sResolvedByName.find(path);
++        if (it != sResolvedByName.end() && it->second.mq == mq && it->second.path == path) {
++            return it->second.res;
++        }
++    }
+     std::string Path = path;
+-    if (ResourceMgr_IsGameMasterQuest()) {
++    if (mq) {
+         size_t pos = 0;
+         if ((pos = Path.find("/nonmq/", 0)) != std::string::npos) {
+             Path.replace(pos, 7, "/mq/");
+         }
+     }
+-    return Ship::Context::GetRawInstance()->GetResourceManager()->LoadResource(Path.c_str());
++    auto res = Ship::Context::GetRawInstance()->GetResourceManager()->LoadResource(Path.c_str());
++    if (keep && res != nullptr) {
++        std::lock_guard<std::mutex> lock(sResolvedByNameMutex);
++        if (sResolvedByName.size() >= 4096) {
++            sResolvedByName.clear();
++        }
++        sResolvedByName[path] = { path, mq, res };
++    }
++    return res;
+ }
+ 
+ extern "C" char* ResourceMgr_GetResourceDataByNameHandlingMQ(const char* path) {
 diff --git a/soh/soh/mixer.c b/soh/soh/mixer.c
 index 303a977d..aebbe568 100644
 --- a/soh/soh/mixer.c
