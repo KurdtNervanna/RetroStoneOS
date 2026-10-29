@@ -3,6 +3,9 @@
 A native game is a program built for the console itself (ARM, Linux), started without an emulator: an
 open-source game engine, a source port, a homebrew game. The menu lists them as the system **Native games**.
 
+[ports/](../ports/README.md) has build scripts for three N64 PC ports (Super Mario 64, Star Fox 64, Ocarina of
+Time), each built on a PC from the user's own ROM. No game or game data is in this repository.
+
 ## On the SD card
 
 One launch script per game in `roms/native/` (subfolders are fine), with the game's own files next to it:
@@ -43,7 +46,7 @@ joystick at all. **`rsos-gamepad`** (RetroStone2) merges them into one standard 
 gamepad, "RetroStoneOS Gamepad" (uinput): the buttons by position (bottom = SDL "a", left = "x"), L1/R1 the
 shoulders, L2/R2 the triggers, the optional C/Z the stick clicks, the D-pad as hat 0, the stick as the left stick
 (centred while it is not fitted, as in the menu). A launch script for an SDL game starts it and gives SDL its
-mapping:
+mapping (ports/starship/Star Fox 64.sh):
 
 ```sh
 SDL_GAMECONTROLLERCONFIG="$(/usr/bin/rsos-gamepad --print-mapping)"
@@ -53,7 +56,7 @@ export SDL_GAMECONTROLLER_IGNORE_DEVICES=0x0001/0x0001   # the raw button device
 ```
 
 It runs in the game's process group, so the menu stops it with the game. A game can also read the devices
-itself from `/dev/input` (for example to follow an emulator's button settings).
+itself from `/dev/input` (ports/sm64/controller_rsos.c does, to follow the N64 emulator's button settings).
 
 ## What the menu does around it
 
