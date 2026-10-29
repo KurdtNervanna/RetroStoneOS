@@ -5,7 +5,7 @@
 #   ports/starship/build-starship.sh <Star Fox 64 ROM (.z64)> [output folder]
 #
 # Needs a built RetroStoneOS tree for the RetroStone2 with SDL2 and the port
-# libraries (build 18 configs): ~/rsos/output, or RSOS_OUTPUT=<dir>; cmake,
+# libraries (the RetroStone2 configs): ~/rsos/output, or RSOS_OUTPUT=<dir>; cmake,
 # ninja and a C++ compiler for the PC (Torch, the asset extractor, runs here).
 # Starship is cloned at a fixed commit into ~/rsos/starship-work
 # (RSOS_STARSHIP_WORK) and patched (starship.patch, libultraship-gles2.patch).
@@ -35,7 +35,7 @@ rom=$(cd "$(dirname "$rom")" && pwd)/$(basename "$rom")
 case "$out" in /*) ;; *) out=$PWD/$out ;; esac
 [ -x "$O/host/bin/arm-linux-gcc" ] || die "no cross compiler in $O/host/bin (build RetroStoneOS first)"
 for lib in libSDL2.so libzip.so libtinyxml2.so libspdlog.so libvorbisfile.so; do
-	[ -e "$O/staging/usr/lib/$lib" ] || die "$lib is not in $O/staging (build RetroStoneOS 0.1.4.18 or newer)"
+	[ -e "$O/staging/usr/lib/$lib" ] || die "$lib is not in $O/staging (build RetroStoneOS with the RetroStone2 configs)"
 done
 TOOLCHAIN=$O/host/share/buildroot/toolchainfile.cmake
 

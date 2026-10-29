@@ -1,4 +1,4 @@
-# Star Fox 64 (Starship) on the RetroStone2: work in progress
+# Star Fox 64 (Starship) on the RetroStone2
 
 [Starship](https://github.com/HarbourMasters/Starship) is the PC port of the Star Fox 64 decompilation, built on
 HarbourMasters' [libultraship](https://github.com/Kenix3/libultraship). libultraship draws with OpenGL 3.0 or
@@ -16,10 +16,10 @@ data comes from **your own ROM** on your PC (Star Fox 64 US 1.1, `.z64`, SHA-1
 | GLES2 renderer (`libultraship-gles2.patch`) | written |
 | Cross-build for the RetroStone2 (32-bit ARM) | **builds** (Starship `3322643f`, libultraship `eaaf9d0`, Torch `cd92cc0`) |
 | Game data from the ROM (`sf64.o2r`) and the port archive (`starship.o2r`) | **built** on a PC |
-| Libraries in the OS (Ogg/Vorbis, libzip, tinyxml2, spdlog, fmt) | in the configs, from RetroStoneOS build 18 |
-| The built-in controls | `rsos-gamepad` (OS build 18): the three devices as one standard SDL gamepad, started by the launch script |
+| Libraries in the OS (Ogg/Vorbis, libzip, tinyxml2, spdlog, fmt) | in the RetroStone2 configs |
+| The built-in controls | `rsos-gamepad`: the three devices as one standard SDL gamepad, started by the launch script |
 | Build script for the SD card folder | `build-starship.sh` |
-| Run on a RetroStone2 | **runs** (RetroStone2 Pro, OS build 18); speed being tuned |
+| Run on a RetroStone2 | **runs** (RetroStone2 Pro); some slowdown in busy scenes |
 
 Starship's libultraship still uses **SDL2** (only libultraship's newest code moved to SDL3), so no SDL3 is needed.
 
@@ -68,4 +68,4 @@ Copy the `roms` folder onto the SD card's **RETROSTONE** partition; in the menu:
 Settings and saves stay in `roms/native/starship/` (`SHIP_HOME`). **Select + Start** quits at once, as in the
 emulators. **Start** skips a level's opening scene, also on a planet not cleared yet (the N64 game allows it only
 after a clear; the `gSkipAnyIntro` setting at 0 in `starship.cfg.json` brings that back).
-The console needs RetroStoneOS **0.1.4.18 (build 18)** or newer: the libraries and `rsos-gamepad`.
+The console needs a RetroStoneOS with Native games, the port libraries and `rsos-gamepad`.

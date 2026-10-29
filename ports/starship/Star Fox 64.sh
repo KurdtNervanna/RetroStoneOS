@@ -3,8 +3,8 @@
 # The game data (sf64.o2r), settings and saves stay in starship/.
 cd starship || exit 1
 export SHIP_HOME="$PWD"
-# The built-in controls as one standard gamepad (rsos-gamepad, RetroStoneOS
-# build 18 or newer); SDL then ignores the raw button devices. It runs in the
+# The built-in controls as one standard gamepad (rsos-gamepad); SDL then
+# ignores the raw button devices. It runs in the
 # game's process group: the menu stops it with the game.
 if [ -x /usr/bin/rsos-gamepad ]; then
 	SDL_GAMECONTROLLERCONFIG="$(/usr/bin/rsos-gamepad --print-mapping)"

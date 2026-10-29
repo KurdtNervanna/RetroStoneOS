@@ -11,10 +11,10 @@ publish it (not in a release, an update, a fork or a download link).
 ## What you need
 
 * A PC with Linux or WSL (Ubuntu), the usual build tools (`build-essential`, `git`, `python3`) and a built
-  RetroStoneOS tree for the RetroStone2 with SDL2 (this fork's `retrostone2_release_defconfig`; `~/rsos/output`
-  or `RSOS_OUTPUT=<dir>`).
+  RetroStoneOS tree for the RetroStone2 with SDL2 (`retrostone2_release_defconfig`; `~/rsos/output` or
+  `RSOS_OUTPUT=<dir>`).
 * Your Super Mario 64 ROM, **US** version, `.z64` byte order (SHA-1 `9bef1128717f958171a4afac3ed78ee2bb4e86ce`).
-* RetroStoneOS 0.1.4.17 (build 17) or newer of this fork on the console: it has "Native games" and SDL2.
+* A RetroStoneOS with "Native games" on the console (it brings SDL2).
 
 ## Build
 
@@ -78,8 +78,6 @@ own (each star); quitting or the power key never loses a saved star.
 
 ## Status
 
-**Works on a RetroStone2 Pro** (build 17): full speed, it looks great. The analog stick moves Mario on the Pro;
-the D-pad moves him whenever the stick is centred or not fitted. If the stick did nothing, rebuild with the
-current `build-sm64.sh` (the first version of `controller_rsos.c` missed the stick's device) and copy the new
-`sm64/sm64.us` onto the card. If something goes wrong, the game's messages are in
+**Works on a RetroStone2 Pro**: full speed, it looks great. The analog stick moves Mario on the Pro; the D-pad
+moves him whenever the stick is centred or not fitted. If something goes wrong, the game's messages are in
 `rsos/logs/boot<N>/game.log` on the SD card.

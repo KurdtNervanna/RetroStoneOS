@@ -1,6 +1,6 @@
 /*
  * controller_rsos.c - the RetroStone2's built-in controls for sm64-port
- * (RetroStoneOS native games, ports/sm64 in the RetroStoneOS fork).
+ * (RetroStoneOS native games, ports/sm64).
  *
  * The console's controls are three evdev devices: "RetroStone2 Buttons"
  * (face buttons, D-pad, Start/Select), "RetroStone2 Shoulder Buttons" (L1,
