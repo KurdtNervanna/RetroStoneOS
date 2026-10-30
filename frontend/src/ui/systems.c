@@ -69,7 +69,7 @@ static const struct sysdef g_systems[] = {
 	{ "cavestory", NC_("system", "Cave Story"), "Ports", { "cavestory", "ports", NULL }, { "nxengine", NULL }, "nxengine", "exe", 2004 },
 	/* native games: programs built for this console, no emulator (one
 	 * launch script per game, docs/native-games.md) */
-	{ "native", NC_("system", "Native games"), "Ports", { "native", "ports", NULL }, { NULL }, "", "sh", 0 },
+	{ "native", NC_("system", "Ports"), "Native", { "native", "ports", NULL }, { NULL }, "", "sh", 0 },
 };
 
 /* Used only when no core .ini is installed (development host). */

@@ -3288,7 +3288,7 @@ msgstr ""
 
 #: src/ui/systems.c:72
 msgctxt "system"
-msgid "Native games"
+msgid "Ports"
 msgstr ""
 
 #: src/ui/transfer_ui.c:35

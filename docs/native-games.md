@@ -1,7 +1,7 @@
 # Native games
 
 A native game is a program built for the console itself (ARM, Linux), started without an emulator: an
-open-source game engine, a source port, a homebrew game. The menu lists them as the system **Native games**.
+open-source game engine, a source port, a homebrew game. The menu lists them as the system **Ports** (folder `roms/native`).
 
 [ports/](../ports/README.md) has build scripts for three N64 PC ports (Super Mario 64, Star Fox 64, Ocarina of
 Time), each built on a PC from the user's own ROM. No game or game data is in this repository.
