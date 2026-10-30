@@ -35,6 +35,7 @@ share it or put it in a release.
 | Star Fox 64 | [starship](starship/README.md) | [Starship](https://github.com/HarbourMasters/Starship) + a GLES2 libultraship | **Works**: built-in controls, cheaper first-start settings; some slowdown in busy scenes |
 | Mario Kart 64 | [spaghettikart](spaghettikart/README.md) | [SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart) + a GLES2 libultraship | **Works**: races, sound, saves, built-in controls; mostly 30 fps, some slowdown in busy places |
 | The Legend of Zelda: Ocarina of Time | [soh](soh/README.md) | [Ship of Harkinian](https://github.com/HarbourMasters/Shipwright) 9.3.1 + a GLES2 libultraship | **Works**: menus, 3D, sound, saves; a little slowdown in busy places |
+| GoldenEye 007 | [goldeneye](goldeneye/README.md) | [Project Midas](https://github.com/murkantor/Project-Midas) + a GLES2 fast3d renderer | **Works**: intro, menus, levels, sound; 30 fps in light areas, 10-15 in busy views |
 | The Legend of Zelda: Majora's Mask | [2ship](2ship/README.md) | [2Ship2Harkinian](https://github.com/HarbourMasters/2ship2harkinian) + a GLES2 libultraship | **Works**: 3D, music and sound, at the game's own 20 fps in most places |
 
 ## Other N64 PC ports: can they run here?
@@ -46,7 +47,7 @@ Cortex-A7 cores at 960-1056 MHz. That decides which ports can work:
 |---|---|---|---|
 | sm64-port's renderer (Fast3D, GLSL 1.10 / ES 1.00) | Super Mario 64 (sm64-port, sm64ex) | OpenGL 2.1 / **ES 2.0** | **Yes** (Super Mario 64 works) |
 | [libultraship](https://github.com/Kenix3/libultraship) (HarbourMasters) | Star Fox 64 ([Starship](https://github.com/HarbourMasters/Starship)), Ocarina of Time ([Ship of Harkinian](https://github.com/HarbourMasters/Shipwright)), Majora's Mask ([2Ship2Harkinian](https://github.com/HarbourMasters/2ship2harkinian)), Mario Kart 64 ([SpaghettiKart](https://github.com/HarbourMasters/SpaghettiKart)), [Ghostship](https://github.com/HarbourMasters/Ghostship), Banjo-Kazooie ([Lighthouse](https://github.com/HarbourMasters/Lighthouse)), Paper Mario ([PaperBoat](https://github.com/HarbourMasters/PaperBoat)) | OpenGL 3.0 (GLSL 1.30) or **ES 3.0** | **Yes with the GLES2 mode** in these patches (Star Fox 64, Ocarina of Time, Majora's Mask and Mario Kart 64 work); ports on the newest libultraship also need SDL3 |
-| [Perfect Dark port](https://github.com/fgsfdsfgs/perfect_dark) | Perfect Dark | OpenGL 3.0 / ES 3.0 | Not as it is (the same GLES2 work) |
+| The [Perfect Dark port](https://github.com/fgsfdsfgs/perfect_dark)'s fast3d (also in [Project Midas](https://github.com/murkantor/Project-Midas)) | Perfect Dark, GoldenEye 007 | OpenGL 3.0 / ES 3.0 | **Yes with the GLES2 mode** in [goldeneye](goldeneye/README.md) (GoldenEye works); Perfect Dark would need the same changes |
 | N64 Recompiled (RT64) | Zelda 64 Recomp, Banjo: Recompiled, DK64, Star Fox 64 Recomp, ... | Vulkan / Direct3D 12 | **No**: the Mali-400 has neither |
 
 ### libultraship on OpenGL ES 2.0
