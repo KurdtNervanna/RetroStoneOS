@@ -61,7 +61,11 @@ itself from `/dev/input` (ports/sm64/controller_rsos.c does, to follow the N64 e
 ## What the menu does around it
 
 * **Select + Start** held for one second quits the game (SIGTERM to its process group, SIGKILL if it is still
-  there 5 s later). A native game has no in-game menu of ours.
+  there 5 s later); on an N64 pad (no Select) **Z + Start**. A native game has no in-game menu of ours.
+* **External pads set up in the menu**: their mappings are written as SDL lines to
+  `/run/rsos/sdl-controllers.txt` and passed in `SDL_GAMECONTROLLERCONFIG_FILE`. An N64 pad becomes the layout
+  the libultraship ports read (A/B on a/b, the C buttons on the right stick, Z on the left trigger, R on the
+  right shoulder and trigger).
 * **Sleep** (power key): the game is frozen (SIGSTOP) and the backlight goes off; waking continues it.
 * **Power-off**: the game gets SIGTERM, then SIGKILL after 8 s. There is no save state: the game must save on
   its own.

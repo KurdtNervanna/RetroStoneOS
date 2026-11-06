@@ -304,6 +304,125 @@ static void keyboard_in_game(void)
 	rig_close(&r);
 }
 
+/* A Retrolink N64 pad (0079:0006, buttons as recorded on a console):
+ * A b6, B b8, Z b7, L b4, R b5, Start b9, C-up b0, C-down b2, C-left b3,
+ * C-right b1, in the N64 slots of input.h */
+#define RETROLINK_N64 "a:b6,x:b8,y:b0,b:b2,leftstick:b3,rightstick:b1,lefttrigger:b7," \
+	"leftshoulder:b4,rightshoulder:b5,start:b9,dpup:h0.1,type:n64"
+#define N64B(i) (BTN_TRIGGER + (i))
+
+static bool next_nav(struct input *in, enum input_btn want)
+{
+	struct input_nav ev;
+	bool seen = false;
+
+	while (input_next_nav(in, &ev))
+		if (ev.btn == want && ev.type == IN_NAV_PRESS)
+			seen = true;
+	return seen;
+}
+
+static void n64_pad(void)
+{
+	struct rig r;
+	enum input_hotkey hk;
+	char sdl[2048];
+	bool seen;
+
+	puts("input: an N64 pad profile (type n64)");
+	rig_open(&r);
+	kernel_held = false;
+	map_reset(&r.ext);
+	for (int c = 0; c < KEY_CNT; c++)
+		r.ext.btn_index[c] = -1;
+	for (int i = 0; i < 12; i++)
+		r.ext.btn_index[N64B(i)] = (int16_t)i;
+	r.ext.hat_index[0] = 0;
+	CHECK(apply_sdl_mapping(&r.ext, RETROLINK_N64) >= 10, "the profile applies");
+	CHECK(r.ext.type == IN_PAD_N64, "its type is n64");
+	strlcpy_(r.ext.map_line, RETROLINK_N64, sizeof(r.ext.map_line));
+	strlcpy_(r.ext.guid, "03000000790000000600000010010000", sizeof(r.ext.guid));
+	strlcpy_(r.ext.name, "Generic USB Joystick", sizeof(r.ext.name));
+	r.ext.source = IN_MAP_USER;
+
+	/* its stick: not in the profile, so the usual X / Y axes */
+	{
+		unsigned long absbits[ABS_CNT / (8 * sizeof(unsigned long)) + 1] = { 0 };
+		struct input_event ev = { .type = EV_ABS, .code = ABS_X, .value = 255 };
+		char elem[16];
+
+		absbits[0] = (1UL << ABS_X) | (1UL << ABS_Y);
+		default_left_stick(&r.ext, absbits);
+		CHECK(r.ext.ax[ABS_X].kind == AX_STICK && r.ext.ax[ABS_Y].kind == AX_STICK,
+		      "a profile without the stick gets X / Y");
+		/* the wizard: an 8-bit stick (0..255, rest 128) pushed all the way */
+		r.ext.axis_index[ABS_X] = 0;
+		r.ext.axis_index[ABS_Y] = 1;
+		for (int a = ABS_X; a <= ABS_Y; a++) {
+			r.ext.absinfo[a] = (struct input_absinfo){ .minimum = 0, .maximum = 255 };
+			r.ext.abs_rest[a] = 128;
+		}
+		r.in.cap_slot = 1;
+		capture_event(&r.in, &r.ext, &ev);
+		seen = input_capture_next(&r.in, elem, sizeof(elem)) && !strcmp(elem, "+a0");
+		CHECK(seen, "the wizard sees an 8-bit stick pushed right");
+		r.in.cap_slot = -1;
+	}
+
+	/* in a game: positional for the N64 core, C buttons also on the right stick */
+	r.in.mode = INPUT_MODE_GAME;
+	key(&r, true, N64B(6), 1);
+	CHECK(HELD(&r, 1, IN_B), "A is RetroPad B (the N64 core's A)");
+	key(&r, true, N64B(6), 0);
+	key(&r, true, N64B(0), 1);
+	CHECK(input_port_analog(&r.in, 1, 1, 1) == -0x7fff, "C-up pushes the right stick up");
+	key(&r, true, N64B(0), 0);
+	CHECK(input_port_analog(&r.in, 1, 1, 1) == 0, "and lets it go");
+	key(&r, true, N64B(1), 1);
+	CHECK(input_port_analog(&r.in, 1, 1, 0) == 0x7fff, "C-right pushes it right");
+	key(&r, true, N64B(1), 0);
+
+	/* Z + Start: a short press is ordinary play, a held second the menu */
+	while (input_next_hotkey(&r.in, &hk))
+		;
+	key(&r, true, N64B(7), 1);
+	key(&r, true, N64B(9), 1);
+	CHECK(input_quit_combo_held(&r.in), "Z + Start counts as the quit combination");
+	seen = next_hk(&r.in, IN_HK_MENU);
+	CHECK(!seen, "Z + Start pressed: no menu yet");
+	CHECK(input_timeout_ms(&r.in) > 0 && input_timeout_ms(&r.in) <= 1000, "the hold is timed");
+	r.ext.held_check_at = ui_now_ms() + 60000;   /* the mock's kernel state says released */
+	usleep(1100 * 1000);
+	input_poll(&r.in);
+	seen = next_hk(&r.in, IN_HK_MENU);
+	CHECK(seen, "Z + Start held a second opens the in-game menu");
+	key(&r, true, N64B(9), 0);
+	key(&r, true, N64B(7), 0);
+
+	/* in the menus: A confirms, B goes back */
+	input_set_mode(&r.in, INPUT_MODE_UI);
+	while (next_nav(&r.in, IN_A))
+		;
+	key(&r, true, N64B(6), 1);
+	seen = next_nav(&r.in, IN_A);
+	CHECK(seen, "in the menu, A confirms");
+	key(&r, true, N64B(6), 0);
+	key(&r, true, N64B(8), 1);
+	seen = next_nav(&r.in, IN_B);
+	CHECK(seen, "and B goes back");
+	key(&r, true, N64B(8), 0);
+
+	/* for the native games: SDL's layout, without our own fields */
+	input_sdl_mappings(&r.in, sdl, sizeof(sdl));
+	CHECK(strstr(sdl, "03000000790000000600000010010000,Generic USB Joystick,") != NULL, "an SDL line per pad");
+	CHECK(strstr(sdl, "b:b8,") && strstr(sdl, "-righty:b0,") && strstr(sdl, "+rightx:b1,"),
+	      "B on b, the C buttons on the right stick");
+	CHECK(strstr(sdl, "rightshoulder:b5,righttrigger:b5,") != NULL, "R on the shoulder and the trigger");
+	CHECK(!strstr(sdl, "type:"), "no type field for SDL");
+	CHECK(strstr(sdl, "leftx:a0,lefty:a1,") != NULL, "and the default stick for SDL");
+	rig_close(&r);
+}
+
 int main(void)
 {
 	puts("input: overflow recovery with stale events in the read buffer");
@@ -313,5 +432,6 @@ int main(void)
 	menu_to_game();
 	stick_detect();
 	keyboard_in_game();
+	n64_pad();
 	return failures ? 1 : 0;
 }

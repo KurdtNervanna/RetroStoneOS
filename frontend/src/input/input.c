@@ -57,6 +57,8 @@ struct pad {
 	int16_t trig[2];               /* L2, R2 analog */
 	bool has_analog;
 	bool stick_nav[4];             /* up, down, left, right from the stick */
+	int64_t combo_since;           /* N64 pad: Z + Start held since (hotkey) */
+	bool combo_fired;
 };
 
 struct dev {
@@ -69,6 +71,8 @@ struct dev {
 	bool builtin, builtin_stick, keyboard, power_only;
 	bool configured;
 	enum input_mapping_source source;
+	enum input_pad_type type;     /* the profile's kind of controller */
+	char map_line[1024];          /* the user mapping applied (SDL export) */
 	int seq;                      /* connection order */
 	int16_t key_map[KEY_CNT];     /* evdev key code -> target */
 	struct axmap ax[ABS_CNT];
@@ -336,6 +340,23 @@ static void map_reset(struct dev *d)
 	for (int i = 0; i < KEY_CNT; i++)
 		d->key_map[i] = T_NONE;
 	memset(d->ax, 0, sizeof(d->ax));
+	d->type = IN_PAD_MODERN;
+	d->map_line[0] = 0;
+}
+
+static const char *const g_pad_type_ids[IN_PAD_TYPES] = { "modern", "n64" };
+
+const char *input_pad_type_id(enum input_pad_type t)
+{
+	return t >= 0 && t < IN_PAD_TYPES ? g_pad_type_ids[t] : g_pad_type_ids[0];
+}
+
+enum input_pad_type input_pad_type_from_id(const char *id)
+{
+	for (int t = 0; id && t < IN_PAD_TYPES; t++)
+		if (!strcmp(id, g_pad_type_ids[t]))
+			return (enum input_pad_type)t;
+	return IN_PAD_MODERN;
 }
 
 /* Linux gamepad spec codes, already positional. Also the built-in pad. */
@@ -478,6 +499,10 @@ static int apply_sdl_mapping(struct dev *d, const char *mapping)
 			continue;
 		*colon = 0;
 		src = colon + 1;
+		if (!strcmp(str_trim(tok), "type")) {
+			d->type = input_pad_type_from_id(str_trim(src));
+			continue;
+		}
 		t = sdl_target(str_trim(tok), &stick, &axis);
 		if (t == T_NONE)
 			continue;
@@ -599,6 +624,20 @@ static bool find_gcdb(const struct input *in, const struct dev *d, char *out, si
 	return found;
 }
 
+/* A mapping without the left stick (skipped in the wizard, or a profile
+ * made before the stick worked there): ABS_X / ABS_Y, as for unknown pads */
+static void default_left_stick(struct dev *d, const unsigned long *absbits)
+{
+	for (int a = 0; a < ABS_CNT; a++)
+		if (d->ax[a].kind == AX_STICK && d->ax[a].a == 0)
+			return;
+	if (!TEST_BIT(ABS_X, absbits) || !TEST_BIT(ABS_Y, absbits) ||
+	    d->ax[ABS_X].kind != AX_NONE || d->ax[ABS_Y].kind != AX_NONE)
+		return;
+	d->ax[ABS_X] = (struct axmap){ AX_STICK, 0, 0, false, false };
+	d->ax[ABS_Y] = (struct axmap){ AX_STICK, 0, 1, false, false };
+}
+
 static void resolve_mapping(struct input *in, struct dev *d, const unsigned long *keybits,
 			    const unsigned long *absbits)
 {
@@ -636,7 +675,10 @@ static void resolve_mapping(struct input *in, struct dev *d, const unsigned long
 				m++;
 		}
 		if (m && apply_sdl_mapping(d, m) > 0) {
+			strlcpy_(d->map_line, m, sizeof(d->map_line));
+			str_trim(d->map_line);
 			free(s);
+			default_left_stick(d, absbits);
 			d->source = IN_MAP_USER;
 			return;
 		}
@@ -905,12 +947,57 @@ uint16_t input_port_buttons(const struct input *in, int port)
 	return out;
 }
 
+/* The external device of a port, NULL for the built-in pad or none. */
+static const struct dev *port_device(const struct input *in, int port)
+{
+	int pd = port >= 0 && port < INPUT_MAX_PORTS ? in->port_dev[port] : -2;
+
+	return pd >= 0 && pd < INPUT_MAX_DEVICES ? in->devs[pd] : NULL;
+}
+
+/*
+ * N64 pad: its C buttons (RetroPad X, A, L3, R3) also push the right
+ * stick, full deflection, as the N64 core reads C buttons there.
+ */
+static int16_t n64_c_stick(uint16_t b, int axis)
+{
+	if (axis == 0)
+		return (int16_t)((b & BTN_MASK(IN_L3)) ? -0x7fff : (b & BTN_MASK(IN_R3)) ? 0x7fff : 0);
+	return (int16_t)((b & BTN_MASK(IN_X)) ? -0x7fff : (b & BTN_MASK(IN_A)) ? 0x7fff : 0);
+}
+
+/*
+ * The menu's view of a pad's buttons. An N64 pad confirms with A and goes
+ * back with B (its profile keeps them positional: A on RetroPad B, B on
+ * RetroPad Y), C-down is Y and Z is Select (the menu's options button).
+ */
+static uint16_t ui_buttons(const struct dev *d, uint16_t b)
+{
+	uint16_t o;
+
+	if (!d || d->type != IN_PAD_N64)
+		return b;
+	o = b & (uint16_t)~(BTN_MASK(IN_A) | BTN_MASK(IN_B) | BTN_MASK(IN_Y) | BTN_MASK(IN_L2));
+	if (b & BTN_MASK(IN_B)) o |= BTN_MASK(IN_A);
+	if (b & BTN_MASK(IN_Y)) o |= BTN_MASK(IN_B);
+	if (b & BTN_MASK(IN_A)) o |= BTN_MASK(IN_Y);
+	if (b & BTN_MASK(IN_L2)) o |= BTN_MASK(IN_SELECT);
+	return o;
+}
+
 int16_t input_port_analog(const struct input *in, int port, int stick, int axis)
 {
 	const struct pad *p = port_pad(in, port);
+	const struct dev *d = port_device(in, port);
 
 	if (!p || stick < 0 || stick > 1 || axis < 0 || axis > 1)
 		return 0;
+	if (stick == 1 && d && d->type == IN_PAD_N64) {
+		int16_t c = n64_c_stick(pad_buttons(p) & (uint16_t)~p->suppress, axis);
+
+		if (c)
+			return c;
+	}
 	if (stick == 0 && in->dpad_analog[port]) {
 		uint16_t b = pad_buttons(p);
 
@@ -1407,8 +1494,9 @@ static void capture_event(struct input *in, struct dev *d, const struct input_ev
 
 		if (range <= 0)
 			return;
-		if (abs(delta) > range / 2 || (abs(delta) > range / 3 &&
-		    (rest == ai->minimum || rest == ai->maximum)))
+		/* a third of the range: a centred 8-bit stick (0..255, rest 128)
+		 * goes only 127 from rest, never past half the range */
+		if (abs(delta) > range / 3)
 			st = delta < 0 ? 1 : 2;
 		else if (abs(delta) < range / 6)
 			st = 0;
@@ -1891,6 +1979,39 @@ static void hotkeys(struct input *in, struct pad *p, uint16_t before, uint16_t n
 	}
 }
 
+/*
+ * A pad without Select (an N64 pad) has no hotkey button: Z + Start held
+ * for a second opens the in-game menu instead (Resume, save states, Quit).
+ * A hold, not a press: holding Z (targeting, crouching) and pressing Start
+ * to pause is ordinary play.
+ */
+#define COMBO_HOLD_MS 1000
+#define N64_COMBO (BTN_MASK(IN_L2) | BTN_MASK(IN_START))
+
+static void combo_holds(struct input *in, int64_t now)
+{
+	for (int i = 0; i < INPUT_MAX_DEVICES; i++) {
+		struct dev *d = in->devs[i];
+		struct pad *p;
+
+		if (!d || d->type != IN_PAD_N64 || d->pad != &d->own)
+			continue;
+		p = &d->own;
+		if (in->mode != INPUT_MODE_GAME || (pad_buttons(p) & N64_COMBO) != N64_COMBO) {
+			p->combo_since = 0;
+			p->combo_fired = false;
+			continue;
+		}
+		if (!p->combo_since) {
+			p->combo_since = now;
+		} else if (!p->combo_fired && now - p->combo_since >= COMBO_HOLD_MS) {
+			p->combo_fired = true;
+			p->suppress |= N64_COMBO;
+			push_hk(in, IN_HK_MENU);
+		}
+	}
+}
+
 static uint16_t nav_bits(const struct pad *p)
 {
 	uint16_t b = pad_buttons(p);
@@ -1916,7 +2037,7 @@ static void update_nav(struct input *in, int64_t now)
 		all |= nav_bits(&in->builtin);
 	for (int i = 0; i < INPUT_MAX_DEVICES; i++)
 		if (in->devs[i] && in->devs[i]->pad == &in->devs[i]->own && i != in->cap_slot)
-			all |= nav_bits(&in->devs[i]->own);
+			all |= ui_buttons(in->devs[i], nav_bits(&in->devs[i]->own));
 	for (int b = 0; b < IN_NUM_BUTTONS; b++) {
 		bool was = in->nav_state & BTN_MASK(b), is = all & BTN_MASK(b);
 
@@ -2060,6 +2181,7 @@ int input_poll(struct input *in)
 	for (int i = 0; i < INPUT_MAX_DEVICES; i++)
 		if (in->devs[i] && in->devs[i]->keyboard)
 			hotkeys(in, &in->devs[i]->own, before[i], pad_buttons(&in->devs[i]->own));
+	combo_holds(in, now);
 	update_nav(in, now);
 	return handled;
 }
@@ -2086,6 +2208,12 @@ int input_timeout_ms(const struct input *in)
 
 		if (d && any_down(d) && (next < 0 || d->held_check_at < next))
 			next = d->held_check_at;   /* check_held() */
+		if (d && d->own.combo_since && !d->own.combo_fired) {
+			int64_t t = d->own.combo_since + COMBO_HOLD_MS;   /* combo_holds() */
+
+			if (next < 0 || t < next)
+				next = t;
+		}
 	}
 	if (next < 0)
 		return -1;
@@ -2135,7 +2263,94 @@ void input_device_info(const struct input *in, int slot, struct input_device_inf
 	strlcpy_(out->guid, d->guid, sizeof(out->guid));
 	strlcpy_(out->path, d->path, sizeof(out->path));
 	out->source = d->source;
+	out->type = d->type;
 	out->port = d->port;
+}
+
+bool input_quit_combo_held(const struct input *in)
+{
+	const uint16_t sel = BTN_MASK(IN_SELECT) | BTN_MASK(IN_START);
+
+	if (in->builtin_present && (pad_buttons(&in->builtin) & sel) == sel)
+		return true;
+	for (int i = 0; i < INPUT_MAX_DEVICES; i++) {
+		const struct dev *d = in->devs[i];
+		uint16_t want = d && d->type == IN_PAD_N64 ? N64_COMBO : sel;
+
+		if (d && d->pad == &d->own && (pad_buttons(&d->own) & want) == want)
+			return true;
+	}
+	return false;
+}
+
+/*
+ * One element of a user mapping, as SDL games expect it for the pad's type.
+ * N64: the profile's slots (see input.h) become the layout the libultraship
+ * ports read: A/B on a/b, C buttons on the right stick halves, Z on the
+ * left trigger, R on the right shoulder and the right trigger.
+ */
+static size_t sdl_export_element(enum input_pad_type type, const char *target, const char *src,
+				 char *out, size_t n)
+{
+	static const struct { const char *from, *to; } n64[] = {
+		{ "a", "a" }, { "x", "b" }, { "y", "-righty" }, { "b", "+righty" },
+		{ "leftstick", "-rightx" }, { "rightstick", "+rightx" },
+		{ "lefttrigger", "lefttrigger" }, { "leftshoulder", "leftshoulder" },
+		{ "rightshoulder", "rightshoulder" },
+	};
+
+	if (!strcmp(target, "type") || !strcmp(target, "platform"))
+		return 0;
+	if (type == IN_PAD_N64) {
+		for (size_t i = 0; i < ARRAY_SIZE(n64); i++)
+			if (!strcmp(target, n64[i].from)) {
+				if (!strcmp(target, "rightshoulder"))
+					return (size_t)snprintf(out, n, "rightshoulder:%s,righttrigger:%s,", src, src);
+				return (size_t)snprintf(out, n, "%s:%s,", n64[i].to, src);
+			}
+	}
+	return (size_t)snprintf(out, n, "%s:%s,", target, src);
+}
+
+size_t input_sdl_mappings(const struct input *in, char *buf, size_t n)
+{
+	size_t len = 0;
+
+	if (n)
+		buf[0] = 0;
+	for (int i = 0; i < INPUT_MAX_DEVICES; i++) {
+		const struct dev *d = in->devs[i];
+		char line[1024], work[1024], *save = NULL, *tok;
+		size_t l;
+
+		if (!d || d->source != IN_MAP_USER || !d->map_line[0])
+			continue;
+		l = (size_t)snprintf(line, sizeof(line), "%s,%s,", d->guid, d->name);
+		strlcpy_(work, d->map_line, sizeof(work));
+		for (tok = strtok_r(work, ",", &save); tok && l < sizeof(line); tok = strtok_r(NULL, ",", &save)) {
+			char *colon = strchr(tok, ':');
+
+			if (!colon)
+				continue;
+			*colon = 0;
+			l += sdl_export_element(d->type, str_trim(tok), str_trim(colon + 1), line + l,
+						sizeof(line) - l);
+		}
+		/* the left stick default_left_stick() gave a profile without one */
+		if (!strstr(d->map_line, "leftx:") && d->ax[ABS_X].kind == AX_STICK &&
+		    d->ax[ABS_Y].kind == AX_STICK && d->axis_index[ABS_X] >= 0 &&
+		    d->axis_index[ABS_Y] >= 0 && l < sizeof(line))
+			l += (size_t)snprintf(line + l, sizeof(line) - l, "leftx:a%d,lefty:a%d,",
+					      d->axis_index[ABS_X], d->axis_index[ABS_Y]);
+		if (l >= sizeof(line) - 20)
+			continue;
+		l += (size_t)snprintf(line + l, sizeof(line) - l, "platform:Linux,\n");
+		if (len + l < n) {
+			memcpy(buf + len, line, l + 1);
+			len += l;
+		}
+	}
+	return len;
 }
 
 /* --------------------------------------------------------------- capture */

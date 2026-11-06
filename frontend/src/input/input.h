@@ -26,6 +26,7 @@
 #define RSOS_INPUT_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /* RetroPad button ids: identical to RETRO_DEVICE_ID_JOYPAD_*, so the
@@ -121,6 +122,18 @@ struct input_port_info {
 	enum input_mapping_source source;
 };
 
+/*
+ * The kind of controller (docs/input-design.md §2b). A profile keeps the
+ * controller's own buttons in fixed slots of the SDL mapping, and each use
+ * (menu, games, native games) derives its layout from the type:
+ *   MODERN: a SNES/Xbox/PlayStation/Switch shape, positional (the default)
+ *   N64:    a = A, x = B, y = C-up, b = C-down, leftstick = C-left,
+ *           rightstick = C-right, lefttrigger = Z, leftshoulder = L,
+ *           rightshoulder = R, start; no Select: Z + Start held is the hotkey
+ * Saved as "type:n64" in the mapping line (other programs ignore it).
+ */
+enum input_pad_type { IN_PAD_MODERN = 0, IN_PAD_N64, IN_PAD_TYPES };
+
 struct input_device_info {
 	bool present;
 	bool builtin;
@@ -129,8 +142,12 @@ struct input_device_info {
 	char guid[33];
 	char path[32];
 	enum input_mapping_source source;
+	enum input_pad_type type;
 	int port;                    /* -1 = none */
 };
+
+const char *input_pad_type_id(enum input_pad_type t);          /* "modern", "n64" */
+enum input_pad_type input_pad_type_from_id(const char *id);    /* unknown: MODERN */
 
 struct input;
 
@@ -242,7 +259,7 @@ int input_brightness_set(struct input *in, int value);
 /*
  * Raw capture for the "Configure controller" screen: while active, the
  * events of `slot` are not mapped; each new button press, hat direction or
- * axis push past half range is reported by input_capture_next() as an SDL
+ * axis push past a third of its range is reported by input_capture_next() as an SDL
  * mapping element ("b3", "h0.1", "+a2", "-a1").
  */
 void input_capture_begin(struct input *in, int slot);
@@ -251,6 +268,22 @@ void input_capture_end(struct input *in);
 /* Saves "<guid>,<name>,a:b0,..." (SDL format, targets in SDL names) to
  * <user_map_dir>/<guid>.cfg and re-resolves the device. */
 int input_save_user_mapping(struct input *in, int slot, const char *mapping);
+
+/*
+ * The quit combination is held on some pad: Select + Start, or on a pad
+ * without Select (an N64 pad) Z + Start. For the native games, which the
+ * menu watches while they run (it quits them after a hold).
+ */
+bool input_quit_combo_held(const struct input *in);
+
+/*
+ * SDL GameControllerDB lines ("guid,name,mapping,platform:Linux,\n") for
+ * the external pads with a user mapping, in the layout SDL games expect for
+ * their type (an N64 pad: A/B on a/b, the C buttons on the right stick, Z on
+ * the left trigger, R on the right shoulder and trigger). For the native
+ * games (SDL_GAMECONTROLLERCONFIG_FILE). Returns the length written.
+ */
+size_t input_sdl_mappings(const struct input *in, char *buf, size_t n);
 
 const char *input_btn_name(enum input_btn b);   /* "A", "B", "L1", ... */
 

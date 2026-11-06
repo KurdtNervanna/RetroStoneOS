@@ -80,6 +80,17 @@ Each input device is resolved in this order:
    come from the board profile (board.ini `builtin_pad_prefix`, `builtin_stick`, docs/porting.md); a board without
    them (a Raspberry Pi with USB pads) has no built-in pad.
 2. **User mapping** saved earlier: `/data/rsos/input/<guid>.cfg` (made with the "Configure controller" screen).
+   "Configure controller" first asks what kind of pad it is, then walks through that pad's buttons:
+   - **SNES, Xbox, PlayStation, Switch or similar** (`modern`): the usual 20 steps. Only A, B and Start are
+     needed; any other step is skipped by pressing a button already set, or by waiting 6 s.
+   - **Nintendo 64** (`n64`): A, B, Z, L, R, Start, the four C buttons, the stick. It is saved in the slots of
+     `input.h` (A on `a`, B on `x`, C-up/down on `y`/`b`, C-left/right on `leftstick`/`rightstick`, Z on
+     `lefttrigger`) with `type:n64` at the end. In a game the C buttons are also the right stick (what the N64
+     core reads as C); in the menus A confirms, B goes back and Z is Select; **Z + Start held 1 s** opens the
+     in-game menu (there is no Select to exit with).
+   - A mapping without the left stick (skipped, or made before the stick could be set) still gets `ABS_X`/`ABS_Y`.
+   - The wizard reads a stick push past a third of the axis range: an 8-bit stick resting at 128 never goes
+     past half.
 3. **SDL GameControllerDB** (`gamecontrollerdb.txt`, zlib licence, shipped in the rootfs). We compute the SDL-style GUID from
    the evdev `input_id` (bus, vendor, product, version) and parse the mapping line ourselves. SDL isn't needed. This covers
    thousands of USB/BT pads, including cheap clones.

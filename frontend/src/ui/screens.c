@@ -479,22 +479,28 @@ struct wstep {
 	bool axis;            /* expects a stick axis */
 };
 
+/*
+ * One list of steps per kind of controller (input.h, enum input_pad_type),
+ * in the controller's own words. Only the buttons the menu cannot do
+ * without are required; any other step is skipped by pressing a button
+ * already set, or by waiting.
+ */
 /* TRANSLATORS: controller set-up wizard: what to press now (big text, one line) */
-static const struct wstep g_steps[] = {
-	{ "dpup", N_("Press D-pad UP"), false, false },
-	{ "dpdown", N_("Press D-pad DOWN"), false, false },
-	{ "dpleft", N_("Press D-pad LEFT"), false, false },
-	{ "dpright", N_("Press D-pad RIGHT"), false, false },
+static const struct wstep g_steps_modern[] = {
+	{ "dpup", N_("Press D-pad UP"), true, false },
+	{ "dpdown", N_("Press D-pad DOWN"), true, false },
+	{ "dpleft", N_("Press D-pad LEFT"), true, false },
+	{ "dpright", N_("Press D-pad RIGHT"), true, false },
 	{ "b", N_("Press the RIGHT face button (A)"), false, false },
 	{ "a", N_("Press the BOTTOM face button (B)"), false, false },
-	{ "y", N_("Press the TOP face button (X)"), false, false },
-	{ "x", N_("Press the LEFT face button (Y)"), false, false },
+	{ "y", N_("Press the TOP face button (X)"), true, false },
+	{ "x", N_("Press the LEFT face button (Y)"), true, false },
 	{ "leftshoulder", N_("Press L1"), true, false },
 	{ "rightshoulder", N_("Press R1"), true, false },
 	{ "lefttrigger", N_("Press L2"), true, false },
 	{ "righttrigger", N_("Press R2"), true, false },
-	{ "back", N_("Press SELECT"), false, false },
-	{ "start", N_("Press START"), false, false },
+	{ "back", N_("Press SELECT"), true, false },
+	{ "start", N_("Press START"), true, false },
 	{ "leftstick", N_("Press the left stick (L3)"), true, false },
 	{ "rightstick", N_("Press the right stick (R3)"), true, false },
 	{ "leftx", N_("Push the left stick RIGHT"), true, true },
@@ -503,16 +509,41 @@ static const struct wstep g_steps[] = {
 	{ "righty", N_("Push the right stick DOWN"), true, true },
 };
 
-#define WIZ_STEPS ((int)ARRAY_SIZE(g_steps))
+/* N64: the slots of input.h (C buttons on y/b/leftstick/rightstick, Z on
+ * lefttrigger); the N64 has no Select (Z + Start held is its hotkey) */
+static const struct wstep g_steps_n64[] = {
+	{ "dpup", N_("Press D-pad UP"), true, false },
+	{ "dpdown", N_("Press D-pad DOWN"), true, false },
+	{ "dpleft", N_("Press D-pad LEFT"), true, false },
+	{ "dpright", N_("Press D-pad RIGHT"), true, false },
+	{ "a", N_("Press A"), false, false },
+	{ "x", N_("Press B"), false, false },
+	{ "lefttrigger", N_("Press Z (the trigger underneath)"), true, false },
+	{ "leftshoulder", N_("Press L"), true, false },
+	{ "rightshoulder", N_("Press R"), true, false },
+	{ "start", N_("Press START"), false, false },
+	{ "y", N_("Press C-UP"), true, false },
+	{ "b", N_("Press C-DOWN"), true, false },
+	{ "leftstick", N_("Press C-LEFT"), true, false },
+	{ "rightstick", N_("Press C-RIGHT"), true, false },
+	{ "leftx", N_("Push the stick RIGHT"), true, true },
+	{ "lefty", N_("Push the stick DOWN"), true, true },
+};
+
+#define WIZ_MAX_STEPS 20
 #define WIZ_SKIP_MS 6000
+#define WIZ_BOUNCE_MS 500
 
 struct wizard {
 	struct screen base;
 	int slot;
 	char name[80];
+	enum input_pad_type type;
+	const struct wstep *steps;
+	int nsteps;
 	int step;
 	int64_t step_t0;
-	char result[WIZ_STEPS][24];
+	char result[WIZ_MAX_STEPS][24];
 	bool done;
 };
 
@@ -531,16 +562,18 @@ static void wiz_render(struct ui *ui, struct screen *scr, struct gfx_surface *s)
 	draw_panel(s, x, y, pw, ph, MAX(4, H / 60), ms->bg);
 	draw_text_box(ui, s, f, _("Configure controller"), x, y + lh / 3, pw, lh, AL_CENTER, ms->title);
 	draw_text_box(ui, s, fs, w->name, x, y + lh, pw, lh, AL_CENTER, ms->text_dim);
-	if (w->step < WIZ_STEPS) {
-		const struct wstep *st = &g_steps[w->step];
+	if (w->step < w->nsteps) {
+		const struct wstep *st = &w->steps[w->step];
 		int left = (int)((WIZ_SKIP_MS - (ui->now - w->step_t0)) / 1000);
 
 		draw_text_box(ui, s, fb, _(st->prompt), x, y + ph / 2 - lh, pw, lh * 3 / 2, AL_CENTER,
 			      ms->accent);
-		snprintf(buf, sizeof(buf), _("Step %d of %d"), w->step + 1, WIZ_STEPS);
+		snprintf(buf, sizeof(buf), _("Step %d of %d"), w->step + 1, w->nsteps);
 		draw_text_box(ui, s, fs, buf, x, y + ph / 2 + lh / 2, pw, lh, AL_CENTER, ms->text_dim);
 		if (st->optional) {
-			snprintf(buf, sizeof(buf), _("Not on this pad? Wait %d s to skip"), MAX(0, left));
+			/* TRANSLATORS: controller wizard; %d is seconds */
+			snprintf(buf, sizeof(buf), _("Not on this pad? Press a button already set, or wait %d s"),
+				 MAX(0, left));
 			draw_text_box(ui, s, fs, buf, x, y + ph - lh * 3 / 2, pw, lh, AL_CENTER,
 				      ms->text_dim);
 		}
@@ -552,12 +585,18 @@ static void wiz_finish(struct ui *ui, struct wizard *w)
 	char map[1024] = "";
 	int r = -1;
 
-	for (int i = 0; i < WIZ_STEPS; i++) {
+	for (int i = 0; i < w->nsteps; i++) {
 		char e[40];
 
 		if (!w->result[i][0])
 			continue;
-		snprintf(e, sizeof(e), "%s%s:%s", map[0] ? "," : "", g_steps[i].target, w->result[i]);
+		snprintf(e, sizeof(e), "%s%s:%s", map[0] ? "," : "", w->steps[i].target, w->result[i]);
+		strncat(map, e, sizeof(map) - strlen(map) - 1);
+	}
+	if (w->type != IN_PAD_MODERN) {
+		char e[40];
+
+		snprintf(e, sizeof(e), ",type:%s", input_pad_type_id(w->type));
 		strncat(map, e, sizeof(map) - strlen(map) - 1);
 	}
 	if (ui->cfg.input) {
@@ -573,7 +612,7 @@ static void wiz_finish(struct ui *ui, struct wizard *w)
 
 static void wiz_record(struct ui *ui, struct wizard *w, const char *elem)
 {
-	const struct wstep *st = &g_steps[w->step];
+	const struct wstep *st = &w->steps[w->step];
 	char v[24];
 
 	if (st->axis) {
@@ -588,10 +627,16 @@ static void wiz_record(struct ui *ui, struct wizard *w, const char *elem)
 			return;
 		strlcpy_(v, elem, sizeof(v));
 	}
-	/* refuse an element already used (bouncing buttons) */
+	/* an element already used: the last one again within the bounce time is
+	 * a bouncing button; otherwise it skips an optional step */
 	for (int i = 0; i < w->step; i++)
-		if (!strcmp(w->result[i], v))
+		if (!strcmp(w->result[i], v)) {
+			if (st->optional && (i != w->step - 1 || ui->now - w->step_t0 > WIZ_BOUNCE_MS)) {
+				w->step++;
+				w->step_t0 = ui->now;
+			}
 			return;
+		}
 	strlcpy_(w->result[w->step], v, sizeof(w->result[0]));
 	w->step++;
 	w->step_t0 = ui->now;
@@ -607,21 +652,21 @@ static bool wiz_update(struct ui *ui, struct screen *scr)
 		ui_pop(ui);
 		return true;
 	}
-	while (w->step < WIZ_STEPS && input_capture_next(ui->cfg.input, elem, sizeof(elem))) {
+	while (w->step < w->nsteps && input_capture_next(ui->cfg.input, elem, sizeof(elem))) {
 		wiz_record(ui, w, elem);
 		redraw = true;
 	}
-	if (w->step < WIZ_STEPS && g_steps[w->step].optional &&
+	if (w->step < w->nsteps && w->steps[w->step].optional &&
 	    ui->now - w->step_t0 > WIZ_SKIP_MS) {
 		w->step++;
 		w->step_t0 = ui->now;
 		redraw = true;
 	}
-	if (w->step >= WIZ_STEPS) {
+	if (w->step >= w->nsteps) {
 		wiz_finish(ui, w);
 		return true;
 	}
-	return redraw || g_steps[w->step].optional;
+	return redraw || w->steps[w->step].optional;
 }
 
 static int wiz_timeout(struct ui *ui, struct screen *s)
@@ -653,13 +698,21 @@ static const struct screen_ops wiz_ops = {
 	.opaque = false,
 };
 
-static void wizard_open(struct ui *ui, int slot)
+static void wizard_open(struct ui *ui, int slot, enum input_pad_type type)
 {
 	struct wizard *w = xcalloc(1, sizeof(*w));
 	struct input_device_info di;
 
 	w->base.ops = &wiz_ops;
 	w->slot = slot;
+	w->type = type;
+	if (type == IN_PAD_N64) {
+		w->steps = g_steps_n64;
+		w->nsteps = (int)ARRAY_SIZE(g_steps_n64);
+	} else {
+		w->steps = g_steps_modern;
+		w->nsteps = (int)ARRAY_SIZE(g_steps_modern);
+	}
 	w->step_t0 = ui->now;
 	if (ui->cfg.input) {
 		input_device_info(ui->cfg.input, slot, &di);
@@ -669,11 +722,39 @@ static void wizard_open(struct ui *ui, int slot)
 	ui_push(ui, &w->base);
 }
 
+/* "What kind of controller is this?": the wizard's steps and the layouts
+ * derived from the profile follow the answer (input.h, enum input_pad_type) */
+static int g_padtype_slot = -1;
+
+static void padtype_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
+{
+	int slot = g_padtype_slot;
+
+	(void)m;
+	if (dir != 0 || it->id < ID_PAD0 || slot < 0)
+		return;
+	ui_pop(ui);           /* frees m */
+	wizard_open(ui, slot, (enum input_pad_type)(it->id - ID_PAD0));
+}
+
+static void padtype_open(struct ui *ui, int slot)
+{
+	/* TRANSLATORS: controller set-up: the first question, a menu title */
+	struct menu *m = menu_new(ui, _("What kind of controller is it?"), K_PADCFG);
+
+	g_padtype_slot = slot;
+	/* TRANSLATORS: kinds of controller (menu entries) */
+	menu_add(m, MI_ACTION, ID_PAD0 + IN_PAD_MODERN, _("SNES, Xbox, PlayStation, Switch or similar"));
+	menu_add(m, MI_ACTION, ID_PAD0 + IN_PAD_N64, _("Nintendo 64"));
+	m->on_item = padtype_item;
+	menu_open(ui, m);
+}
+
 static void padcfg_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
 {
 	(void)m;
 	if (dir == 0 && it->id >= ID_PAD0)
-		wizard_open(ui, it->id - ID_PAD0);
+		padtype_open(ui, it->id - ID_PAD0);
 }
 
 static void open_padcfg(struct ui *ui)
@@ -693,6 +774,8 @@ static void open_padcfg(struct ui *ui)
 				/* TRANSLATORS: how a controller is set up: your own mapping, from the
 			 * database of known pads, the Linux standard, a keyboard, none */
 			snprintf(it->value, sizeof(it->value), "%s",
+				 /* TRANSLATORS: a custom mapping of a Nintendo 64 controller */
+				 di.source == IN_MAP_USER && di.type == IN_PAD_N64 ? _("N64, custom") :
 				 di.source == IN_MAP_USER ? _("custom") :
 				 di.source == IN_MAP_GCDB ? _("known pad") :
 				 di.source == IN_MAP_GAMEPAD_SPEC ? _("standard") :
