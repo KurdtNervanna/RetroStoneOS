@@ -2532,9 +2532,19 @@ static void put_elem(char *line, size_t n, size_t *l, const char *name, const ch
  */
 static size_t export_dev(const struct dev *d, char *line, size_t n)
 {
-	char src[24], rshoulder[24] = "";
+	char src[24], rshoulder[24] = "", nbuf[160];
 	bool rtrig = false;
-	size_t l = (size_t)snprintf(line, n, "%s,%s,", d->guid, d->name);
+	const char *name = d->name;
+	size_t l;
+
+	/* The menu knows an N64 pad when the pad does not say so (a USB
+	 * adapter's "Generic USB Joystick"): games that choose their layout by
+	 * the controller's name (GoldenEye) then find their N64 one. */
+	if (d->type == IN_PAD_N64 && !strstr(d->name, "64")) {
+		snprintf(nbuf, sizeof(nbuf), "N64 Controller (%s)", d->name);
+		name = nbuf;
+	}
+	l = (size_t)snprintf(line, n, "%s,%s,", d->guid, name);
 
 	for (int c = 0; c < KEY_CNT; c++) {
 		int t = d->key_map[c];
@@ -2611,12 +2621,160 @@ static size_t export_dev(const struct dev *d, char *line, size_t n)
 	return l;
 }
 
-size_t input_sdl_mappings(const struct input *in, char *buf, size_t n)
+/*
+ * A port's layout for an N64 pad: which SDL element the port reads for each
+ * N64 function, so a real N64 pad does what the built-in buttons do in that
+ * game, whatever the port's bindings were changed to. One "function = element"
+ * per line (# comments), the functions being the ones the default N64 mapping
+ * names below; "none" drops the element.
+ */
+static const struct { const char *fn, *def; } g_n64_fn[] = {
+	{ "a", "a" }, { "b", "b" }, { "z", "lefttrigger" }, { "l", "leftshoulder" },
+	{ "r", "rightshoulder" }, { "start", "start" },
+	{ "cup", "-righty" }, { "cdown", "+righty" }, { "cleft", "-rightx" }, { "cright", "+rightx" },
+	{ "dpup", "dpup" }, { "dpdown", "dpdown" }, { "dpleft", "dpleft" }, { "dpright", "dpright" },
+};
+#define N64_FN_COUNT ARRAY_SIZE(g_n64_fn)
+
+struct n64_layout {
+	bool has[N64_FN_COUNT];
+	char to[N64_FN_COUNT][24];
+};
+
+static void layout_parse(struct n64_layout *lay, const char *text)
+{
+	memset(lay, 0, sizeof(*lay));
+	while (text && *text) {
+		const char *eol = strchr(text, '\n');
+		size_t len = eol ? (size_t)(eol - text) : strlen(text);
+		char ln[96], *eq, *k, *v;
+
+		if (len >= sizeof(ln))
+			len = sizeof(ln) - 1;
+		memcpy(ln, text, len);
+		ln[len] = 0;
+		text = eol ? eol + 1 : text + strlen(text);
+		if (ln[0] == '#' || !(eq = strchr(ln, '=')))
+			continue;
+		*eq = 0;
+		k = ln;
+		v = eq + 1;
+		while (*k == ' ' || *k == '\t')
+			k++;
+		for (char *e = k + strlen(k); e > k && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r'); *--e = 0)
+			;
+		while (*v == ' ' || *v == '\t')
+			v++;
+		for (char *e = v + strlen(v); e > v && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r'); *--e = 0)
+			;
+		for (size_t i = 0; i < N64_FN_COUNT; i++)
+			if (!strcmp(k, g_n64_fn[i].fn) && v[0] && strlen(v) < sizeof(lay->to[i])) {
+				lay->has[i] = true;
+				strlcpy_(lay->to[i], v, sizeof(lay->to[i]));
+			}
+	}
+}
+
+/* Renames the elements of one N64 mapping line (guid,name,elem:src,...,platform:Linux,)
+ * by the layout; all at once, so two functions can swap. */
+static size_t layout_apply(char *line, size_t cap, size_t len, const struct n64_layout *lay)
+{
+	char out[1536];
+	size_t o = 0;
+	const char *p = line, *end;
+	char rsrc[24] = "";
+	int commas = 0;
+	size_t orig_len = len;
+
+	if (len && line[len - 1] == '\n')
+		len--;                 /* the newline goes back at the end */
+	end = line + len;
+
+	/* the source of the right shoulder: the right trigger on it is only the
+	 * default's copy of R (an N64 pad has no ZR) */
+	for (const char *t = line; t < end; ) {
+		const char *c = memchr(t, ',', (size_t)(end - t));
+		size_t tl = c ? (size_t)(c - t) : (size_t)(end - t);
+
+		if (tl > 14 && !strncmp(t, "rightshoulder:", 14) && tl - 14 < sizeof(rsrc)) {
+			memcpy(rsrc, t + 14, tl - 14);
+			rsrc[tl - 14] = 0;
+		}
+		t = c ? c + 1 : end;
+	}
+	while (p < end) {
+		const char *c = memchr(p, ',', (size_t)(end - p));
+		size_t tl = c ? (size_t)(c - p) : (size_t)(end - p);
+		char tok[64];
+		const char *colon;
+		bool keep = true;
+
+		if (tl == 0 && !c)
+			break;
+		if (tl >= sizeof(tok))
+			return orig_len;   /* odd line: leave it */
+		memcpy(tok, p, tl);
+		tok[tl] = 0;
+		p = c ? c + 1 : end;
+		if (commas++ < 2 || !(colon = strchr(tok, ':'))) {
+			/* guid and name (the name may hold a comma-free text) and odd tokens */
+			if (o + tl + 1 < sizeof(out)) {
+				memcpy(out + o, tok, tl);
+				o += tl;
+				out[o++] = ',';
+			}
+			continue;
+		}
+		{
+			char nm[32];
+			size_t nl = (size_t)(colon - tok);
+			const char *src = colon + 1;
+
+			if (nl >= sizeof(nm))
+				return orig_len;
+			memcpy(nm, tok, nl);
+			nm[nl] = 0;
+			if (!strcmp(nm, "righttrigger") && rsrc[0] && !strcmp(src, rsrc)) {
+				for (size_t i = 0; i < N64_FN_COUNT; i++)
+					if (!strcmp(g_n64_fn[i].fn, "r") && lay->has[i])
+						keep = false;   /* R is placed by the layout */
+			}
+			for (size_t i = 0; keep && i < N64_FN_COUNT; i++) {
+				if (lay->has[i] && !strcmp(nm, g_n64_fn[i].def)) {
+					if (!strcmp(lay->to[i], "none")) {
+						keep = false;
+					} else {
+						strlcpy_(nm, lay->to[i], sizeof(nm));
+					}
+					break;
+				}
+			}
+			if (keep) {
+				int w = snprintf(out + o, sizeof(out) - o, "%s:%s,", nm, src);
+
+				if (w < 0 || (size_t)w >= sizeof(out) - o)
+					return orig_len;
+				o += (size_t)w;
+			}
+		}
+	}
+	if (o + 2 >= cap || o + 2 >= sizeof(out))
+		return orig_len;
+	memcpy(line, out, o);
+	line[o++] = '\n';
+	line[o] = 0;
+	return o;
+}
+
+size_t input_sdl_mappings_layout(const struct input *in, char *buf, size_t n, const char *layout)
 {
 	size_t len = 0;
+	struct n64_layout lay;
 
 	if (n)
 		buf[0] = 0;
+	if (layout)
+		layout_parse(&lay, layout);
 	for (int i = 0; i < INPUT_MAX_DEVICES; i++) {
 		const struct dev *d = in->devs[i];
 		char line[1536];
@@ -2627,12 +2785,19 @@ size_t input_sdl_mappings(const struct input *in, char *buf, size_t n)
 		l = export_dev(d, line, sizeof(line));
 		if (l >= sizeof(line) - 1)
 			continue;   /* cut short: better none than a wrong one */
+		if (layout && d->type == IN_PAD_N64)
+			l = layout_apply(line, sizeof(line), l, &lay);
 		if (len + l < n) {
 			memcpy(buf + len, line, l + 1);
 			len += l;
 		}
 	}
 	return len;
+}
+
+size_t input_sdl_mappings(const struct input *in, char *buf, size_t n)
+{
+	return input_sdl_mappings_layout(in, buf, n, NULL);
 }
 
 /* --------------------------------------------------------------- capture */

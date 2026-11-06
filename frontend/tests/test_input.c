@@ -414,7 +414,8 @@ static void n64_pad(void)
 
 	/* for the native games: SDL's layout, without our own fields */
 	input_sdl_mappings(&r.in, sdl, sizeof(sdl));
-	CHECK(strstr(sdl, "03000000790000000600000010010000,Generic USB Joystick,") != NULL, "an SDL line per pad");
+	CHECK(strstr(sdl, "03000000790000000600000010010000,N64 Controller (Generic USB Joystick),") != NULL,
+	      "an SDL line per pad, named N64 for the games that choose a layout by name");
 	CHECK(strstr(sdl, "b:b8,") && strstr(sdl, "-righty:b0,") && strstr(sdl, "+rightx:b1,"),
 	      "B on b, the C buttons on the right stick");
 	CHECK(strstr(sdl, "rightshoulder:b5,") && strstr(sdl, "righttrigger:b5,"), "R on the shoulder and the trigger");
@@ -545,6 +546,21 @@ static void known_pads(void)
 	CHECK(strstr(sdl, "a:b0,") && strstr(sdl, "b:b1,") && strstr(sdl, "-righty:b10,") &&
 	      strstr(sdl, "+rightx:b2,") && strstr(sdl, "lefttrigger:b8,") && strstr(sdl, "guide:b12,"),
 	      "NSO N64: native games get the database's layout for it");
+	{
+		/* a port's layout renames the elements (all at once: two can swap) */
+		static char s2[8192];
+
+		input_sdl_mappings_layout(&r.in, s2, sizeof(s2),
+					  "# comment\nz = righttrigger\ncup = leftshoulder\nl=back\nb = x\nr = none\n");
+		CHECK(strstr(s2, "righttrigger:b8,") && !strstr(s2, "lefttrigger:"), "layout: Z moved to the right trigger");
+		CHECK(strstr(s2, "leftshoulder:b10,") && !strstr(s2, "-righty:"), "layout: C-up moved to the left shoulder");
+		CHECK(strstr(s2, "x:b1,") && !strstr(s2, "b:b1,"), "layout: B moved to x");
+		CHECK(strstr(s2, "back:") && !strstr(s2, "rightshoulder:"), "layout: L is back, R dropped");
+		CHECK(strstr(s2, "+rightx:b2,") && strstr(s2, "a:b0,"), "layout: what it does not name stays");
+		CHECK(strstr(s2, "platform:Linux,\n"), "layout: the line still ends properly");
+		input_sdl_mappings_layout(&r.in, s2, sizeof(s2), NULL);
+		CHECK(strstr(s2, "lefttrigger:b8,") && strstr(s2, "b:b1,"), "no layout: unchanged");
+	}
 
 	/* Mayflash GameCube adapter, PC mode (hid-generic; the database knows it) */
 	plug(&r, 0x0079, 0x1844, 0x0110, "hid-generic", "Mayflash GC", hid16, six_axes);

@@ -76,3 +76,22 @@ itself from `/dev/input` (ports/sm64/controller_rsos.c does, to follow the N64 e
   error".
 
 `make check-frontend` (steps 2a-2c) covers the launch, the environment, the error message and the process group.
+
+## Layouts: an N64 pad that plays like the built-in buttons
+
+A port's bindings are usually changed for the built-in buttons (the C buttons on the shoulders, L on Select...),
+so a real N64 pad, plugged in with the menu's own N64 mapping (C buttons on the right stick, Z on the left trigger,
+L and R on the shoulders), would press the wrong things. A **layout** says which SDL element the game reads for each
+N64 function; the menu applies it to an N64 pad's mapping when it starts the game, so the pad does what the
+built-in buttons do in that game.
+
+* The file is `<launch script name>.layout` next to the script (`Ocarina of Time.sh` → `Ocarina of Time.layout`),
+  lines of `function = SDL element`, `#` for comments. A line left out keeps the default; `none` drops the element.
+* Functions: `a b z l r start cup cdown cleft cright dpup dpdown dpleft dpright`. Elements are SDL names
+  (`a b x y back start leftshoulder rightshoulder lefttrigger righttrigger dpup dpdown dpleft dpright`, and the
+  right-stick halves `-righty +righty -rightx +rightx`).
+* All lines apply at once, so two functions can swap. Naming `r` also removes the default's copy of R on the right
+  trigger (an N64 pad has no ZR), which a port could read as another button.
+* The menu also gives an N64 pad whose name does not say so (a USB adapter's "Generic USB Joystick") the name
+  "N64 Controller (...)", for games that pick their layout by the pad's name (GoldenEye does).
+* Edit the file on the card to change it; no new build is needed. Layouts shipped with the ports are in `ports/`.

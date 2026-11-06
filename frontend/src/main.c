@@ -2412,8 +2412,26 @@ static int launch_native(const struct ui_launch *req)
 	 * expect for their kind (an N64 pad's C buttons on the right stick);
 	 * a file of its own, as the launchers set SDL_GAMECONTROLLERCONFIG */
 	if (M.in) {
-		static char pads[8192];
-		size_t n = input_sdl_mappings(M.in, pads, sizeof(pads));
+		static char pads[8192], layout[2048];
+		char lpath[PATH_MAX];
+		size_t n, ll = 0;
+		char *dot;
+		FILE *lf;
+
+		/* the port's layout for an N64 pad: "<launch script>.layout" next
+		 * to the script (docs/native-games.md, "Layouts") */
+		layout[0] = 0;
+		snprintf(lpath, sizeof(lpath), "%s", req->rom_path);
+		if ((dot = strrchr(lpath, '.')) && !strcmp(dot, ".sh")) {
+			strcpy(dot, ".layout");
+			if ((lf = fopen(lpath, "r"))) {
+				ll = fread(layout, 1, sizeof(layout) - 1, lf);
+				layout[ll] = 0;
+				fclose(lf);
+				mlog("N64 pad layout: %s", lpath);
+			}
+		}
+		n = input_sdl_mappings_layout(M.in, pads, sizeof(pads), ll ? layout : NULL);
 
 		if (n > 0 && file_write_atomic(P("/run/rsos/sdl-controllers.txt"), pads, n) == 0) {
 			snprintf(e_pads, sizeof(e_pads), "SDL_GAMECONTROLLERCONFIG_FILE=%s",

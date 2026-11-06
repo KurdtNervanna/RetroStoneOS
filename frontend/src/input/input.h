@@ -299,6 +299,15 @@ bool input_quit_combo_held(const struct input *in);
  */
 size_t input_sdl_mappings(const struct input *in, char *buf, size_t n);
 
+/*
+ * The same, with a port's layout for an N64 pad (docs/native-games.md,
+ * "Layouts"): text of "function = SDL element" lines (a, b, z, l, r, start,
+ * cup, cdown, cleft, cright, dpup..dpright; "none" drops one) that renames
+ * the elements of an N64 pad's mapping, so the pad does in that game what
+ * the built-in buttons do there. NULL = no layout.
+ */
+size_t input_sdl_mappings_layout(const struct input *in, char *buf, size_t n, const char *layout);
+
 const char *input_btn_name(enum input_btn b);   /* "A", "B", "L1", ... */
 
 #endif
