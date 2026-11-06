@@ -509,25 +509,46 @@ static const struct wstep g_steps_modern[] = {
 	{ "righty", N_("Push the right stick DOWN"), true, true },
 };
 
-/* N64: the slots of input.h (C buttons on y/b/leftstick/rightstick, Z on
- * lefttrigger); the N64 has no Select (Z + Start held is its hotkey) */
+/* N64, in the database's names for it (input.h): the C buttons on the
+ * right stick halves, Z on lefttrigger; no Select (Z + Start held) */
 static const struct wstep g_steps_n64[] = {
 	{ "dpup", N_("Press D-pad UP"), true, false },
 	{ "dpdown", N_("Press D-pad DOWN"), true, false },
 	{ "dpleft", N_("Press D-pad LEFT"), true, false },
 	{ "dpright", N_("Press D-pad RIGHT"), true, false },
 	{ "a", N_("Press A"), false, false },
-	{ "x", N_("Press B"), false, false },
+	{ "b", N_("Press B"), false, false },
 	{ "lefttrigger", N_("Press Z (the trigger underneath)"), true, false },
 	{ "leftshoulder", N_("Press L"), true, false },
 	{ "rightshoulder", N_("Press R"), true, false },
 	{ "start", N_("Press START"), false, false },
-	{ "y", N_("Press C-UP"), true, false },
-	{ "b", N_("Press C-DOWN"), true, false },
-	{ "leftstick", N_("Press C-LEFT"), true, false },
-	{ "rightstick", N_("Press C-RIGHT"), true, false },
+	{ "-righty", N_("Press C-UP"), true, false },
+	{ "+righty", N_("Press C-DOWN"), true, false },
+	{ "-rightx", N_("Press C-LEFT"), true, false },
+	{ "+rightx", N_("Press C-RIGHT"), true, false },
 	{ "leftx", N_("Push the stick RIGHT"), true, true },
 	{ "lefty", N_("Push the stick DOWN"), true, true },
+};
+
+/* GameCube, by label (input.h): Z on rightshoulder, L / R on the triggers,
+ * the C stick on the right stick; no Select (Z + Start held) */
+static const struct wstep g_steps_gc[] = {
+	{ "dpup", N_("Press D-pad UP"), true, false },
+	{ "dpdown", N_("Press D-pad DOWN"), true, false },
+	{ "dpleft", N_("Press D-pad LEFT"), true, false },
+	{ "dpright", N_("Press D-pad RIGHT"), true, false },
+	{ "a", N_("Press A (the big button)"), false, false },
+	{ "b", N_("Press B"), false, false },
+	{ "x", N_("Press X"), true, false },
+	{ "y", N_("Press Y"), true, false },
+	{ "rightshoulder", N_("Press Z"), true, false },
+	{ "lefttrigger", N_("Press L all the way"), true, false },
+	{ "righttrigger", N_("Press R all the way"), true, false },
+	{ "start", N_("Press START"), false, false },
+	{ "leftx", N_("Push the stick RIGHT"), true, true },
+	{ "lefty", N_("Push the stick DOWN"), true, true },
+	{ "rightx", N_("Push the C stick RIGHT"), true, true },
+	{ "righty", N_("Push the C stick DOWN"), true, true },
 };
 
 #define WIZ_MAX_STEPS 20
@@ -621,9 +642,11 @@ static void wiz_record(struct ui *ui, struct wizard *w, const char *elem)
 			return;
 		snprintf(v, sizeof(v), "%s%s", elem + 1, elem[0] == '-' ? "~" : "");
 	} else {
-		/* buttons, hats and half axes ("+a5" for analog triggers) */
+		/* buttons, hats and half axes ("+a5" for analog triggers, an
+		 * N64 adapter's C buttons on a stick) */
 		if ((elem[0] == '+' || elem[0] == '-') && strcmp(st->target, "lefttrigger") &&
-		    strcmp(st->target, "righttrigger") && strncmp(st->target, "dp", 2))
+		    strcmp(st->target, "righttrigger") && strncmp(st->target, "dp", 2) &&
+		    st->target[0] != '+' && st->target[0] != '-')
 			return;
 		strlcpy_(v, elem, sizeof(v));
 	}
@@ -709,6 +732,9 @@ static void wizard_open(struct ui *ui, int slot, enum input_pad_type type)
 	if (type == IN_PAD_N64) {
 		w->steps = g_steps_n64;
 		w->nsteps = (int)ARRAY_SIZE(g_steps_n64);
+	} else if (type == IN_PAD_GC) {
+		w->steps = g_steps_gc;
+		w->nsteps = (int)ARRAY_SIZE(g_steps_gc);
 	} else {
 		w->steps = g_steps_modern;
 		w->nsteps = (int)ARRAY_SIZE(g_steps_modern);
@@ -723,8 +749,11 @@ static void wizard_open(struct ui *ui, int slot, enum input_pad_type type)
 }
 
 /* "What kind of controller is this?": the wizard's steps and the layouts
- * derived from the profile follow the answer (input.h, enum input_pad_type) */
+ * derived from the mapping follow the answer (input.h, enum input_pad_type) */
 static int g_padtype_slot = -1;
+#define ID_PAD_FORGET (ID_PAD0 + IN_PAD_TYPES)
+
+static void open_padcfg(struct ui *ui);
 
 static void padtype_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
 {
@@ -733,6 +762,17 @@ static void padtype_item(struct ui *ui, struct menu *m, struct menu_item *it, in
 	(void)m;
 	if (dir != 0 || it->id < ID_PAD0 || slot < 0)
 		return;
+	if (it->id == ID_PAD_FORGET) {
+		int r = ui->cfg.input ? input_forget_user_mapping(ui->cfg.input, slot) : -1;
+
+		ui_pop(ui);       /* frees m */
+		ui_pop(ui);       /* the list of controllers: its values changed */
+		open_padcfg(ui);
+		if (r == 0)
+			/* TRANSLATORS: toast after removing a controller's own set-up */
+			ui_toastf(ui, "%s", _("Controller set up automatically again"));
+		return;
+	}
 	ui_pop(ui);           /* frees m */
 	wizard_open(ui, slot, (enum input_pad_type)(it->id - ID_PAD0));
 }
@@ -741,13 +781,40 @@ static void padtype_open(struct ui *ui, int slot)
 {
 	/* TRANSLATORS: controller set-up: the first question, a menu title */
 	struct menu *m = menu_new(ui, _("What kind of controller is it?"), K_PADCFG);
+	struct input_device_info di = { 0 };
 
 	g_padtype_slot = slot;
+	if (ui->cfg.input)
+		input_device_info(ui->cfg.input, slot, &di);
 	/* TRANSLATORS: kinds of controller (menu entries) */
 	menu_add(m, MI_ACTION, ID_PAD0 + IN_PAD_MODERN, _("SNES, Xbox, PlayStation, Switch or similar"));
 	menu_add(m, MI_ACTION, ID_PAD0 + IN_PAD_N64, _("Nintendo 64"));
+	menu_add(m, MI_ACTION, ID_PAD0 + IN_PAD_GC, _("GameCube"));
+	if (di.present && di.source == IN_MAP_USER)
+		/* TRANSLATORS: controller set-up: remove your own set-up of this
+		 * controller and use the automatic one (or none) */
+		menu_add(m, MI_ACTION, ID_PAD_FORGET, _("Forget my set-up (automatic)"));
 	m->on_item = padtype_item;
 	menu_open(ui, m);
+}
+
+/* How a controller is set up, for the list: its kind and where the mapping
+ * comes from */
+static const char *padcfg_value(const struct input_device_info *di)
+{
+	bool user = di->source == IN_MAP_USER;
+	bool known = di->source == IN_MAP_GCDB || di->source == IN_MAP_PROFILE;
+
+	/* TRANSLATORS: how a controller is set up (the value next to its name):
+	 * your own mapping of an N64 / GameCube / other pad, a known N64 /
+	 * GameCube / other pad, the Linux standard, a keyboard, none */
+	if (di->type == IN_PAD_N64 && (user || known))
+		return user ? _("N64, custom") : _("N64");
+	if (di->type == IN_PAD_GC && (user || known))
+		return user ? _("GameCube, custom") : _("GameCube");
+	return user ? _("custom") : known ? _("known pad") :
+	       di->source == IN_MAP_GAMEPAD_SPEC ? _("standard") :
+	       di->source == IN_MAP_KEYBOARD ? _("keyboard") : _("not configured");
 }
 
 static void padcfg_item(struct ui *ui, struct menu *m, struct menu_item *it, int dir)
@@ -771,15 +838,7 @@ static void open_padcfg(struct ui *ui)
 			if (!di.present || di.builtin || !strncmp(di.path, "", 1))
 				continue;
 			it = menu_add(m, MI_ACTION, ID_PAD0 + i, di.name);
-				/* TRANSLATORS: how a controller is set up: your own mapping, from the
-			 * database of known pads, the Linux standard, a keyboard, none */
-			snprintf(it->value, sizeof(it->value), "%s",
-				 /* TRANSLATORS: a custom mapping of a Nintendo 64 controller */
-				 di.source == IN_MAP_USER && di.type == IN_PAD_N64 ? _("N64, custom") :
-				 di.source == IN_MAP_USER ? _("custom") :
-				 di.source == IN_MAP_GCDB ? _("known pad") :
-				 di.source == IN_MAP_GAMEPAD_SPEC ? _("standard") :
-				 di.source == IN_MAP_KEYBOARD ? _("keyboard") : _("not configured"));
+			snprintf(it->value, sizeof(it->value), "%s", padcfg_value(&di));
 			n++;
 		}
 	}
