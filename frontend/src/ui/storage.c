@@ -1333,7 +1333,7 @@ static int covers_request(struct ui *ui, bool replace, int *nsys_out)
 			lr = strlen(g->rel);
 			if (lr + 1 >= lp || strcmp(g->path + lp - lr, g->rel) || g->path[lp - lr - 1] != '/')
 				continue;
-			fprintf(f, "%s\t%.*s\t%s\n", se->name, (int)(lp - lr - 1), g->path, g->path);
+			fprintf(f, "%s\t%.*s\t%s\n", systems_effective(g->system, g->path), (int)(lp - lr - 1), g->path, g->path);
 			n++;
 		}
 		nsys += n > before;
@@ -2040,7 +2040,7 @@ void cover_choose_game(struct ui *ui, const struct game *g)
 	if (lr + 1 >= lp || g->path[lp - lr - 1] != '/')
 		return;
 	snprintf(root, sizeof(root), "%.*s", (int)(lp - lr - 1), g->path);
-	cover_choose(ui, g->system, root, g->path, g->name);
+	cover_choose(ui, systems_effective(g->system, g->path), root, g->path, g->name);
 }
 
 /* ------------------------------------------- Games without a picture
@@ -2128,7 +2128,7 @@ void covers_missing_open(struct ui *ui)
 				more++;
 				continue;
 			}
-			strlcpy_(ML.g[ML.n].system, se->name, sizeof(ML.g[ML.n].system));
+			strlcpy_(ML.g[ML.n].system, systems_effective(g->system, g->path), sizeof(ML.g[ML.n].system));
 			snprintf(ML.g[ML.n].root, sizeof(ML.g[ML.n].root), "%.*s", (int)(lp - lr - 1), g->path);
 			strlcpy_(ML.g[ML.n].path, g->path, sizeof(ML.g[ML.n].path));
 			strlcpy_(ML.g[ML.n].name, g->name ? g->name : g->rel, sizeof(ML.g[ML.n].name));
