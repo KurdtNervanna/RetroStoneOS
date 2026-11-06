@@ -9,9 +9,10 @@ Linux, a single menu/emulation program written in C, and libretro emulator cores
 layer cake, and every setting lives in one menu.
 
 > **This fork** ([KurdtNervanna/RetroStoneOS](https://github.com/KurdtNervanna/RetroStoneOS), branch `pro-storage`)
-> adds **Native games**: N64 PC ports such as **Super Mario 64** running natively on the RetroStone2's GPU, at full
-> speed (**Star Fox 64** is in progress: it builds, but hasn't run on the console yet). You build them on your PC
-> from your own ROM: **[how to get native ports](ports/README.md)**. Its
+> adds **Ports**: Doom, Cave Story and native N64 PC ports (**Super Mario 64**, **Ocarina of Time**, **Majora's Mask**,
+> **Star Fox 64**, **Mario Kart 64**, **GoldenEye 007**, **Perfect Dark**, **Smash 64**) running on the RetroStone2's GPU, in
+> one menu list. The native ports follow HDMI live like every emulator and work with a real N64 pad. You build them on
+> your PC from your own ROM: **[how to get native ports](ports/README.md)**. Its
 > [Releases](https://github.com/KurdtNervanna/RetroStoneOS/releases) update over the air (Settings > System
 > update). The official RetroStoneOS is [PaddleStroke/RetroStoneOS](https://github.com/PaddleStroke/RetroStoneOS).
 
@@ -37,6 +38,7 @@ layer cake, and every setting lives in one menu.
 
 **Laptop-style display switching**
 - Plug HDMI in and the picture moves to the TV (720p, or 640x480 for the retro look). Unplug it and it's back on the LCD, even mid-game.
+  The native **Ports** do the same: they render at 640x480 and the display engine scales them to the screen in use ([docs/native-games.md](docs/native-games.md)).
 - In docked mode, the controller that starts a game becomes player 1.
 
 **Controls**
@@ -157,6 +159,7 @@ program also builds and tests on a PC: `cd frontend && make check`. Details: [do
 | [rom-transfer.md](docs/rom-transfer.md) | USB, web page and Windows share |
 | [updates.md](docs/updates.md) | Signed system updates (`.rsu` packages, keys) |
 | [power.md](docs/power.md) | Battery, charging, shutdown |
+| [native-games.md](docs/native-games.md) | Ports: native games, HDMI switching, N64 pad layouts |
 | [pro-storage.md](docs/pro-storage.md) | RetroStone2 Pro: eMMC and M.2 storage, starter card; game covers, multi-disc games, memory speed |
 | [translating.md](docs/translating.md) | Adding or fixing a translation |
 | [homebrew.md](docs/homebrew.md) | The bundled games and their licences |

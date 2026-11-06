@@ -10,7 +10,7 @@ share it or put it in a release.
 
 ## How to get a native port (step by step)
 
-1. **Update the console** to a RetroStoneOS with **Native games** in the menu (Settings > System update). The
+1. **Update the console** to a RetroStoneOS with **Ports** in the menu (build 20 or newer; Settings > System update). The
    libultraship ports (Star Fox 64, Ocarina of Time, Majora's Mask, Mario Kart 64) also need `rsos-gamepad` and the port libraries in the
    RetroStone2 configs (Ogg/Vorbis, Opus, libzip, tinyxml2, spdlog, SDL2_net).
 2. **Set up the build on a PC** with Linux or Windows + WSL (Ubuntu):
@@ -24,7 +24,7 @@ share it or put it in a release.
    ```
 4. **Copy** the `roms` folder from the output (`~/my-ports/roms`) onto the SD card's **RETROSTONE** partition
    (it merges with the `roms` folder there). From WSL, Windows sees it at `\\wsl$\Ubuntu\home\<you>\my-ports`.
-5. In the menu: **Native games** > the game. **Select + Start** goes back to the menu (Super Mario 64 and Star Fox
+5. In the menu: **Ports** > the game. **Select + Start** goes back to the menu (Super Mario 64 and Star Fox
    64 quit at once, as the emulators do; any other native game when both are held for a second).
 
 ## Available ports
@@ -37,6 +37,20 @@ share it or put it in a release.
 | The Legend of Zelda: Ocarina of Time | [soh](soh/README.md) | [Ship of Harkinian](https://github.com/HarbourMasters/Shipwright) 9.3.1 + a GLES2 libultraship | **Works**: menus, 3D, sound, saves; a little slowdown in busy places |
 | GoldenEye 007 | [goldeneye](goldeneye/README.md) | [Project Midas](https://github.com/murkantor/Project-Midas) + a GLES2 fast3d renderer | **Works**: intro, menus, levels, sound; 30 fps in light areas, 10-15 in busy views |
 | The Legend of Zelda: Majora's Mask | [2ship](2ship/README.md) | [2Ship2Harkinian](https://github.com/HarbourMasters/2ship2harkinian) + a GLES2 libultraship | **Works**: 3D, music and sound, at the game's own 20 fps in most places |
+
+## HDMI, pads and the Ports list
+
+* **One Ports list** (RetroStoneOS 0.1.5.24): Doom, Cave Story and the native games are in a single **Ports** entry of the
+  menu; each game starts as it always did (a `.sh` launch script natively, a `.wad` in the Doom engine, an `.exe` in the
+  Cave Story engine).
+* **HDMI** (0.1.5.23): a native port follows HDMI exactly like a libretro game: plug a TV or monitor in and the game is
+  on it with the built-in screen off, unplug it and the game is back on the built-in screen, without restarting. The
+  game always renders 640x480; the display engine scales it, so it never sees a resolution change. Audio stays on
+  the console's speaker for now.
+* **A real N64 pad** plays like the built-in buttons in every port: each port has a `<name>.layout` file next to its
+  launch script (in this folder, and in [RetroStone-Ports](https://github.com/KurdtNervanna/RetroStone-Ports) for
+  Perfect Dark and Smash 64) that says which control the game reads for each N64 function. Edit it on the card to
+  change it; see [docs/native-games.md](../docs/native-games.md), "Layouts".
 
 ## Other N64 PC ports: can they run here?
 

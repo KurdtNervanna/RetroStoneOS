@@ -38,6 +38,10 @@ A program that the exFAT partition does not mark executable can be started throu
 * The display, the sound and the pads, as a libretro game does: the menu drops DRM master before the launch and
   takes it back afterwards. **SDL2** is installed with the KMS/DRM video driver (GLES2 on the Mali-400 through
   Mesa's lima) and ALSA; the menu sets `SDL_VIDEODRIVER=kmsdrm` and `SDL_AUDIODRIVER=alsa`.
+* **HDMI**: like a libretro game, the game is on the TV or monitor while HDMI is plugged in (the built-in screen is off) and
+  back on the built-in screen when it is unplugged, live. The SDL2 of the image does this (docs/display-design.md,
+  9b): the game always renders 640x480 and the display engine scales it, so it must not assume another size. Sound
+  stays on the speaker for now.
 * `HOME=/data/rsos/native-home` (the root file system is read-only), with `XDG_CONFIG_HOME` and
   `XDG_DATA_HOME` under it. A game that saves next to itself (its working directory) keeps its saves on the card.
 * `RSOS_GAME_DIR` (the script's folder) and `RSOS_LANG` (the menu's language, e.g. `en`).
