@@ -114,3 +114,10 @@ theme art for it, a list view with covers (the catalog already carries a `cover`
 on demand and cached), and the console categories as the first level.
 
 See also [store-ports.md](store-ports.md): installing ports from the user's own ROM (design, 2026-11-06).
+
+## Screens (preview tool, fake helper)
+| | |
+|---|---|
+| ![the list](ui-previews/store-list.png) | ![a game](ui-previews/store-game.png) |
+| ![a port, ROM found](ui-previews/store-port-found.png) | ![a port, no ROM](ui-previews/store-port-no-rom.png) |
+| ![the question before preparing](ui-previews/store-port-confirm.png) | ![preparing](ui-previews/store-port-preparing.png) |
