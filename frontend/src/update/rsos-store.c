@@ -1969,9 +1969,32 @@ done:
 	return result;
 }
 
+
+/* <state>/store.ini: the player's own catalog (a home server): "url=https://host/catalog.json" and, for a
+ * server without HTTPS, "allow_http=1". Options on the command line win. */
+static void read_store_ini(bool url_given, bool http_given)
+{
+	char path[1100], line[1200];
+	FILE *f;
+
+	snprintf(path, sizeof(path), "%s/store.ini", C.state);
+	f = fopen(path, "r");
+	if (!f)
+		return;
+	while (fgets(line, sizeof(line), f)) {
+		line[strcspn(line, "\r\n")] = 0;
+		if (!url_given && !strncmp(line, "url=", 4) && line[4])
+			cpy(C.url, sizeof(C.url), line + 4);
+		else if (!http_given && !strcmp(line, "allow_http=1"))
+			C.allow_http = true;
+	}
+	fclose(f);
+}
+
 int main(int argc, char **argv)
 {
 	const char *cmd = NULL, *arg = NULL;
+	bool url_given = false, http_given = false;
 
 	cpy(C.roms, sizeof(C.roms), "/data/roms");
 	cpy(C.state, sizeof(C.state), "/data/rsos/store");
@@ -1990,9 +2013,9 @@ int main(int argc, char **argv)
 		} else if (v && !strcmp(a, "--pubkey")) {
 			cpy(C.pubkey, sizeof(C.pubkey), v), i++;
 		} else if (v && !strcmp(a, "--url")) {
-			cpy(C.url, sizeof(C.url), v), i++;
+			cpy(C.url, sizeof(C.url), v), url_given = true, i++;
 		} else if (v && !strcmp(a, "--catalog")) {
-			cpy(C.catalog_file, sizeof(C.catalog_file), v), i++;
+			cpy(C.catalog_file, sizeof(C.catalog_file), v), url_given = true, i++;
 		} else if (v && !strcmp(a, "--arch")) {
 			cpy(C.arch, sizeof(C.arch), v), i++;
 		} else if (v && !strcmp(a, "--cover-dir")) {
@@ -2012,6 +2035,7 @@ int main(int argc, char **argv)
 			cpy(C.rom_arg, sizeof(C.rom_arg), v), i++;
 		} else if (!strcmp(a, "--allow-http")) {
 			C.allow_http = true;
+			http_given = true;
 		} else if (!cmd) {
 			cmd = a;
 		} else if (!arg) {
@@ -2020,6 +2044,7 @@ int main(int argc, char **argv)
 			return fail("usage", "unexpected argument %s", a);
 		}
 	}
+	read_store_ini(url_given, http_given);
 	signal(SIGTERM, on_term);
 	signal(SIGINT, on_term);
 	signal(SIGPIPE, SIG_IGN);

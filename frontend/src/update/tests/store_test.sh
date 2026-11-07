@@ -245,6 +245,16 @@ check "zstd: no temporary tar left" "[ -z \"\$(ls -A $W/proms | grep '^\.store')
 $P remove zstdport > /dev/null
 rm -rf $W/proms/native
 
+
+# the player's own catalog: <state>/store.ini
+mkdir -p "$W/inistate" && printf 'url=%s/catalog.json
+allow_http=1
+' "$BASE" > "$W/inistate/store.ini"
+OUT=$($ST --pubkey $W/store.pub --state $W/inistate --roms $W/roms list)
+check "store.ini: the catalog URL and allow_http are used" "echo \"\$OUT\" | grep -q '^done.count=8.source=net'"
+OUT=$($ST --pubkey $W/store.pub --state $W/inistate --roms $W/roms --url http://127.0.0.1:1/x.json list)
+check "store.ini: an option wins over it (the dead URL falls back to the saved catalog)" "echo \"\$OUT\" | grep -q 'source=cache'"
+
 # tampered / wrongly signed catalog
 cp "$W/out/catalog.json" "$W/cat.good"
 sed 's/"version": "1.1"/"version": "9.9"/' "$W/cat.good" > "$W/out/catalog.json"
