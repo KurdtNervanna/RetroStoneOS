@@ -472,18 +472,13 @@
  
          if (ret) {
              SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Could not set videomode on CRTC.");
-@@ -178,6 +192,14 @@
+@@ -178,6 +192,9 @@
              flip_flags |= DRM_MODE_PAGE_FLIP_ASYNC;
          }
  
-+        if (rsos_scaled) {
-+            /* a scaled plane update, complete at the next vblank */
-+            ret = rsos_scanout(viddata, dispdata, fb_info->fb_id, 0);
-+            if (ret != 0) {
-+                SDL_LogError(SDL_LOG_CATEGORY_VIDEO, "Could not update the scaled plane: %d", ret);
-+            }
-+            return 1;
-+        }
++        /* RetroStoneOS: with the scaled plane the usual page flip is kept (it only
++           changes the framebuffer: the plane keeps its scaling), so the game does not
++           wait for the vblank inside the swap, as before. */
          ret = KMSDRM_drmModePageFlip(viddata->drm_fd, dispdata->crtc->crtc_id,
                                       fb_info->fb_id, flip_flags, &windata->waiting_for_flip);
  
