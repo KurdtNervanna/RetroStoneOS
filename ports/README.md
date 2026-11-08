@@ -43,10 +43,10 @@ share it or put it in a release.
 * **One Ports list** (RetroStoneOS 0.1.5.24): Doom, Cave Story and the native games are in a single **Ports** entry of the
   menu; each game starts as it always did (a `.sh` launch script natively, a `.wad` in the Doom engine, an `.exe` in the
   Cave Story engine).
-* **HDMI** (0.1.5.23): a native port follows HDMI exactly like a libretro game: plug a TV or monitor in and the game is
+* **HDMI** (0.1.5.23, sound 0.1.5.28): a native port follows HDMI exactly like a libretro game: plug a TV or monitor in and the game is
   on it with the built-in screen off, unplug it and the game is back on the built-in screen, without restarting. The
-  game always renders 640x480; the display engine scales it, so it never sees a resolution change. Audio stays on
-  the console's speaker for now.
+  game always renders 640x480; the display engine scales it, so it never sees a resolution change. The sound
+  follows the picture: the TV's sound while the game is on HDMI, the speaker when it is not.
 * **A real N64 pad** plays like the built-in buttons in every port: each port has a `<name>.layout` file next to its
   launch script (in this folder, and in [RetroStone-Ports](https://github.com/KurdtNervanna/RetroStone-Ports) for
   Perfect Dark and Smash 64) that says which control the game reads for each N64 function. Edit it on the card to
