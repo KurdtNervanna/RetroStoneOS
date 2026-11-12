@@ -597,8 +597,12 @@ SDL 2.32.10 `kmsdrm`) takes the same decisions:
   HPD poll of kernel patch 0001 keeps them current) and runs the policy again. On a change the output left is
   switched off (HDMI) or put on a black frame (the panel never stops scanning, section 8.5), the panel's backlight
   goes off behind HDMI (`bl_power` 4) and on again for the panel, and the same frame is shown on the new output.
-- Not done: audio follows the output (the ports use ALSA's default device), and the menu does not hand its output
-  choice to the game (SDL decides by itself, with the same policy).
+- **Sound follows the picture** (0.1.5.28): `SDL_alsa_audio.c` plays on the HDMI sound card (`sun4ihdmi`, or
+  `RSOS_AUDIO_HDMI_DEV`) while `rsos_audio_hdmi` says the game is on HDMI, else on the usual device, and moves the
+  sound with the same switch (the pcm is closed and opened again on the other card, set up as the first one was).
+- Per frame the game's buffer is shown with the usual non-blocking page flip once the first modeset has put the
+  scaled plane in place (a plane update per frame waits for the vblank and slowed the ports down).
+- Not done: the menu does not hand its output choice to the game (SDL decides by itself, with the same policy).
 - The 640x480 mode on HDMI (an unscaled plane on CRTC 1) showed nothing on a Dell P2312H; 800x600 and 1920x1080
   work. Not understood yet.
 

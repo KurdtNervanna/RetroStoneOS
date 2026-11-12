@@ -8,7 +8,7 @@
  #include <sys/stat.h>
  #include <sys/param.h>
  #include <sys/utsname.h>
-@@ -711,6 +712,259 @@
+@@ -711,6 +712,262 @@
      return SDL_FALSE;
  }
  
@@ -73,6 +73,7 @@
 +static uint32_t rsos_force_crtc_id;
 +static int rsos_force_w, rsos_force_h, rsos_force_hz;
 +static uint32_t rsos_force_conn_id;
++static int rsos_choice_hdmi;
 +
 +/* The policy's choice among the connectors: sets rsos_force_* and returns
 + * the connector id to open first (0 = none). */
@@ -141,6 +142,7 @@
 +    rsos_force_h = ch.h;
 +    rsos_force_hz = ch.hz;
 +    rsos_force_conn_id = resources->connectors[idx[ch.conn]];
++    rsos_choice_hdmi = conns[ch.conn].kind == PF_KIND_HDMI;
 +    return rsos_force_conn_id;
 +}
 +
@@ -252,6 +254,7 @@
 +        }
 +    }
 +    rsos_backlight(rsos_is_external(c->connector_type) ? SDL_FALSE : SDL_TRUE);
++    rsos_audio_hdmi = rsos_is_external(c->connector_type) ? 1 : 0;   /* the sound follows (SDL_alsa_audio.c) */
 +
 +    KMSDRM_drmModeFreeConnector(dispdata->connector);
 +    KMSDRM_drmModeFreeCrtc(dispdata->crtc);
@@ -268,7 +271,7 @@
  /* Gets a DRM connector, builds an SDL_Display with it, and adds it to the
     list of SDL Displays in _this->displays[]  */
  static void KMSDRM_AddDisplay(_THIS, drmModeConnector *connector, drmModeRes *resources)
-@@ -790,6 +1044,11 @@
+@@ -790,6 +1047,11 @@
          goto cleanup;
      }
  
@@ -280,7 +283,7 @@
      /* Try to find a CRTC connected to this encoder */
      crtc = KMSDRM_drmModeGetCrtc(viddata->drm_fd, encoder->crtc_id);
  
-@@ -845,6 +1104,29 @@
+@@ -845,6 +1107,29 @@
          }
      }
  
@@ -310,7 +313,7 @@
      if (mode_index == -1) {
          ret = SDL_SetError("Failed to find index of mode attached to the CRTC.");
          goto cleanup;
-@@ -898,8 +1180,8 @@
+@@ -898,8 +1183,8 @@
      modedata->mode_index = mode_index;
  
      display.driverdata = dispdata;
@@ -321,7 +324,7 @@
      display.desktop_mode.refresh_rate = dispdata->mode.vrefresh;
      display.desktop_mode.format = SDL_PIXELFORMAT_ARGB8888;
      display.desktop_mode.driverdata = modedata;
-@@ -963,6 +1245,19 @@
+@@ -963,6 +1248,21 @@
          goto cleanup;
      }
  
@@ -330,6 +333,8 @@
 +    rsos_scaled = 0;
 +    if (rsos_policy_choose(viddata->drm_fd, resources, 1)) {
 +        drmModeConnector *connector = KMSDRM_drmModeGetConnector(viddata->drm_fd, rsos_force_conn_id);
++
++        rsos_audio_hdmi = rsos_choice_hdmi;
 +
 +        if (connector && connector->connection == DRM_MODE_CONNECTED && connector->count_modes) {
 +            KMSDRM_AddDisplay(_this, connector, resources);
@@ -341,7 +346,7 @@
      /* Iterate on the available connectors. For every connected connector,
         we create an SDL_Display and add it to the list of SDL Displays. */
      for (i = 0; i < resources->count_connectors; i++) {
-@@ -972,6 +1267,13 @@
+@@ -972,6 +1272,13 @@
          if (!connector) {
              continue;
          }
@@ -355,7 +360,7 @@
  
          if (connector->connection == DRM_MODE_CONNECTED && connector->count_modes) {
              /* If it's a connected connector with available videomodes, try to add
-@@ -1181,7 +1483,8 @@
+@@ -1181,7 +1488,8 @@
         or SetWindowFullscreen, send a fake event for now since the actual
         recreation is deferred */
      KMSDRM_GetModeToSet(window, &mode);
@@ -365,7 +370,7 @@
  }
  
  /* This determines the size of the fb, which comes from the GBM surface
-@@ -1193,7 +1496,9 @@
+@@ -1193,7 +1501,9 @@
      SDL_VideoDisplay *display = SDL_GetDisplayForWindow(window);
      SDL_DisplayData *dispdata = (SDL_DisplayData *)display->driverdata;
  
@@ -376,7 +381,7 @@
      uint32_t surface_flags = GBM_BO_USE_SCANOUT | GBM_BO_USE_RENDERING;
  
      EGLContext egl_context;
-@@ -1216,13 +1521,14 @@
+@@ -1216,13 +1526,14 @@
         mode that's set in sync with what SDL_video.c thinks is set */
      KMSDRM_GetModeToSet(window, &dispdata->mode);
  
@@ -394,7 +399,7 @@
                                              surface_fmt, surface_flags);
  
      if (!windata->gs) {
-@@ -1246,7 +1552,8 @@
+@@ -1246,7 +1557,8 @@
      ret = SDL_EGL_MakeCurrent(_this, windata->egl_surface, egl_context);
  
      SDL_SendWindowEvent(window, SDL_WINDOWEVENT_RESIZED,
@@ -404,7 +409,7 @@
  
      windata->egl_surface_dirty = SDL_FALSE;
  
-@@ -1363,8 +1670,8 @@
+@@ -1363,8 +1675,8 @@
              modedata->mode_index = i;
          }
  
@@ -425,12 +430,13 @@
      SDL_VideoData *viddata;
      /* SDL internals expect EGL surface to be here, and in KMSDRM the GBM surface is
         what supports the EGL surface on the driver side, so all these surfaces and buffers
-@@ -192,6 +193,13 @@
+@@ -192,6 +193,14 @@
  int KMSDRM_GLES_SwapWindow(_THIS, SDL_Window *window);
  void KMSDRM_GLES_DeleteContext(_THIS, SDL_GLContext context);
  
 +
 +/* RetroStoneOS scaled scan-out (rsos_scanout.c) */
++extern volatile int rsos_audio_hdmi;
 +extern int rsos_scaled, rsos_rw, rsos_rh, rsos_crtc_index;
 +int rsos_scanout(SDL_VideoData *viddata, SDL_DisplayData *dispdata, uint32_t fb_id, int first);
 +uint32_t rsos_black_fb(int fd, int w, int h);
@@ -494,7 +500,7 @@
  SDL_KMSDRM_SYM(int,drmModePageFlip,(int fd, uint32_t crtc_id, uint32_t fb_id,
 --- a/src/video/kmsdrm/rsos_scanout.c
 +++ b/src/video/kmsdrm/rsos_scanout.c
-@@ -0,0 +1,165 @@
+@@ -0,0 +1,168 @@
 +/*
 + * rsos_scanout.c - RetroStoneOS: scaled scan-out for SDL's KMSDRM driver.
 + *
@@ -516,6 +522,9 @@
 +#include <string.h>
 +#include <sys/ioctl.h>
 +
++/* 1 while the game is on an external screen (HDMI), 0 on the built-in one, -1 unknown:
++ * SDL's ALSA backend plays on the HDMI sound card or the speaker accordingly */
++volatile int rsos_audio_hdmi = -1;
 +int rsos_scaled;                 /* the policy chose the output: scaled scan-out */
 +int rsos_rw = 640, rsos_rh = 480; /* the size the game renders at */
 +int rsos_crtc_index;
@@ -837,3 +846,167 @@
 +bool pf_pick_mode(const struct pf_cfg *cfg, const struct pf_conn *c, struct pf_mode *out, bool *builtin);
 +
 +#endif
+--- a/src/audio/alsa/SDL_alsa_audio.c
++++ b/src/audio/alsa/SDL_alsa_audio.c
+@@ -368,12 +368,66 @@
+ }
+ #endif /* SND_CHMAP_API_VERSION */
+ 
++
++/* RetroStoneOS: the sound follows the picture. The KMSDRM video driver says whether the game is on HDMI
++   (rsos_audio_hdmi, rsos_scanout.c); then the HDMI sound card plays, else the usual device. A device the
++   game or the user chose (AUDIODEV, a named device) is left alone. */
++static int ALSA_configure_pcm(_THIS, snd_pcm_t *pcm_handle);
++extern volatile int rsos_audio_hdmi __attribute__((weak));
++
++static const char *rsos_hdmi_device(void)
++{
++    const char *d = SDL_getenv("RSOS_AUDIO_HDMI_DEV");
++
++    return d && *d ? d : "plughw:CARD=sun4ihdmi,DEV=0";
++}
++
++static int rsos_route_hdmi(_THIS)
++{
++    if (this->iscapture || this->handle || SDL_getenv("AUDIODEV") || !&rsos_audio_hdmi) {
++        return 0;
++    }
++    return rsos_audio_hdmi > 0;
++}
++
++/* Plays on another sound card from now on: the new pcm is set up as the first one was. */
++static void rsos_alsa_reopen(_THIS, const char *device)
++{
++    SDL_AudioSpec keep = this->spec;
++    snd_pcm_t *old = this->hidden->pcm_handle, *pcm = NULL;
++    void (*swizzle)(_THIS, void *, Uint32) = this->hidden->swizzle_func;
++
++    if (ALSA_snd_pcm_open(&pcm, device, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK) < 0) {
++        return;
++    }
++    this->hidden->pcm_handle = pcm;
++    if (ALSA_configure_pcm(this, pcm) < 0) {
++        this->hidden->pcm_handle = old;
++        this->hidden->swizzle_func = swizzle;
++        this->spec = keep;
++        ALSA_snd_pcm_close(pcm);
++        return;
++    }
++    this->spec = keep;    /* the game's buffers stay as they are: writei takes any size */
++#if !SDL_ALSA_NON_BLOCKING
++    ALSA_snd_pcm_nonblock(pcm, 0);
++#endif
++    ALSA_snd_pcm_close(old);
++    SDL_LogDebug(SDL_LOG_CATEGORY_AUDIO, "rsos: the sound moved to %s", device);
++}
++
+ static void ALSA_PlayDevice(_THIS)
+ {
+     const Uint8 *sample_buf = (const Uint8 *)this->hidden->mixbuf;
+     const int frame_size = ((SDL_AUDIO_BITSIZE(this->spec.format)) / 8) *
+                            this->spec.channels;
+     snd_pcm_uframes_t frames_left = ((snd_pcm_uframes_t)this->spec.samples);
++    int rsos_route = rsos_route_hdmi(this);
++
++    if (rsos_route != this->hidden->rsos_route) {
++        this->hidden->rsos_route = rsos_route;
++        rsos_alsa_reopen(this, rsos_route ? rsos_hdmi_device() : get_audio_device(this->handle, this->spec.channels));
++    }
+ 
+     this->hidden->swizzle_func(this, this->hidden->mixbuf, frames_left);
+ 
+@@ -585,11 +639,11 @@
+     return 0;
+ }
+ 
+-static int ALSA_OpenDevice(_THIS, const char *devname)
++/* RetroStoneOS: the configuration of an open pcm, from ALSA_OpenDevice (also used to move
++   the sound to another card). */
++static int ALSA_configure_pcm(_THIS, snd_pcm_t *pcm_handle)
+ {
+     int status = 0;
+-    SDL_bool iscapture = this->iscapture;
+-    snd_pcm_t *pcm_handle = NULL;
+     snd_pcm_hw_params_t *hwparams = NULL;
+     snd_pcm_sw_params_t *swparams = NULL;
+     snd_pcm_format_t format = 0;
+@@ -601,26 +655,6 @@
+     char chmap_str[64];
+ #endif
+ 
+-    /* Initialize all variables that we clean on shutdown */
+-    this->hidden = (struct SDL_PrivateAudioData *)SDL_malloc(sizeof(*this->hidden));
+-    if (!this->hidden) {
+-        return SDL_OutOfMemory();
+-    }
+-    SDL_zerop(this->hidden);
+-
+-    /* Open the audio device */
+-    /* Name of device should depend on # channels in spec */
+-    status = ALSA_snd_pcm_open(&pcm_handle,
+-                               get_audio_device(this->handle, this->spec.channels),
+-                               iscapture ? SND_PCM_STREAM_CAPTURE : SND_PCM_STREAM_PLAYBACK,
+-                               SND_PCM_NONBLOCK);
+-
+-    if (status < 0) {
+-        return SDL_SetError("ALSA: Couldn't open audio device: %s", ALSA_snd_strerror(status));
+-    }
+-
+-    this->hidden->pcm_handle = pcm_handle;
+-
+     /* Figure out what the hardware is capable of */
+     snd_pcm_hw_params_alloca(&hwparams);
+     status = ALSA_snd_pcm_hw_params_any(pcm_handle, hwparams);
+@@ -744,6 +778,40 @@
+         return SDL_SetError("Couldn't set software audio parameters: %s", ALSA_snd_strerror(status));
+     }
+ 
++    return 0;
++}
++
++static int ALSA_OpenDevice(_THIS, const char *devname)
++{
++    int status = 0;
++    SDL_bool iscapture = this->iscapture;
++    snd_pcm_t *pcm_handle = NULL;
++
++    /* Initialize all variables that we clean on shutdown */
++    this->hidden = (struct SDL_PrivateAudioData *)SDL_malloc(sizeof(*this->hidden));
++    if (!this->hidden) {
++        return SDL_OutOfMemory();
++    }
++    SDL_zerop(this->hidden);
++
++    /* Open the audio device */
++    /* Name of device should depend on # channels in spec */
++    this->hidden->rsos_route = rsos_route_hdmi(this);
++    status = ALSA_snd_pcm_open(&pcm_handle,
++                               this->hidden->rsos_route ? rsos_hdmi_device() : get_audio_device(this->handle, this->spec.channels),
++                               iscapture ? SND_PCM_STREAM_CAPTURE : SND_PCM_STREAM_PLAYBACK,
++                               SND_PCM_NONBLOCK);
++
++    if (status < 0) {
++        return SDL_SetError("ALSA: Couldn't open audio device: %s", ALSA_snd_strerror(status));
++    }
++
++    this->hidden->pcm_handle = pcm_handle;
++
++    if (ALSA_configure_pcm(this, pcm_handle) < 0) {
++        return -1;
++    }
++
+     /* Calculate the final parameters for this audio specification */
+     SDL_CalculateAudioSpec(&this->spec);
+ 
+--- a/src/audio/alsa/SDL_alsa_audio.h
++++ b/src/audio/alsa/SDL_alsa_audio.h
+@@ -39,6 +39,9 @@
+     Uint8 *mixbuf;
+     int mixlen;
+ 
++    /* RetroStoneOS: 1 while the sound is on the HDMI card */
++    int rsos_route;
++
+     /* swizzle function */
+     void (*swizzle_func)(_THIS, void *buffer, Uint32 bufferlen);
+ };
