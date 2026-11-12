@@ -235,7 +235,12 @@ check "copy mode: the ROM goes into the port's folder in z64 order" "echo \"\$OU
 $P remove copyport > /dev/null
 mkdir -p $W/proms/native && printf 'mine' > "$W/proms/native/Copy Game.sh"
 OUT=$($P install-port copyport)
-check "port: a file that is not the store's is not overwritten" "echo \"\$OUT\" | grep -q '^error.code=exists' && [ \"\$(cat '$W/proms/native/Copy Game.sh')\" = mine ]"
+check "port: a file that is not the store's is moved aside, then the port installs" "echo \"\$OUT\" | grep -q '^ok.id=copyport' && [ \"\$(cat '$W/proms/native/.store-replaced/copyport/Copy Game.sh')\" = mine ] && [ \"\$(cat '$W/proms/native/Copy Game.sh')\" != mine ]"
+# removed by the store (the game's save stays in its folder), then installed again
+$P remove copyport > /dev/null
+mkdir -p $W/proms/native/copygame && printf 'old' > $W/proms/native/copygame/save.dat
+OUT=$($P install-port copyport)
+check "port: installs again over what a delete left, its save kept" "echo \"\$OUT\" | grep -q '^ok.id=copyport' && [ -f '$W/proms/native/Copy Game.sh' ] && [ \"\$(cat $W/proms/native/copygame/save.dat)\" = old ]"
 rm -rf $W/proms/native
 
 

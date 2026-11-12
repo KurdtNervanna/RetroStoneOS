@@ -1900,16 +1900,42 @@ static int cmd_install_port(const char *id)
 	mine = installed_version(e.id, iv, sizeof(iv));
 	walk_files(inst, "", &files);
 	for (int i = 0; i < files.n; i++) {
-		struct stat st;
-
 		if (!safe_relpath(files.p[i])) {
 			fail("archive", "unsafe path in the package");
 			goto done;
 		}
-		snprintf(target, sizeof(target), "%s/%s", native, files.p[i]);
-		if (!mine && lstat(target, &st) == 0) {
-			fail("exists", "%s already exists and is not from the store", files.p[i]);
-			goto done;
+	}
+	if (!mine) {
+		/* Files of the port that the store did not put there: what "Delete this game"
+		 * left behind (it deletes the launcher only), or a copy installed by hand. They
+		 * are this port's own program files, never its saves (no package holds a save),
+		 * so they are moved aside into native/.store-replaced/<id>/ (hidden from the game
+		 * list; the previous one is replaced) instead of blocking the install. */
+		char keep[1300];
+		bool cleared = false;
+
+		snprintf(keep, sizeof(keep), "%s/.store-replaced/%s", native, e.id);
+		for (int i = 0; i < files.n; i++) {
+			struct stat st;
+			char to[2700], *sl;
+
+			snprintf(target, sizeof(target), "%s/%s", native, files.p[i]);
+			if (lstat(target, &st) < 0)
+				continue;
+			if (!cleared) {
+				rm_tree(keep);
+				cleared = true;
+			}
+			snprintf(to, sizeof(to), "%s/%s", keep, files.p[i]);
+			sl = strrchr(to, '/');
+			*sl = 0;
+			mkdir_p(to);
+			*sl = '/';
+			if (rename(target, to) < 0) {
+				fail("exists", "%s already exists and cannot be moved aside: %s", files.p[i], strerror(errno));
+				goto done;
+			}
+			fprintf(stderr, "rsos-store: %s was not from the store: moved to %s\n", files.p[i], to);
 		}
 	}
 	if (mine)
