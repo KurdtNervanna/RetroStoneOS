@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build and sign the store catalog (docs/store-design.md).
 
-  make-catalog.py --entries store/entries --base-url https://host/files -o out/ [--key store.key] [--mkupdate rsos-mkupdate]
+  make-catalog.py --entries store/entries --base-url https://host -o out/ [--key store.key] [--mkupdate rsos-mkupdate]
 
 Every entries/*.json describes one game: the catalog fields (id, name, system, version, author, license,
 source, desc, kind, file | launcher, arch, cover) plus "payload": the local file to publish

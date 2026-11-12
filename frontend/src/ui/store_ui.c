@@ -258,7 +258,7 @@ static void items(struct ui *ui, struct menu *m)
 	if (T.failed || !T.n) {
 		/* TRANSLATORS: Game store: the catalog could not be loaded (no network, or nothing in it) */
 		it = menu_add(m, MI_INFO, ID_S_NOTE,
-			      T.failed ? _("Could not load the catalog. Connect to WiFi.") : _("The store is empty"));
+			      T.failed ? _("Could not load the catalog. Check the network (WiFi or Ethernet).") : _("The store is empty"));
 		it->disabled = true;
 		return;
 	}
@@ -513,7 +513,7 @@ static void error_message(struct ui *ui, const char *code, const char *text)
 		return;
 	else
 		/* TRANSLATORS: Game store: the download failed (network) */
-		message_open(ui, _("The game could not be downloaded. Check the WiFi and try again."));
+		message_open(ui, _("The game could not be downloaded. Check the network (WiFi or Ethernet) and try again."));
 	LOGW("store: %s: %s", code, text);
 }
 

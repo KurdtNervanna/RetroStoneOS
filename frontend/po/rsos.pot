@@ -3237,7 +3237,7 @@ msgstr ""
 
 #. TRANSLATORS: Game store: the catalog could not be loaded (no network, or nothing in it)
 #: src/ui/store_ui.c:261
-msgid "Could not load the catalog. Connect to WiFi."
+msgid "Could not load the catalog. Check the network (WiFi or Ethernet)."
 msgstr ""
 
 #: src/ui/store_ui.c:261
@@ -3301,7 +3301,7 @@ msgstr ""
 
 #. TRANSLATORS: Game store: the download failed (network)
 #: src/ui/store_ui.c:516
-msgid "The game could not be downloaded. Check the WiFi and try again."
+msgid "The game could not be downloaded. Check the network (WiFi or Ethernet) and try again."
 msgstr ""
 
 #. TRANSLATORS: Game store: toast after an install; %s is the game's name
