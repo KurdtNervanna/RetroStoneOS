@@ -59,6 +59,9 @@ So extraction on the console is possible but takes nearly all RAM: it must run a
 4. Verify: the output archive exists and is non-empty, and the extractor's own "done" marker is present.
 5. Commit atomically: move the program folder into `<drive>/roms/native/<port>/`, the launcher next to it, the cover into
    `roms/native/media/covers/`; write the install record (`installed.tsv`, with the ROM's SHA-1 and the archive format).
+   The record is `/data/rsos/store/installed.tsv` for the console's own `/data/roms`; an install into another roms
+   folder (`--roms`, a test into a scratch folder) keeps its record in that folder, `<roms>/.rsos-store/installed.tsv`,
+   so it never shows as installed in the menu.
 6. **Always clean up**, success or failure or cancel: delete `.store-<id>/` and the downloaded package. A start-up sweep
    removes any `.store-*` left by a power cut.
 
@@ -67,6 +70,9 @@ Failure never touches an installed copy: an update stages beside it and swaps at
 ## Remove / update
 - **Remove** deletes the program, archives and launcher; **saves and settings are kept** by default (they live in the port's
   folder, so the helper moves them to `<drive>/roms/native/.removed-saves/<port>/` and a later install restores them).
+- **Delete this game** in the Ports list, on a launcher the store installed, removes the whole port the same way
+  (`rsos-store remove-path <launcher>`), with the files an earlier install moved aside into
+  `roms/native/.store-replaced/<port>/`; any other native game loses its launcher only.
 - **Update** replaces program and launcher. The made archive (`oot.o2r`) is kept unless the catalog's `rom.archive_format`
   changed; then the page asks for the ROM again ("This update needs your game data prepared again").
 
