@@ -1451,7 +1451,7 @@ void screens_job_done(struct ui *ui, const struct hw_job_result *r)
 		wifi_scan_done(ui, r);
 		return;
 	}
-	if (bt_job_done(ui, r))
+	if (bt_job_done(ui, r) || store_job_done(ui, r))
 		return;
 	if (r->tag >= JOB_WIFI && r->tag <= JOB_BT) {
 		int i = r->tag - JOB_WIFI;
@@ -2340,7 +2340,7 @@ static void open_time(struct ui *ui)
 
 /* ---------------------------------------------------------------- main menu */
 /* Settings > System update (ui/update_ui.c, docs/updates.md) */
-enum { ID_SYSUPDATE = 290 };
+enum { ID_SYSUPDATE = 290, ID_STORE = 291 };
 
 static void main_refresh(struct ui *ui, struct menu *m)
 {
@@ -2367,6 +2367,7 @@ static void main_item(struct ui *ui, struct menu *m, struct menu_item *it, int d
 	case ID_STORAGE: open_storage(ui); break;
 	case ID_INFO: open_info(ui); break;
 	case ID_SYSUPDATE: update_open(ui); break;
+	case ID_STORE: store_open(ui); break;
 	case ID_DATETIME: open_time(ui); break;
 	case ID_POWER: open_power(ui); break;
 	case ID_LANGUAGE: language_open(ui, false); break;
@@ -2403,6 +2404,9 @@ void settings_open_main(struct ui *ui)
 	if (update_available(ui))
 		/* TRANSLATORS: Settings item: check for and install a new RetroStoneOS version */
 		menu_add(m, MI_SUBMENU, ID_SYSUPDATE, _("System update"));
+	if (store_available(ui))
+		/* TRANSLATORS: Settings item: download homebrew and freeware games */
+		menu_add(m, MI_SUBMENU, ID_STORE, _("Game store"));
 	menu_add(m, MI_SUBMENU, ID_DATETIME, _("Date & time"));
 	menu_add(m, MI_SUBMENU, ID_POWER, C_("settings", "Power"));
 	/* TRANSLATORS: Settings item: find a game by its name in every system */
