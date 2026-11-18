@@ -5,6 +5,8 @@
  *   rsos-store [options] list [SYSTEM]       the signed catalog (online, else the cached copy)
  *   rsos-store [options] get ID              download, verify, install
  *   rsos-store [options] remove ID           delete what the store installed for ID
+ *   rsos-store [options] remove-path PATH    the same for the game a file belongs to (the menu's Delete
+ *                                            of a launcher; error code=notstore if no game owns it)
  *   rsos-store [options] installed           what is installed
  *   rsos-store [options] find-rom ID         the player's ROM for a port (by SHA-1), if there is one
  *   rsos-store [options] install-port ID     download, make the game data from the ROM, install
@@ -14,6 +16,10 @@
  *          --arch NAME (armhf)  --allow-http  --cover-dir DIR  --max-bytes N
  *          --scan DIR (more places to look for ROMs, repeatable)  --rom FILE (a ROM to use, install-port)
  *          --out FILE (the lines go there, not to stdout: the menu reads the file)
+ *
+ * What is installed is recorded in <state>/installed.tsv for the console's own roms folder (/data/roms). For
+ * another --roms (a test install into a scratch folder) the record is <roms>/.rsos-store/installed.tsv,
+ * so that install never shows up in the menu's store as installed, nor a remove there touches it.
  *
  * Output: lines "type<TAB>key=value<TAB>..." (\\ \t \n escaped), the same shape as rsos-update --machine:
  *   entry  id name system version author license desc size kind installed update
@@ -29,6 +35,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -61,7 +68,7 @@
 #define NAME_MAX_LEN 120
 
 struct cfg {
-	char roms[512], state[512], pubkey[512], url[1024], catalog_file[512], arch[32], cover_dir[512];
+	char roms[512], state[512], record[1100], pubkey[512], url[1024], catalog_file[512], arch[32], cover_dir[512];
 	bool allow_http;
 	int64_t max_bytes;
 	char scan[4][512];
@@ -564,7 +571,34 @@ static const struct json *catalog_find(const struct catalog *c, const char *id, 
 /* installed.tsv: "id<TAB>version<TAB>relative path" per top-level path installed */
 static void installed_path(char *out, size_t n)
 {
-	snprintf(out, n, "%s/installed.tsv", C.state);
+	cpy(out, n, C.record);
+}
+
+/* the folder of the record (made before it is written) */
+static int record_dir(void)
+{
+	char d[1100], *sl;
+
+	cpy(d, sizeof(d), C.record);
+	sl = strrchr(d, '/');
+	if (sl && sl != d)
+		*sl = 0;
+	return mkdir_p(d);
+}
+
+/* --roms names the console's own roms folder (the default), whatever its spelling */
+static bool roms_is_default(void)
+{
+	char a[PATH_MAX], b[PATH_MAX];
+	size_t l;
+
+	if (realpath(C.roms, a) && realpath("/data/roms", b))
+		return !strcmp(a, b);
+	cpy(a, sizeof(a), C.roms);
+	l = strlen(a);
+	while (l > 1 && a[l - 1] == '/')
+		a[--l] = 0;
+	return !strcmp(a, "/data/roms");
 }
 
 static bool installed_version(const char *id, char *ver, size_t vn)
@@ -636,7 +670,7 @@ static int installed_update(const char *id, const char *version, char **paths, i
 		memcpy(out + len, l, (size_t)ln);
 		len += (size_t)ln;
 	}
-	if (mkdir_p(C.state) < 0) {
+	if (record_dir() < 0) {
 		free(out);
 		return -1;
 	}
@@ -1262,6 +1296,17 @@ static int cmd_get(const char *id)
 	return 0;
 }
 
+/* the port's files an install moved aside (native/.store-replaced/<id>/, see cmd_install_port) */
+static void replaced_remove(const char *id)
+{
+	char keep[1300];
+
+	snprintf(keep, sizeof(keep), "%s/native/.store-replaced/%s", C.roms, id);
+	rm_tree(keep);
+	snprintf(keep, sizeof(keep), "%s/native/.store-replaced", C.roms);
+	rmdir(keep);
+}
+
 static int cmd_remove(const char *id)
 {
 	char iv[64];
@@ -1272,11 +1317,45 @@ static int cmd_remove(const char *id)
 	if (!installed_version(id, iv, sizeof(iv)))
 		return fail("notfound", "%s is not installed from the store", id);
 	n = installed_remove(id);
+	replaced_remove(id);
 	printf("ok");
 	field("id", id);
 	fieldf("removed", "%d", n);
 	endl();
 	return 0;
+}
+
+/* The game that PATH (relative to the roms folder, or a full path in it) belongs to, removed like
+ * remove ID: the menu's "Delete this game" on a store port's launcher removes the whole port, not
+ * the launcher alone (its saves and settings stay, as with remove). */
+static int cmd_remove_path(const char *arg)
+{
+	char path[1100], line[1500], id[128] = "";
+	const char *rel = arg;
+	size_t rl = strlen(C.roms);
+	FILE *f;
+
+	while (rl > 1 && C.roms[rl - 1] == '/')
+		rl--;
+	if (!strncmp(arg, C.roms, rl) && arg[rl] == '/')
+		rel = arg + rl + 1;
+	if (!safe_relpath(rel))
+		return fail("notstore", "%s is not in the roms folder", arg);
+	installed_path(path, sizeof(path));
+	f = fopen(path, "r");
+	while (f && fgets(line, sizeof(line), f)) {
+		char *a = strtok(line, "\t"), *b = strtok(NULL, "\t"), *p = strtok(NULL, "\n");
+
+		if (a && b && p && !strcmp(p, rel)) {
+			cpy(id, sizeof(id), a);
+			break;
+		}
+	}
+	if (f)
+		fclose(f);
+	if (!id[0] || !rsu_safe_token(id))
+		return fail("notstore", "%s was not installed from the store", rel);
+	return cmd_remove(id);
 }
 
 
@@ -2071,11 +2150,15 @@ int main(int argc, char **argv)
 		}
 	}
 	read_store_ini(url_given, http_given);
+	if (roms_is_default())
+		snprintf(C.record, sizeof(C.record), "%s/installed.tsv", C.state);
+	else
+		snprintf(C.record, sizeof(C.record), "%s/.rsos-store/installed.tsv", C.roms);
 	signal(SIGTERM, on_term);
 	signal(SIGINT, on_term);
 	signal(SIGPIPE, SIG_IGN);
 	if (!cmd)
-		return fail("usage", "list [SYSTEM] | get ID | install-port ID | find-rom ID | remove ID | installed");
+		return fail("usage", "list [SYSTEM] | get ID | install-port ID | find-rom ID | remove ID | remove-path PATH | installed");
 	if (!strcmp(cmd, "list"))
 		return cmd_list(arg);
 	if (!strcmp(cmd, "installed"))
@@ -2088,5 +2171,7 @@ int main(int argc, char **argv)
 		return rsu_safe_token(arg) ? cmd_install_port(arg) : fail("notfound", "bad id");
 	if (!strcmp(cmd, "remove") && arg)
 		return cmd_remove(arg);
+	if (!strcmp(cmd, "remove-path") && arg)
+		return cmd_remove_path(arg);
 	return fail("usage", "unknown command %s", cmd);
 }

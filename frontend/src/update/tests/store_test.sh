@@ -137,7 +137,8 @@ $S get pack > /dev/null
 check "tar unpacked" "[ -f $W/roms/snes/data/level1.bin ]"
 $S get coolgame > /dev/null
 check "native placed" "[ -f '$W/roms/native/Cool Game.sh' ] && [ -f $W/roms/native/data/level1.bin ]"
-check "native: record lists top-level paths" "[ \"\$(grep -c '^coolgame' $W/state/installed.tsv)\" = 2 ]"
+check "native: record lists top-level paths" "[ \"\$(grep -c '^coolgame' $W/roms/.rsos-store/installed.tsv)\" = 2 ]"
+check "a roms folder that is not the console's: its record is in it, not in the state" "[ ! -e $W/state/installed.tsv ]"
 
 # remove
 OUT=$($S remove coolgame)
@@ -241,6 +242,17 @@ $P remove copyport > /dev/null
 mkdir -p $W/proms/native/copygame && printf 'old' > $W/proms/native/copygame/save.dat
 OUT=$($P install-port copyport)
 check "port: installs again over what a delete left, its save kept" "echo \"\$OUT\" | grep -q '^ok.id=copyport' && [ -f '$W/proms/native/Copy Game.sh' ] && [ \"\$(cat $W/proms/native/copygame/save.dat)\" = old ]"
+# the menu's "Delete this game" on the launcher: the whole port goes, the save and other games stay
+mkdir -p $W/proms/native/.store-replaced/copyport && printf 'mine' > "$W/proms/native/.store-replaced/copyport/Copy Game.sh"
+printf 'by hand' > "$W/proms/native/Hand Game.sh"
+OUT=$($P remove-path "$W/proms/native/Copy Game.sh")
+check "remove-path: the launcher's port is removed" "echo \"\$OUT\" | grep -q '^ok.id=copyport' && [ ! -e '$W/proms/native/Copy Game.sh' ] && [ ! -e $W/proms/native/copygame/data/rom.z64 ]"
+check "remove-path: the save stays, the moved-aside copy goes" "[ \"\$(cat $W/proms/native/copygame/save.dat)\" = old ] && [ ! -e $W/proms/native/.store-replaced ]"
+check "remove-path: no longer installed" "! $P installed | grep -q 'id=copyport'"
+OUT=$($P remove-path "native/Hand Game.sh")
+check "remove-path: a game not from the store is left alone" "echo \"\$OUT\" | grep -q '^error.code=notstore' && [ -f '$W/proms/native/Hand Game.sh' ]"
+OUT=$($P remove-path "../outside.sh")
+check "remove-path: a path outside the roms folder" "echo \"\$OUT\" | grep -q '^error.code=notstore'"
 rm -rf $W/proms/native
 
 
