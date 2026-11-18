@@ -15,6 +15,7 @@ layer cake, and every setting lives in one menu.
 > your PC from your own ROM: **[how to get native ports](ports/README.md)**. Its
 > [Releases](https://github.com/KurdtNervanna/RetroStoneOS/releases) update over the air (Settings > System
 > update). The official RetroStoneOS is [PaddleStroke/RetroStoneOS](https://github.com/PaddleStroke/RetroStoneOS).
+> **What is different from the official image, and what has been sent upstream: [FORK.md](FORK.md).**
 
 <p align="center">
   <img src="docs/ui-previews/rsos-dark-v2-system-snes.png" width="32%" alt="System carousel">
