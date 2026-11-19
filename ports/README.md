@@ -4,9 +4,10 @@ PC ports of N64 games (and other open-source engines) can run on the RetroStone2
 that draw with the console's GPU, with no emulator in between. They are much faster and look much better than
 emulating the N64: Super Mario 64 runs at full speed on the RetroStone2.
 
-**RetroStoneOS never ships any game.** This folder holds only build scripts and code changes. Each port is built
-**on your PC, from your own ROM**, and the result goes onto your own SD card. Keep it to yourself: never upload it,
-share it or put it in a release.
+**RetroStoneOS never ships any game.** This folder holds only build scripts and code changes. A port's game data is
+made **from your own ROM**, either **on your PC** with the scripts here (the steps below), or **on the console itself**
+through Settings > Game store ([docs/store-ports.md](../docs/store-ports.md)), and it stays on your own SD card. Keep it
+to yourself: never upload it, share it or put it in a release.
 
 ## How to get a native port (step by step)
 
