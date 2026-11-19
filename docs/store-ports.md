@@ -1,6 +1,6 @@
 # Store: installing ports from the user's own ROM - design
 
-Status: proposal (2026-11-06), nothing implemented. Extends [store-design.md](store-design.md). Scope: the store carries
+Status: implemented in this fork (design written 2026-11-06; see "Status" at the end for what is built). Extends [store-design.md](store-design.md). Scope: the store carries
 **only the ports built for this console** (curated, signed by the maintainer, each one tested on hardware). The store never
 holds or downloads any game data: the data is made on the console from a ROM the player already has.
 
@@ -121,5 +121,11 @@ checks in `store_test.sh`) and the port page in Settings > Game store (`ui/store
 before a long preparation, the charger/battery check, progress ("preparing N%"), the translated errors, LOOK AGAIN when there is no ROM;
 leaving the screen cancels an install; no idle power-off meanwhile. Preview tests with `tests/fake-rsos-store.sh` (`make check-ui`).
 
-Not built yet: the real packages (`install/` + `extract/extract.sh` per port) and the signed catalog entries; an ARM cross-build of the
-frontend with the new screen; a full install on the console; the carousel tile.
+Since then (2026-11-13): the store is live. The signed catalog and the packages are in
+[KurdtNervanna/RetroStoneOS-Store](https://github.com/KurdtNervanna/RetroStoneOS-Store) with eight ports (Ocarina of Time,
+Majora's Mask, Star Fox 64, Mario Kart 64, Smash 64 and Super Mario 64: the game data is extracted from the player's ROM;
+Perfect Dark and GoldenEye 007: the ROM is copied), and the fork's releases ship the Settings > Game store screen. A Star Fox 64 install from the
+store was confirmed on a RetroStone2 with fork build 0.1.5.30.
+
+Not built yet: the carousel tile (online only). A full install on the console has been confirmed for Star Fox 64 only; the other
+ports' installs have not all been repeated through the store on hardware. The legal review in "Open questions" is still open.
