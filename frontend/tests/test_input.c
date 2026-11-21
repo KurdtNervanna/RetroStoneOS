@@ -651,6 +651,8 @@ static void known_pads(void)
 	CHECK(r.ext.source != IN_MAP_USER, "and the mapping is automatic again");
 	rmdir(dir);
 	rig_close(&r);
+}
+
 /* ------------------------------ Bluetooth/USB keyboards and mice (classify) */
 static void set_keys(unsigned long *bits, const int *codes, int n)
 {
