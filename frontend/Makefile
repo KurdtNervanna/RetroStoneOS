@@ -360,6 +360,24 @@ check-ui: $(UIPREVIEW)
 		--keys "start down down a down down down down down a sleep:500 wait:1600 sleep:300 down down \
 			expect:|Wireless_Controller a sleep:1500 expect:dialog:Could_not_pair a wait:300 \
 			expect:menu:Bluetooth_devices|Wireless_Controller b sleep:500"
+	rm -rf $(UI_CHECK_DIR)/bt
+	FAKE_BT_DIR=$(UI_CHECK_DIR)/bt FAKE_BT_FAIL=pin $(UIPREVIEW) --root $(UI_CHECK_DIR) --quiet \
+		--bt-helper $(CURDIR)/tests/fake-rsos-bt.sh \
+		--keys "start down down a down down down down down a sleep:500 wait:1600 sleep:300 down down \
+			expect:|Wireless_Controller a sleep:1500 expect:dialog:This_controller_could_not_pair_without_a_PIN"
+	@echo "          headphones (fourth field audio): a failed pairing says headphones, a good one connects"
+	rm -rf $(UI_CHECK_DIR)/bt
+	FAKE_BT_DIR=$(UI_CHECK_DIR)/bt FAKE_BT_FAIL=pair $(UIPREVIEW) --root $(UI_CHECK_DIR) --quiet \
+		--bt-helper $(CURDIR)/tests/fake-rsos-bt.sh \
+		--keys "start down down a down down down down down a sleep:500 wait:1600 sleep:300 down down down \
+			expect:|WH-1000XM3 a sleep:1500 expect:dialog:Could_not_pair_the_headphones a wait:300 \
+			expect:menu:Bluetooth_devices|WH-1000XM3 b sleep:500"
+	rm -rf $(UI_CHECK_DIR)/bt
+	FAKE_BT_DIR=$(UI_CHECK_DIR)/bt $(UIPREVIEW) --root $(UI_CHECK_DIR) --quiet \
+		--bt-helper $(CURDIR)/tests/fake-rsos-bt.sh \
+		--keys "start down down a down down down down down a sleep:500 wait:1600 sleep:300 down down down \
+			expect:|WH-1000XM3 a sleep:1500 expect:toast=WH-1000XM3_connected b sleep:500"
+	grep -qx 'pair 00:1B:66:00:00:07' $(UI_CHECK_DIR)/bt/calls.log
 	rm -rf $(UI_CHECK_DIR)/bt $(UI_CHECK_DIR)/data/rsos/settings.ini
 	@echo "check-ui: Game store (tests/fake-rsos-store.sh): the list by system, install, update flag, remove, a full drive"
 	rm -rf $(UI_CHECK_DIR)/store
